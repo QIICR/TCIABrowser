@@ -58,7 +58,6 @@ class TCIABrowserWidget:
     # setup API key
     keyFile = open('C://Projects//tcia_api_key.txt','r')
     self.apiKey= keyFile.readline()[:-1]
-    print self.apiKey
     item = qt.QStandardItem()
 
     # setup the TCIA client
@@ -165,6 +164,7 @@ class TCIABrowserWidget:
     self.seriesTreeView.expandAll()
     self.seriesTreeView.resizeColumnToContents(1)
     parametersFormLayout.addRow(self.seriesTreeView)
+    self.seriesTreeSelectionModel = self.studiesTreeView.selectionModel()
 
     #
     # Request Button
@@ -250,6 +250,32 @@ class TCIABrowserWidget:
 
   def onLoadButton(self):
     print "onLoadButton"
+    currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
+    selectedSeries = self.seriesInstanceUIDs[currentSeriesIndex].text()
+    # Get Image request
+    dicomAppWidget = ctk.ctkDICOMAppWidget()
+    databaseDirectory = dicomAppWidget.databaseDirectory
+    tempPath = databaseDirectory + "/TCIA-temp/"
+    fileName = tempPath + str(selectedSeries) + ".zip"
+    try:
+      response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
+      # Save server response as images.zip in current directory
+      if response.getcode() == 200:
+        print "\n" + str(response.info())
+        bytesRead = response.read()
+        fout = open(fileName, "wb")
+        fout.write(bytesRead)
+        fout.close()
+        print "\nDownloaded file %s.zip from the server" %fileName
+      else:
+        print "Error : " + str(response.getcode) # print error code
+        print "\n" + str(response.info())
+    except urllib2.HTTPError, err:
+      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+
+    # Unzip the data
+
+    # Import the data into dicomAppWidget and open the dicom browser
 
   def populateCollectionsTreeView(self,responseString):
     collections = json.loads(responseString)
