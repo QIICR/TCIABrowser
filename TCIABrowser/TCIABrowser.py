@@ -686,12 +686,26 @@ class TCIAClient:
         self.baseUrl = baseUrl
         
     def execute(self, url, queryParameters={}):
+        # pop up progress dialog to prevent user from messing around
+        self.progress = qt.QProgressDialog(slicer.util.mainWindow())
+        self.progress.minimumDuration = 0
+        self.progress.show()
+        self.progress.setValue(0)
+        self.progress.setMaximum(0)
+        self.progress.setCancelButton(0)
+        self.progress.setWindowModality(2)
+        self.progress.setLabelText('Communicating with TCIA Server')
+        slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+        self.progress.repaint()
+        
         queryParameters = dict((k, v) for k, v in queryParameters.iteritems() if v)
         headers = {"api_key" : self.apiKey }
         queryString = "?%s" % urllib.urlencode(queryParameters)
         requestUrl = url + queryString
         request = urllib2.Request(url=requestUrl , headers=headers)
         resp = urllib2.urlopen(request)
+        
+        self.progress.close()
         return resp
     
     def get_modality_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
@@ -745,100 +759,3 @@ class TCIAClient:
         print "\n"
       else:
         print "Error : " + str(response.getcode) # print error code
-
-class ItemTable(object):
-
-  def __init__(self,parent, headerName, multiSelect=False, width=100):
-    self.widget = qt.QTableWidget(parent)
-    # self.widget.setMinimumWidth(width)
-    self.widget.setColumnCount(12)
-    self.widget.setHorizontalHeaderLabels([headerName])
-    #self.widget.horizontalHeader().setResizeMode(0, qt.QHeaderView.Stretch)
-    #self.widget.horizontalHeader().stretchLastSection = 1
-    self.widget.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
-    self.multiSelect = multiSelect
-    if self.multiSelect == False:
-      self.widget.setSelectionMode(qt.QAbstractItemView.SingleSelection)
-    self.width = width
-    self.items = []
-    self.strings = []
-    # self.widget.connect('cellClicked(int,int)',self.onCellClicked())
-    #self.loadables = {}
-    #self.setLoadables([])
-
-  def onCellClicked(self,row,col):
-    print('Cell clicked: '+str(row)+','+str(col))
-
-  def addContentItemRow(self,stringCont,row):
-    """Add a row to the loadable table
-    """
-    colStrs = string.split(stringCont,',')
-    col = 0
-    for colStr in colStrs:
-      # name and check state
-      self.strings.append(colStr)
-      item = qt.QTableWidgetItem(colStr[1:-1])
-      item.setCheckState(0)
-      #if not self.multiSelect:
-      #  item.setFlags(33)
-      #else:
-      #  # allow checkboxes interaction
-      #  item.setFlags(49)
-      self.items.append(item)
-      self.widget.setItem(row,col,item)
-      col += 1
-
-  def setHeader(self,strings):
-    self.widget.setColumnCount(len(strings))
-    self.widget.setHorizontalHeaderLabels(strings)
-    return
-
-  def setContent(self,strings):
-    """Load the table widget with a list
-    of volume options (of class DICOMVolume)
-    """
-    self.widget.clearContents()
-    self.widget.setColumnWidth(0,int(self.width))
-    self.widget.setRowCount(len(strings))
-    # self.items = []
-    row = 0
-
-    for s in strings:
-      self.addContentItemRow(s,row)
-      row += 1
-      '''
-      uid = string.split(s,',')
-      if len(uid)>1:
-        uid = uid[0]
-        self.addContentItemRow(uid[1:-1],row)
-        row += 1
-      '''
-
-    self.widget.setVerticalHeaderLabels(row * [""])
-
-  def uncheckAll(self):
-    for row in xrange(self.widget.rowCount):
-      item = self.widget.item(row,0)
-      item.setCheckState(False)
-
-  def checkAll(self):
-    for row in xrange(self.widget.rowCount):
-      item = self.widget.item(row,0)
-      item.setCheckState(True)
-      print('Checked: '+str(item.checkState()))
-
-  def getSelectedItem(self):
-    for row in xrange(self.widget.rowCount):
-      for col in xrange(self.widget.columnCount):
-        item = self.widget.item(row,col)
-        if item.isSelected():
-          return item
-
-  def getCheckedItems(self):
-    checkedItems = []
-    for row in xrange(self.widget.rowCount):
-      item = self.widget.item(row,0)
-      if item.checkState():
-        checkedItems.append(item)
-    return checkedItems
-
