@@ -1,4 +1,5 @@
 import urllib2, urllib,sys, os
+import string, json
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 
@@ -51,9 +52,10 @@ class TCIABrowserWidget:
       self.parent.show()
 
     # setup API key
-    keyFile = open('C://Projects//tcia_api.key','r')
+    keyFile = open('C://Projects//tcia_api_key.txt','r')
     self.apiKey= keyFile.readline()[:-1]
     print self.apiKey
+    item = qt.QStandardItem()
 
     # setup the TCIA client
   
@@ -108,32 +110,40 @@ class TCIABrowserWidget:
     #
     self.collectionsTreeView = qt.QTreeView()
     self.collectionsModel = qt.QStandardItemModel()
-    collectionsTableHeaderLabels = ['Collection Name','Body Part Examined','Modalities','Manufacturers']
-    self.collectionsModel.setHorizontalHeaderLabels(collectionsTableHeaderLabels)
+    collectionsTreeHeaderLabels = ['Collection Name','Body Part Examined','Modalities','Manufacturers']
+    self.collectionsModel.setHorizontalHeaderLabels(collectionsTreeHeaderLabels)
+    #header = self.collectionsTreeView.horizontalHeader()
+    #header.setStretchLastSection(True)
     self.collectionsTreeView.setModel(self.collectionsModel)
     self.collectionsTreeView.expandAll()
     self.collectionsTreeView.resizeColumnToContents(1)
     parametersFormLayout.addRow(self.collectionsTreeView)
-
+    self.collectionsTreeSelectionModel = self.collectionsTreeView.selectionModel()
+    
+    
+    #self.studyTable = ItemTable(self.parent,headerName='Study Name')
+    #self.layout.addWidget(self.studyTable.widget)
     # 
     # Patients Tree View
     #
     self.patientsTreeView = qt.QTreeView()
     self.patientsModel = qt.QStandardItemModel()
-    collectionsTableHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate','Patient Sex','Ethnic Group','Collection']
-    self.patientsModel.setHorizontalHeaderLabels(collectionsTableHeaderLabels)
+    # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate','Patient Sex','Ethnic Group','Collection']
+    self.patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate','Patient Sex','Ethnic Group']
+    self.patientsModel.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
     self.patientsTreeView.setModel(self.patientsModel)
     self.patientsTreeView.expandAll()
     self.patientsTreeView.resizeColumnToContents(1)
     parametersFormLayout.addRow(self.patientsTreeView)
+    patientsTreeSelectionModel = self.patientsTreeView.selectionModel()
 
     # 
     # Studies Tree View
     #
     self.studiesTreeView = qt.QTreeView()
     self.studiesModel = qt.QStandardItemModel()
-    collectionsTableHeaderLabels = ['Study Date','Study ID','Study Description','Admitting Diagnosis Descrition','Patient Age','Collection','Series Count','Study Instance UID']
-    self.studiesModel.setHorizontalHeaderLabels(collectionsTableHeaderLabels)
+    studiesTreeHeaderLabels = ['Study Date','Study ID','Study Description','Admitting Diagnosis Descrition','Patient Age','Collection','Series Count','Study Instance UID']
+    self.studiesModel.setHorizontalHeaderLabels(studiesTreeHeaderLabels)
     self.studiesTreeView.setModel(self.studiesModel)
     self.studiesTreeView.expandAll()
     self.studiesTreeView.resizeColumnToContents(1)
@@ -144,8 +154,8 @@ class TCIABrowserWidget:
     #
     self.seriesTreeView = qt.QTreeView()
     self.seriesModel = qt.QStandardItemModel()
-    collectionsTableHeaderLabels = ['Modality','Series Date','Series Description','Body Part Examined','Series Number','Manufacturer']
-    self.seriesModel.setHorizontalHeaderLabels(collectionsTableHeaderLabels)
+    seriesTreeHeaderLabels = ['Modality','Series Date','Series Description','Body Part Examined','Series Number','Manufacturer']
+    self.seriesModel.setHorizontalHeaderLabels(seriesTreeHeaderLabels)
     self.seriesTreeView.setModel(self.seriesModel)
     self.seriesTreeView.expandAll()
     self.seriesTreeView.resizeColumnToContents(1)
@@ -171,6 +181,7 @@ class TCIABrowserWidget:
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.requestButton.connect('clicked(bool)', self.onRequestButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
+    # collectionsTreeSelectionModel.connect('selectionChanged(const QItemSelection & selected, const QItemSelection & deselected)',self.onSelectionChanged)
     # self.retrieveButton.connect('clicked(bool)', self.onRetrieveButton)
     
 
@@ -183,30 +194,126 @@ class TCIABrowserWidget:
   def onConnectButton(self):
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    tcia_client = TCIAClient(slef.apiKey, baseUrl = "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
+    self.tcia_client = TCIAClient(self.apiKey, baseUrl = "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
     try:    
-      response = tcia_client.get_patient(collection ="TCGA-GBM" , bodyPartExamined = "BRAIN", modality ="MR", outputFormat = "csv")
-      tcia_client.printServerResponse(response)
+      response = self.tcia_client.get_collection_values()
+      # self.tcia_client.printServerResponse(response)
+      responseString = response.read()[:]
+      self.populateCollectionsTreeView(responseString)
     except urllib2.HTTPError, err:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
-    # enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
-    # screenshotScaleFactor = int(self.screenshotScaleFactorSliderWidget.value)
-    print("Run the algorithm")
-    # logic.run(self.inputSelector.currentNode(), self.outputSelector.currentNode(), enableScreenshotsFlag,screenshotScaleFactor)
-
   def onRequestButton(self):
     print "onRequestButton"
+    currentIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
+    selectedCollection = self.collectionsItems[currentIndex].text()
+    try:    
+      response = self.tcia_client.get_patient(collection = selectedCollection)
+      # self.tcia_client.printServerResponse(response)
+      responseString = response.read()[:]
+      self.populatePatientsTreeView(responseString)
+    except urllib2.HTTPError, err:
+      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+
 
   def onLoadButton(self):
     print "onLoadButton"
 
+  def populateCollectionsTreeView(self,responseString):
+    collections = json.loads(responseString)
+    root = self.collectionsModel.invisibleRootItem()
+    n = 0
+    self.collectionsItems =[]
+    for collection in collections:
+      item = qt.QStandardItem(str(collections[n]['Collection']))
+      self.collectionsItems.append(item)
+      root.appendRow(item)
+      n +=1
+
+  def populatePatientsTreeView(self,responseString):
+    model = self.patientsModel
+    #model.clear()
+    # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient Sex','Collection']
+    model.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    patients = json.loads(responseString)
+    rowCounts = len(patients)
+    model.setRowCount(rowCounts)
+    self.patientsIDs =[]
+    self.patientNames = []
+    self.patientBirthDates = []
+    self.patientSexes = []
+    self.ethnicGroups = []
+    #self.collections = []
+    
+    n = 0
+    for patient in patients:
+      keys = patient.keys()
+      for key in keys:
+        if key == 'PatientID':
+          patientID = qt.QStandardItem(str(patient['PatientID']))
+          self.patientsIDs.append(patientID)
+          model.setItem(n,0,patientID)
+        if key == 'PatientName':
+          patientName = qt.QStandardItem(str(patient['PatientName']))
+          self.patientNames.append(patientName)
+          model.setItem(n,1,patientName )
+        if key == 'PatientBirthDate':
+          patientBirthDate= qt.QStandardItem(str(patient['PatientBirthDate']))
+          self.patientBirthDates.append(patientBirthDate)
+          model.setItem(n,2,patientBirthDate)
+        if key == 'PatientSex':
+          patientSex = qt.QStandardItem(str(patient['PatientSex']))
+          self.patientSexes.append(patientSex)
+          model.setItem(n,3,patientSex)
+        if key == 'EthnicGroup':
+          ethnicGroup= qt.QStandardItem(str(patient['EthnicGroup']))
+          self.ethnicGroups.append(ethnicGroup)
+          model.setItem(n,4,ethnicGroup)
+      n += 1
+
+    '''
+    root = model.invisibleRootItem()
+    n = 0
+    self.patientsIDs =[]
+    self.patientNames = []
+    self.patientBirthDates = []
+    self.patientSexes = []
+    self.ethnicGroups = []
+    self.collections = []
+    
+    for patient in patients:
+      patientID = qt.QStandardItem(str(patients[n]['PatientID']))
+      patientName = qt.QStandardItem(str(patients[n]['PatientName']))
+      # patientBirthDate = qt.QStandardItem(str(patients[n]['PatientBirthDate']))
+      patientSex = qt.QStandardItem(str(patients[n]['PatientSex']))
+      # ethnicGroup = qt.QStandardItem(str(patients[n]['EthnicGroup']))
+      collection = qt.QStandardItem(str(patients[n]['Collection']))
+      self.patientsIDs.append(patientID)
+      self.patientNames.append(patientName)
+      # self.patientBirthDates.append(patientBirthDates)
+      self.patientSexes.append(patientSex)
+      # self.ethnicGroups.append(ethnicGroups)
+      self.collections.append(collection)
+      model.setItem(n,0,patientID)
+      #root.appendRow(patientID)
+      model.setItem(n,1,patientName)
+      model.setItem(n,2,patientSex)
+      model.setItem(n,3,collection)
+      n +=1
+    '''
+  def onSelectionChanged(self,selected,deselected):
+    indexes = selected.indexed()
+    if indexes:
+      print('row: %d' % indexes[0].row())
 
   def onReload(self,moduleName="TCIABrowser"):
     """Generic reload method for any scripted module.
     ModuleWizard will subsitute correct default moduleName.
     """
     import imp, sys, os, slicer
+    import urllib2, urllib,sys, os
+    import string
+
 
     widgetName = moduleName + "Widget"
 
@@ -468,7 +575,7 @@ class TCIAClient:
         resp = self.execute(serviceUrl , queryParameters)
         return resp
         
-    def get_body_part_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
+    def get_body_part_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "csv" ):
         serviceUrl = self.baseUrl + "/" + self.GET_BODY_PART_VALUES
         queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
@@ -483,9 +590,9 @@ class TCIAClient:
         queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
-    def get_patient(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
+    def get_patient(self,collection = None , outputFormat = "json" ):
         serviceUrl = self.baseUrl + "/" + self.GET_PATIENT
-        queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
+        queryParameters = {"Collection" : collection , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
     def get_image(self , seriesInstanceUid):
@@ -501,3 +608,100 @@ class TCIAClient:
         print "\n"
       else:
         print "Error : " + str(response.getcode) # print error code
+
+class ItemTable(object):
+
+  def __init__(self,parent, headerName, multiSelect=False, width=100):
+    self.widget = qt.QTableWidget(parent)
+    # self.widget.setMinimumWidth(width)
+    self.widget.setColumnCount(12)
+    self.widget.setHorizontalHeaderLabels([headerName])
+    #self.widget.horizontalHeader().setResizeMode(0, qt.QHeaderView.Stretch)
+    #self.widget.horizontalHeader().stretchLastSection = 1
+    self.widget.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
+    self.multiSelect = multiSelect
+    if self.multiSelect == False:
+      self.widget.setSelectionMode(qt.QAbstractItemView.SingleSelection)
+    self.width = width
+    self.items = []
+    self.strings = []
+    # self.widget.connect('cellClicked(int,int)',self.onCellClicked())
+    #self.loadables = {}
+    #self.setLoadables([])
+
+  def onCellClicked(self,row,col):
+    print('Cell clicked: '+str(row)+','+str(col))
+
+  def addContentItemRow(self,stringCont,row):
+    """Add a row to the loadable table
+    """
+    colStrs = string.split(stringCont,',')
+    col = 0
+    for colStr in colStrs:
+      # name and check state
+      self.strings.append(colStr)
+      item = qt.QTableWidgetItem(colStr[1:-1])
+      item.setCheckState(0)
+      #if not self.multiSelect:
+      #  item.setFlags(33)
+      #else:
+      #  # allow checkboxes interaction
+      #  item.setFlags(49)
+      self.items.append(item)
+      self.widget.setItem(row,col,item)
+      col += 1
+
+  def setHeader(self,strings):
+    self.widget.setColumnCount(len(strings))
+    self.widget.setHorizontalHeaderLabels(strings)
+    return
+
+  def setContent(self,strings):
+    """Load the table widget with a list
+    of volume options (of class DICOMVolume)
+    """
+    self.widget.clearContents()
+    self.widget.setColumnWidth(0,int(self.width))
+    self.widget.setRowCount(len(strings))
+    # self.items = []
+    row = 0
+
+    for s in strings:
+      self.addContentItemRow(s,row)
+      row += 1
+      '''
+      uid = string.split(s,',')
+      if len(uid)>1:
+        uid = uid[0]
+        self.addContentItemRow(uid[1:-1],row)
+        row += 1
+      '''
+
+    self.widget.setVerticalHeaderLabels(row * [""])
+
+  def uncheckAll(self):
+    for row in xrange(self.widget.rowCount):
+      item = self.widget.item(row,0)
+      item.setCheckState(False)
+
+  def checkAll(self):
+    for row in xrange(self.widget.rowCount):
+      item = self.widget.item(row,0)
+      item.setCheckState(True)
+      print('Checked: '+str(item.checkState()))
+
+  def getSelectedItem(self):
+    for row in xrange(self.widget.rowCount):
+      for col in xrange(self.widget.columnCount):
+        item = self.widget.item(row,col)
+        if item.isSelected():
+          return item
+
+  def getCheckedItems(self):
+    checkedItems = []
+    for row in xrange(self.widget.rowCount):
+      item = self.widget.item(row,0)
+      if item.checkState():
+        checkedItems.append(item)
+    return checkedItems
+
