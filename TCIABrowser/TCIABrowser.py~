@@ -50,6 +50,9 @@ class TCIABrowserWidget:
     if not parent:
       self.setup()
       self.parent.show()
+      
+    self.previousCollectionsIndex = -1
+    self.previousPatientsIndex = -1
 
     # setup API key
     keyFile = open('C://Projects//tcia_api_key.txt','r')
@@ -135,15 +138,15 @@ class TCIABrowserWidget:
     self.patientsTreeView.expandAll()
     self.patientsTreeView.resizeColumnToContents(1)
     parametersFormLayout.addRow(self.patientsTreeView)
-    patientsTreeSelectionModel = self.patientsTreeView.selectionModel()
+    self.patientsTreeSelectionModel = self.patientsTreeView.selectionModel()
 
     # 
     # Studies Tree View
     #
     self.studiesTreeView = qt.QTreeView()
     self.studiesModel = qt.QStandardItemModel()
-    studiesTreeHeaderLabels = ['Study Date','Study ID','Study Description','Admitting Diagnosis Descrition','Patient Age','Collection','Series Count','Study Instance UID']
-    self.studiesModel.setHorizontalHeaderLabels(studiesTreeHeaderLabels)
+    self.studiesTreeHeaderLabels = ['Study Instance UID','Study Date','Study Description','Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
+    self.studiesModel.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
     self.studiesTreeView.setModel(self.studiesModel)
     self.studiesTreeView.expandAll()
     self.studiesTreeView.resizeColumnToContents(1)
@@ -205,16 +208,31 @@ class TCIABrowserWidget:
 
   def onRequestButton(self):
     print "onRequestButton"
-    currentIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
-    selectedCollection = self.collectionsItems[currentIndex].text()
-    try:    
-      response = self.tcia_client.get_patient(collection = selectedCollection)
-      # self.tcia_client.printServerResponse(response)
-      responseString = response.read()[:]
-      self.populatePatientsTreeView(responseString)
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
-
+    currentCollectionsIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
+    currentPatientsIndex = self.patientsTreeSelectionModel.currentIndex().row() 
+    
+    if self.previousCollectionsIndex != currentCollectionsIndex:
+      self.previousCollectionsIndex = currentCollectionsIndex
+      print "populate patient"
+      selectedCollection = self.collectionsItems[currentCollectionsIndex].text()
+      try:    
+        response = self.tcia_client.get_patient(collection = selectedCollection)
+        # self.tcia_client.printServerResponse(response)
+        responseString = response.read()[:]
+        self.populatePatientsTreeView(responseString)
+      except urllib2.HTTPError, err:
+        print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    elif self.previousPatientsIndex != currentPatientsIndex:
+      self.previousPatientsIndex = currentPatientsIndex
+      print "populate series"
+      selectedPatient = self.patientsIDs[currentPatientsIndex].text()
+      try:    
+        response = self.tcia_client.get_patient_study(patientId = selectedPatient)
+        # self.tcia_client.printServerResponse(response)
+        responseString = response.read()[:]
+        self.populateStudiesTreeView(responseString)
+      except urllib2.HTTPError, err:
+        print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
   def onLoadButton(self):
     print "onLoadButton"
@@ -231,19 +249,13 @@ class TCIABrowserWidget:
       n +=1
 
   def populatePatientsTreeView(self,responseString):
+    self.clearPatientsTreeView()
+    self.clearStudiesTreeView()
     model = self.patientsModel
-    #model.clear()
     # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient Sex','Collection']
     model.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    self.studiesModel.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
     patients = json.loads(responseString)
-    rowCounts = len(patients)
-    model.setRowCount(rowCounts)
-    self.patientsIDs =[]
-    self.patientNames = []
-    self.patientBirthDates = []
-    self.patientSexes = []
-    self.ethnicGroups = []
-    #self.collections = []
     
     n = 0
     for patient in patients:
@@ -271,36 +283,47 @@ class TCIABrowserWidget:
           model.setItem(n,4,ethnicGroup)
       n += 1
 
-    '''
-    root = model.invisibleRootItem()
+  def populateStudiesTreeView(self,responseString):
+    self.clearStudiesTreeView()
+    model = self.studiesModel
+    model.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    studies = json.loads(responseString)
     n = 0
+    for study in studies:
+      keys = study.keys()
+      for key in keys:
+        if key == 'StudyDescription':
+          studyDescription = qt.QStandardItem(str(study['StudyDescription']))
+          self.studyDescriptions.append(studyDescription)
+          model.setItem(n,2,studyDescription)
+        
+      n += 1
+
+  def clearPatientsTreeView(self):
+    model = self.patientsModel
+    # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient Sex','Collection']
+    model.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
     self.patientsIDs =[]
     self.patientNames = []
     self.patientBirthDates = []
     self.patientSexes = []
     self.ethnicGroups = []
-    self.collections = []
-    
-    for patient in patients:
-      patientID = qt.QStandardItem(str(patients[n]['PatientID']))
-      patientName = qt.QStandardItem(str(patients[n]['PatientName']))
-      # patientBirthDate = qt.QStandardItem(str(patients[n]['PatientBirthDate']))
-      patientSex = qt.QStandardItem(str(patients[n]['PatientSex']))
-      # ethnicGroup = qt.QStandardItem(str(patients[n]['EthnicGroup']))
-      collection = qt.QStandardItem(str(patients[n]['Collection']))
-      self.patientsIDs.append(patientID)
-      self.patientNames.append(patientName)
-      # self.patientBirthDates.append(patientBirthDates)
-      self.patientSexes.append(patientSex)
-      # self.ethnicGroups.append(ethnicGroups)
-      self.collections.append(collection)
-      model.setItem(n,0,patientID)
-      #root.appendRow(patientID)
-      model.setItem(n,1,patientName)
-      model.setItem(n,2,patientSex)
-      model.setItem(n,3,collection)
-      n +=1
-    '''
+    #self.collections = []
+    model.clear()
+
+  def clearStudiesTreeView(self):
+    model = self.studiesModel
+    model.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    self.studyInstanceUIDs =[]
+    self.studyDates = []
+    self.studyDescriptions = []
+    self.admittingDiagnosesDescriptions = []
+    self.studyIDs = []
+    self.patientAges = []
+    self.seriesCounts = []
+
+    model.clear()
+
   def onSelectionChanged(self,selected,deselected):
     indexes = selected.indexed()
     if indexes:
