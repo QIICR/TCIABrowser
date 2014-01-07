@@ -53,6 +53,7 @@ class TCIABrowserWidget:
       
     self.previousCollectionsIndex = -1
     self.previousPatientsIndex = -1
+    self.previousStudiesIndex = -1
 
     # setup API key
     keyFile = open('C://Projects//tcia_api_key.txt','r')
@@ -151,14 +152,15 @@ class TCIABrowserWidget:
     self.studiesTreeView.expandAll()
     self.studiesTreeView.resizeColumnToContents(1)
     parametersFormLayout.addRow(self.studiesTreeView)
+    self.studiesTreeSelectionModel = self.studiesTreeView.selectionModel()
 
     # 
     # Series Tree View
     #
     self.seriesTreeView = qt.QTreeView()
     self.seriesModel = qt.QStandardItemModel()
-    seriesTreeHeaderLabels = ['Modality','Series Date','Series Description','Body Part Examined','Series Number','Manufacturer']
-    self.seriesModel.setHorizontalHeaderLabels(seriesTreeHeaderLabels)
+    self.seriesTreeHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date','Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer','Manufacturer Model Name','Software Versions','Image Count']
+    self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
     self.seriesTreeView.setModel(self.seriesModel)
     self.seriesTreeView.expandAll()
     self.seriesTreeView.resizeColumnToContents(1)
@@ -210,6 +212,7 @@ class TCIABrowserWidget:
     print "onRequestButton"
     currentCollectionsIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
     currentPatientsIndex = self.patientsTreeSelectionModel.currentIndex().row() 
+    currentStudiesIndex = self.studiesTreeSelectionModel.currentIndex().row() 
     
     if self.previousCollectionsIndex != currentCollectionsIndex:
       self.previousCollectionsIndex = currentCollectionsIndex
@@ -224,13 +227,24 @@ class TCIABrowserWidget:
         print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
     elif self.previousPatientsIndex != currentPatientsIndex:
       self.previousPatientsIndex = currentPatientsIndex
-      print "populate series"
+      print "populate studies"
       selectedPatient = self.patientsIDs[currentPatientsIndex].text()
       try:    
         response = self.tcia_client.get_patient_study(patientId = selectedPatient)
         # self.tcia_client.printServerResponse(response)
         responseString = response.read()[:]
         self.populateStudiesTreeView(responseString)
+      except urllib2.HTTPError, err:
+        print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    elif self.previousStudiesIndex != currentStudiesIndex:
+      self.previousStudiesIndex = currentStudiesIndex
+      print "populate series"
+      selectedStudy = self.studyInstanceUIDs[currentStudiesIndex].text()
+      try:    
+        response = self.tcia_client.get_series(studyInstanceUID = selectedStudy)
+        # self.tcia_client.printServerResponse(response)
+        responseString = response.read()[:]
+        self.populateSeriesTreeView(responseString)
       except urllib2.HTTPError, err:
         print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
@@ -251,10 +265,12 @@ class TCIABrowserWidget:
   def populatePatientsTreeView(self,responseString):
     self.clearPatientsTreeView()
     self.clearStudiesTreeView()
+    self.clearSeriesTreeView()
     model = self.patientsModel
     # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient Sex','Collection']
     model.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
     self.studiesModel.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
     patients = json.loads(responseString)
     
     n = 0
@@ -285,18 +301,104 @@ class TCIABrowserWidget:
 
   def populateStudiesTreeView(self,responseString):
     self.clearStudiesTreeView()
+    self.clearSeriesTreeView()
     model = self.studiesModel
     model.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
     studies = json.loads(responseString)
     n = 0
     for study in studies:
       keys = study.keys()
       for key in keys:
+        if key == 'StudyInstanceUID':
+          studyInstanceUID= qt.QStandardItem(str(study['StudyInstanceUID']))
+          self.studyInstanceUIDs.append(studyInstanceUID)
+          model.setItem(n,0,studyInstanceUID)
+        if key == 'StudyDate':
+          studyDate = qt.QStandardItem(str(study['StudyDate']))
+          self.studyDates.append(studyDate)
+          model.setItem(n,1,studyDate)
         if key == 'StudyDescription':
           studyDescription = qt.QStandardItem(str(study['StudyDescription']))
           self.studyDescriptions.append(studyDescription)
           model.setItem(n,2,studyDescription)
-        
+        if key == 'AdmittingDiagnosesDescriptions':
+          admittingDiagnosesDescription= qt.QStandardItem(str(study['AdmittingDiagnosesDescriptions']))
+          self.admittingDiagnosesDescriptions.append(admittingDiagnosesDescription)
+          model.setItem(n,3,admittingDiagnosesDescription)
+        if key == 'StudyID':
+          studyID= qt.QStandardItem(str(study['StudyID']))
+          self.studyIDs.append(studyID)
+          model.setItem(n,4,studyID)
+        if key == 'PatientAge':
+          patientAge = qt.QStandardItem(str(study['PatientAge']))
+          self.patientAges.append(patientAge)
+          model.setItem(n,5,patientAge)
+        if key == 'SeriesCount':
+          seriesCount = qt.QStandardItem(str(study['SeriesCount']))
+          self.seriesCounts.append(seriesCount)
+          model.setItem(n,6,seriesCount)
+      n += 1
+
+  def populateSeriesTreeView(self,responseString):
+    self.clearSeriesTreeView()
+    model = self.seriesModel
+    model.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    seriesCollection = json.loads(responseString)
+    n = 0
+    for series in seriesCollection:
+      keys = series.keys()
+      for key in keys:
+        if key == 'SeriesInstanceUID':
+          print "key found"
+          seriesInstanceUID = qt.QStandardItem(str(series['SeriesInstanceUID']))
+          self.seriesInstanceUIDs.append(seriesInstanceUID)
+          print seriesInstanceUID
+          model.setItem(n,0,seriesInstanceUID)
+        if key == 'Modality':
+          modality = qt.QStandardItem(str(series['Modality']))
+          self.modalities.append(modality)
+          model.setItem(n,1,modality)
+        if key == 'ProtocolName':
+          protocolName = qt.QStandardItem(str(series['ProtocolName']))
+          self.protocolNames.append(protocolName)
+          model.setItem(n,2,protocolName)
+        if key == 'SeriesDate':
+          seriesDate = qt.QStandardItem(str(series['SeriesDate']))
+          self.seriesDates.append(seriesDate)
+          model.setItem(n,3,seriesDate)
+        if key == 'SeriesDescription':
+          seriesDescription = qt.QStandardItem(str(series['SeriesDescription']))
+          self.seriesDescriptions.append(seriesDescription)
+          model.setItem(n,4,seriesDescription)
+        if key == 'BodyPartExamined':
+          bodyPartExamined = qt.QStandardItem(str(series['BodyPartExamined']))
+          self.bodyPartsExamined.append(bodyPartExamined)
+          model.setItem(n,5,bodyPartExamined)
+        if key == 'SeriesNumber':
+          seriesNumber = qt.QStandardItem(str(series['SeriesNumber']))
+          self.seriesNumbers.append(seriesNumber)
+          model.setItem(n,6,seriesNumber)
+        if key == 'AnnotationsFlag':
+          annotationsFlag = qt.QStandardItem(str(series['AnnotationsFlag']))
+          self.annotationsFlags.append(annotationsFlag)
+          model.setItem(n,7,annotationsFlag)
+        if key == 'Manufacturer':
+          manufacturer = qt.QStandardItem(str(series['Manufacturer']))
+          self.manufacturers.append(manufacturer)
+          model.setItem(n,8,manufacturer)
+        if key == 'ManufacturerModelName':
+          manufacturerModelName = qt.QStandardItem(str(series['ManufacturerModelName']))
+          self.manufacturerModelNames.append(manufacturerModelName )
+          model.setItem(n,9,manufacturerModelName)
+        if key == 'SoftwareVersions':
+          softwareVersions = qt.QStandardItem(str(series['SoftwareVersions']))
+          self.softwareVersionsCollection.append(softwareVersions )
+          model.setItem(n,10,softwareVersions)
+        if key == 'ImageCount':
+          imageCount = qt.QStandardItem(str(series['ImageCount']))
+          self.imageCounts.append(imageCount )
+          model.setItem(n,11,imageCount )
       n += 1
 
   def clearPatientsTreeView(self):
@@ -321,13 +423,25 @@ class TCIABrowserWidget:
     self.studyIDs = []
     self.patientAges = []
     self.seriesCounts = []
-
     model.clear()
 
-  def onSelectionChanged(self,selected,deselected):
-    indexes = selected.indexed()
-    if indexes:
-      print('row: %d' % indexes[0].row())
+  def clearSeriesTreeView(self):
+    model = self.seriesModel
+    model.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    self.seriesInstanceUIDs= []
+    self.modalities = []
+    self.protocolNames = []
+    self.seriesDates = []
+    self.seriesDescriptions = []
+    self.bodyPartsExamined = []
+    self.seriesNumbers =[]
+    self.annotationsFlags = []
+    self.manufacturers = []
+    self.manufacturerModelNames = []
+    self.softwareVersionsCollection = []
+    self.imageCounts = []
+    #self.collections = []
+    model.clear()
 
   def onReload(self,moduleName="TCIABrowser"):
     """Generic reload method for any scripted module.
@@ -608,9 +722,9 @@ class TCIAClient:
         queryParameters = {"Collection" : collection , "PatientID" : patientId , "StudyInstanceUID" : studyInstanceUid , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
-    def get_series(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
+    def get_series(self,collection = None , patientId = None , studyInstanceUID = None, modality = None , outputFormat = "json" ):
         serviceUrl = self.baseUrl + "/" + self.GET_SERIES
-        queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
+        queryParameters = {"Collection" : collection , "PatientID" : patientId ,"StudyInstanceUID": studyInstanceUID, "Modality" : modality , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
     def get_patient(self,collection = None , outputFormat = "json" ):
