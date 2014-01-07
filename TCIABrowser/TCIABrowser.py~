@@ -1,5 +1,5 @@
 import urllib2, urllib,sys, os
-import string, json
+import string, json, zipfile, os.path
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 
@@ -255,8 +255,9 @@ class TCIABrowserWidget:
     # Get Image request
     dicomAppWidget = ctk.ctkDICOMAppWidget()
     databaseDirectory = dicomAppWidget.databaseDirectory
-    tempPath = databaseDirectory + "/TCIA-temp/"
+    tempPath = databaseDirectory + "/incoming/"
     fileName = tempPath + str(selectedSeries) + ".zip"
+    imagesDirectory = tempPath + str(selectedSeries)
     try:
       response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
       # Save server response as images.zip in current directory
@@ -274,8 +275,22 @@ class TCIABrowserWidget:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
     # Unzip the data
-
+    self.unzip(fileName,imagesDirectory)
     # Import the data into dicomAppWidget and open the dicom browser
+    dicomAppWidget.onImportDirectory(imagesDirectory)
+    slicer.util.selectModule('DICOM')
+
+  def unzip(self,source_filename, dest_dir):
+    with zipfile.ZipFile(source_filename) as zf:
+      for member in zf.infolist():
+        words = member.filename.split('/')
+        path = dest_dir
+        for word in words[:-1]:
+          drive, word = os.path.splitdrive(word)
+          head, word = os.path.split(word)
+          if word in (os.curdir, os.pardir, ''): continue
+          path = os.path.join(path, word)
+        zf.extract(member, path)
 
   def populateCollectionsTreeView(self,responseString):
     collections = json.loads(responseString)
@@ -475,7 +490,8 @@ class TCIABrowserWidget:
     """
     import imp, sys, os, slicer
     import urllib2, urllib,sys, os
-    import string
+    import string, json
+    import zipfile, os.path
 
 
     widgetName = moduleName + "Widget"
