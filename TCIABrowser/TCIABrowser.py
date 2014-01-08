@@ -70,7 +70,7 @@ class TCIABrowserWidget:
     #
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
-    #self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -94,7 +94,7 @@ class TCIABrowserWidget:
     # Parameters Area
     #
     parametersCollapsibleButton = ctk.ctkCollapsibleButton()
-    parametersCollapsibleButton.text = "Parameters"
+    parametersCollapsibleButton.text = "TCIA Browser"
     self.layout.addWidget(parametersCollapsibleButton)
 
     # Layout within the dummy collapsible button
@@ -107,7 +107,17 @@ class TCIABrowserWidget:
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
     parametersFormLayout.addRow(self.connectButton)
+    #
+    collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    collectionsCollapsibleGroupBox.setTitle('Collections')
+    parametersFormLayout.addWidget(collectionsCollapsibleGroupBox)  # 
+    collectionsFormLayout = qt.QFormLayout(collectionsCollapsibleGroupBox)
 
+    self.collectionSelector = qt.QComboBox()
+    self.infoPushButton = qt.QPushButton("?")
+    collectionsFormLayout.addRow(self.infoPushButton,self.collectionSelector)
+    self.infoPushButton.setMaximumWidth(25)
+    ''' 
     # 
     # Collections Tree View
     #
@@ -122,52 +132,79 @@ class TCIABrowserWidget:
     self.collectionsTreeView.resizeColumnToContents(1)
     parametersFormLayout.addRow(self.collectionsTreeView)
     self.collectionsTreeSelectionModel = self.collectionsTreeView.selectionModel()
-    
+    '''
     
     #self.studyTable = ItemTable(self.parent,headerName='Study Name')
     #self.layout.addWidget(self.studyTable.widget)
-    # 
+   
+    patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    patientsCollapsibleGroupBox.setTitle('Patients')
+    parametersFormLayout.addWidget(patientsCollapsibleGroupBox)  # 
+    patientsFormLayout = qt.QFormLayout(patientsCollapsibleGroupBox)
     # Patients Tree View
     #
-    self.patientsTreeView = qt.QTreeView()
+    #self.patientsTreeView = qt.QTreeView()
+    self.patientsTreeView = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
     self.patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
         'Patient Sex','Ethnic Group']
-    self.patientsModel.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
-    self.patientsTreeView.setModel(self.patientsModel)
-    self.patientsTreeView.expandAll()
-    self.patientsTreeView.resizeColumnToContents(1)
-    parametersFormLayout.addRow(self.patientsTreeView)
+    #self.patientsModel.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    self.patientsTreeView.setColumnCount(5)
+    self.patientsTreeView.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    #self.patientsTreeView.setModel(self.patientsModel)
+    #self.patientsTreeView.expandAll()
+    #self.patientsTreeView.resizeColumnToContents(1)
+    patientsFormLayout.addRow(self.patientsTreeView)
     self.patientsTreeSelectionModel = self.patientsTreeView.selectionModel()
-
+    abstractItemView =qt.QAbstractItemView()
+    self.patientsTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
+    verticalheader = self.patientsTreeView.verticalHeader()
+    verticalheader.setDefaultSectionSize(20)
+    #
+    studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    studiesCollapsibleGroupBox.setTitle('Studies')
+    parametersFormLayout.addWidget(studiesCollapsibleGroupBox)  # 
+    studiesFormLayout = qt.QFormLayout(studiesCollapsibleGroupBox)
     # 
     # Studies Tree View
     #
-    self.studiesTreeView = qt.QTreeView()
+    self.studiesTreeView = qt.QTableWidget()
     self.studiesModel = qt.QStandardItemModel()
     self.studiesTreeHeaderLabels = ['Study Instance UID','Study Date','Study Description',
         'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
-    self.studiesModel.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
-    self.studiesTreeView.setModel(self.studiesModel)
-    self.studiesTreeView.expandAll()
-    self.studiesTreeView.resizeColumnToContents(1)
-    parametersFormLayout.addRow(self.studiesTreeView)
+    self.studiesTreeView.setColumnCount(7)
+    self.studiesTreeView.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    #self.studiesTreeView.setModel(self.studiesModel)
+    #self.studiesTreeView.expandAll()
+    #self.studiesTreeView.resizeColumnToContents(1)
+    studiesFormLayout.addRow(self.studiesTreeView)
     self.studiesTreeSelectionModel = self.studiesTreeView.selectionModel()
+    self.studiesTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
+    studiesVerticalheader = self.studiesTreeView.verticalHeader()
+    studiesVerticalheader.setDefaultSectionSize(20)
 
+    seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    seriesCollapsibleGroupBox.setTitle('Series')
+    parametersFormLayout.addWidget(seriesCollapsibleGroupBox)  # 
+    seriesFormLayout = qt.QFormLayout(seriesCollapsibleGroupBox)
     # 
     # Series Tree View
     #
-    self.seriesTreeView = qt.QTreeView()
-    self.seriesModel = qt.QStandardItemModel()
+    self.seriesTreeView = qt.QTableWidget()
+    #self.seriesModel = qt.QStandardItemModel()
+    self.seriesTreeView.setColumnCount(12)
     self.seriesTreeHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date'
         ,'Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer'
         ,'Manufacturer Model Name','Software Versions','Image Count']
-    self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
-    self.seriesTreeView.setModel(self.seriesModel)
-    self.seriesTreeView.expandAll()
-    self.seriesTreeView.resizeColumnToContents(1)
-    parametersFormLayout.addRow(self.seriesTreeView)
+    self.seriesTreeView.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    #self.seriesTreeView.setModel(self.seriesModel)
+    #self.seriesTreeView.expandAll()
+    #self.seriesTreeView.resizeColumnToContents(1)
+    seriesFormLayout.addRow(self.seriesTreeView)
     self.seriesTreeSelectionModel = self.studiesTreeView.selectionModel()
+    self.seriesTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
+    seriesVerticalheader = self.seriesTreeView.verticalHeader()
+    seriesVerticalheader.setDefaultSectionSize(20)
 
     #
     # Request Button
@@ -186,10 +223,13 @@ class TCIABrowserWidget:
     parametersFormLayout.addRow(self.loadButton)
 
     # connections
+    self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
+    self.patientsTreeView.connect('cellClicked(int,int)',self.patientSelected)
+    self.studiesTreeView.connect('cellClicked(int,int)',self.studySelected)
+    self.seriesTreeView.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.requestButton.connect('clicked(bool)', self.onRequestButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
-    
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -210,12 +250,48 @@ class TCIABrowserWidget:
     except urllib2.HTTPError, err:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
+  def collectionSelected(self,item):
+    selectedCollection = item
+    try:    
+      response = self.tcia_client.get_patient(collection = selectedCollection)
+      # self.tcia_client.printServerResponse(response)
+      responseString = response.read()[:]
+      self.populatePatientsTableWidget(responseString)
+    except urllib2.HTTPError, err:
+      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+
+  def patientSelected(self,row,column):
+    self.clearStudiesTreeView()
+    self.clearSeriesTreeView()
+    selectedPatient = self.patientsIDs[row].text()
+    try:    
+      response = self.tcia_client.get_patient_study(patientId = selectedPatient)
+      # self.tcia_client.printServerResponse(response)
+      responseString = response.read()[:]
+      self.populateStudiesTableWidget(responseString)
+    except urllib2.HTTPError, err:
+      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+
+  def studySelected(self,row,column):
+    self.clearSeriesTreeView()
+    selectedStudy = self.studyInstanceUIDs[row].text()
+    try:    
+      response = self.tcia_client.get_series(studyInstanceUID = selectedStudy)
+      # self.tcia_client.printServerResponse(response)
+      responseString = response.read()[:]
+      self.populateSeriesTableWidget(responseString)
+    except urllib2.HTTPError, err:
+      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+
+  def seriesSelected(self,row,column):
+    self.selectedSeriesForDownload = self.seriesInstanceUIDs[row].text()
+
   def onRequestButton(self):
     print "onRequestButton"
-    currentCollectionsIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
+    # currentCollectionsIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
     currentPatientsIndex = self.patientsTreeSelectionModel.currentIndex().row() 
     currentStudiesIndex = self.studiesTreeSelectionModel.currentIndex().row() 
-    
+    ''' 
     if self.previousCollectionsIndex != currentCollectionsIndex:
       self.previousCollectionsIndex = currentCollectionsIndex
       print "populate patient"
@@ -228,6 +304,8 @@ class TCIABrowserWidget:
       except urllib2.HTTPError, err:
         print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
     elif self.previousPatientsIndex != currentPatientsIndex:
+    '''
+    if self.previousPatientsIndex != currentPatientsIndex:
       self.previousPatientsIndex = currentPatientsIndex
       print "populate studies"
       selectedPatient = self.patientsIDs[currentPatientsIndex].text()
@@ -252,9 +330,10 @@ class TCIABrowserWidget:
 
   def onLoadButton(self):
     print "onLoadButton"
-    currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
-    selectedSeries = self.seriesInstanceUIDs[currentSeriesIndex].text()
-    # Get Image request
+    #currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
+    selectedSeries = self.selectedSeriesForDownload
+    #selectedseries = self.seriesinstanceuids[currentseriesindex].text()
+    # get image request
     dicomAppWidget = ctk.ctkDICOMAppWidget()
     databaseDirectory = dicomAppWidget.databaseDirectory
     tempPath = databaseDirectory + "/incoming/"
@@ -296,6 +375,13 @@ class TCIABrowserWidget:
 
   def populateCollectionsTreeView(self,responseString):
     collections = json.loads(responseString)
+    # populate collection selector
+    n = 0
+    for collection in collections:
+      self.collectionSelector.addItem(str(collections[n]['Collection']))
+      n += 1
+    '''
+
     root = self.collectionsModel.invisibleRootItem()
     n = 0
     self.collectionsItems =[]
@@ -304,161 +390,152 @@ class TCIABrowserWidget:
       self.collectionsItems.append(item)
       root.appendRow(item)
       n +=1
-
-  def populatePatientsTreeView(self,responseString):
+    '''
+  def populatePatientsTableWidget(self,responseString):
     self.clearPatientsTreeView()
-    self.clearStudiesTreeView()
-    self.clearSeriesTreeView()
-    model = self.patientsModel
-    # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient Sex','Collection']
-    model.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
-    self.studiesModel.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
-    self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    table = self.patientsTreeView
     patients = json.loads(responseString)
-    
+    table.setRowCount(len(patients))
     n = 0
     for patient in patients:
       keys = patient.keys()
       for key in keys:
         if key == 'PatientID':
-          patientID = qt.QStandardItem(str(patient['PatientID']))
+          patientID = qt.QTableWidgetItem(str(patient['PatientID']))
           self.patientsIDs.append(patientID)
-          model.setItem(n,0,patientID)
+          table.setItem(n,0,patientID)
         if key == 'PatientName':
-          patientName = qt.QStandardItem(str(patient['PatientName']))
+          patientName = qt.QTableWidgetItem(str(patient['PatientName']))
           self.patientNames.append(patientName)
-          model.setItem(n,1,patientName )
+          table.setItem(n,1,patientName )
         if key == 'PatientBirthDate':
-          patientBirthDate= qt.QStandardItem(str(patient['PatientBirthDate']))
+          patientBirthDate= qt.QTableWidgetItem(str(patient['PatientBirthDate']))
           self.patientBirthDates.append(patientBirthDate)
-          model.setItem(n,2,patientBirthDate)
+          table.setItem(n,2,patientBirthDate)
         if key == 'PatientSex':
-          patientSex = qt.QStandardItem(str(patient['PatientSex']))
+          patientSex = qt.QTableWidgetItem(str(patient['PatientSex']))
           self.patientSexes.append(patientSex)
-          model.setItem(n,3,patientSex)
+          table.setItem(n,3,patientSex)
         if key == 'EthnicGroup':
-          ethnicGroup= qt.QStandardItem(str(patient['EthnicGroup']))
+          ethnicGroup= qt.QTableWidgetItem(str(patient['EthnicGroup']))
           self.ethnicGroups.append(ethnicGroup)
-          model.setItem(n,4,ethnicGroup)
+          table.setItem(n,4,ethnicGroup)
       n += 1
 
-  def populateStudiesTreeView(self,responseString):
+  def populateStudiesTableWidget(self,responseString):
     self.clearStudiesTreeView()
-    self.clearSeriesTreeView()
-    model = self.studiesModel
-    model.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
-    self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    table = self.studiesTreeView
     studies = json.loads(responseString)
+    table.setRowCount(len(studies))
     n = 0
     for study in studies:
       keys = study.keys()
       for key in keys:
         if key == 'StudyInstanceUID':
-          studyInstanceUID= qt.QStandardItem(str(study['StudyInstanceUID']))
+          studyInstanceUID= qt.QTableWidgetItem(str(study['StudyInstanceUID']))
           self.studyInstanceUIDs.append(studyInstanceUID)
-          model.setItem(n,0,studyInstanceUID)
+          table.setItem(n,0,studyInstanceUID)
         if key == 'StudyDate':
-          studyDate = qt.QStandardItem(str(study['StudyDate']))
+          studyDate = qt.QTableWidgetItem(str(study['StudyDate']))
           self.studyDates.append(studyDate)
-          model.setItem(n,1,studyDate)
+          table.setItem(n,1,studyDate)
         if key == 'StudyDescription':
-          studyDescription = qt.QStandardItem(str(study['StudyDescription']))
+          studyDescription = qt.QTableWidgetItem(str(study['StudyDescription']))
           self.studyDescriptions.append(studyDescription)
-          model.setItem(n,2,studyDescription)
+          table.setItem(n,2,studyDescription)
         if key == 'AdmittingDiagnosesDescriptions':
-          admittingDiagnosesDescription= qt.QStandardItem(str(study['AdmittingDiagnosesDescriptions']))
+          admittingDiagnosesDescription= qt.QTableWidgetItem(str(study['AdmittingDiagnosesDescriptions']))
           self.admittingDiagnosesDescriptions.append(admittingDiagnosesDescription)
-          model.setItem(n,3,admittingDiagnosesDescription)
+          table.setItem(n,3,admittingDiagnosesDescription)
         if key == 'StudyID':
-          studyID= qt.QStandardItem(str(study['StudyID']))
+          studyID= qt.QTableWidgetItem(str(study['StudyID']))
           self.studyIDs.append(studyID)
-          model.setItem(n,4,studyID)
+          table.setItem(n,4,studyID)
         if key == 'PatientAge':
-          patientAge = qt.QStandardItem(str(study['PatientAge']))
+          patientAge = qt.QTableWidgetItem(str(study['PatientAge']))
           self.patientAges.append(patientAge)
-          model.setItem(n,5,patientAge)
+          table.setItem(n,5,patientAge)
         if key == 'SeriesCount':
-          seriesCount = qt.QStandardItem(str(study['SeriesCount']))
+          seriesCount = qt.QTableWidgetItem(str(study['SeriesCount']))
           self.seriesCounts.append(seriesCount)
-          model.setItem(n,6,seriesCount)
+          table.setItem(n,6,seriesCount)
       n += 1
 
-  def populateSeriesTreeView(self,responseString):
+  def populateSeriesTableWidget(self,responseString):
     self.clearSeriesTreeView()
-    model = self.seriesModel
-    model.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    table = self.seriesTreeView
     seriesCollection = json.loads(responseString)
+    table.setRowCount(len(seriesCollection))
+  
     n = 0
     for series in seriesCollection:
       keys = series.keys()
       for key in keys:
         if key == 'SeriesInstanceUID':
           print "key found"
-          seriesInstanceUID = qt.QStandardItem(str(series['SeriesInstanceUID']))
+          seriesInstanceUID = qt.QTableWidgetItem(str(series['SeriesInstanceUID']))
           self.seriesInstanceUIDs.append(seriesInstanceUID)
           print seriesInstanceUID
-          model.setItem(n,0,seriesInstanceUID)
+          table.setItem(n,0,seriesInstanceUID)
         if key == 'Modality':
-          modality = qt.QStandardItem(str(series['Modality']))
+          modality = qt.QTableWidgetItem(str(series['Modality']))
           self.modalities.append(modality)
-          model.setItem(n,1,modality)
+          table.setItem(n,1,modality)
         if key == 'ProtocolName':
-          protocolName = qt.QStandardItem(str(series['ProtocolName']))
+          protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
           self.protocolNames.append(protocolName)
-          model.setItem(n,2,protocolName)
+          table.setItem(n,2,protocolName)
         if key == 'SeriesDate':
-          seriesDate = qt.QStandardItem(str(series['SeriesDate']))
+          seriesDate = qt.QTableWidgetItem(str(series['SeriesDate']))
           self.seriesDates.append(seriesDate)
-          model.setItem(n,3,seriesDate)
+          table.setItem(n,3,seriesDate)
         if key == 'SeriesDescription':
-          seriesDescription = qt.QStandardItem(str(series['SeriesDescription']))
+          seriesDescription = qt.QTableWidgetItem(str(series['SeriesDescription']))
           self.seriesDescriptions.append(seriesDescription)
-          model.setItem(n,4,seriesDescription)
+          table.setItem(n,4,seriesDescription)
         if key == 'BodyPartExamined':
-          bodyPartExamined = qt.QStandardItem(str(series['BodyPartExamined']))
+          bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
           self.bodyPartsExamined.append(bodyPartExamined)
-          model.setItem(n,5,bodyPartExamined)
+          table.setItem(n,5,bodyPartExamined)
         if key == 'SeriesNumber':
-          seriesNumber = qt.QStandardItem(str(series['SeriesNumber']))
+          seriesNumber = qt.QTableWidgetItem(str(series['SeriesNumber']))
           self.seriesNumbers.append(seriesNumber)
-          model.setItem(n,6,seriesNumber)
+          table.setItem(n,6,seriesNumber)
         if key == 'AnnotationsFlag':
-          annotationsFlag = qt.QStandardItem(str(series['AnnotationsFlag']))
+          annotationsFlag = qt.QTableWidgetItem(str(series['AnnotationsFlag']))
           self.annotationsFlags.append(annotationsFlag)
-          model.setItem(n,7,annotationsFlag)
+          table.setItem(n,7,annotationsFlag)
         if key == 'Manufacturer':
-          manufacturer = qt.QStandardItem(str(series['Manufacturer']))
+          manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
           self.manufacturers.append(manufacturer)
-          model.setItem(n,8,manufacturer)
+          table.setItem(n,8,manufacturer)
         if key == 'ManufacturerModelName':
-          manufacturerModelName = qt.QStandardItem(str(series['ManufacturerModelName']))
+          manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
           self.manufacturerModelNames.append(manufacturerModelName )
-          model.setItem(n,9,manufacturerModelName)
+          table.setItem(n,9,manufacturerModelName)
         if key == 'SoftwareVersions':
-          softwareVersions = qt.QStandardItem(str(series['SoftwareVersions']))
+          softwareVersions = qt.QTableWidgetItem(str(series['SoftwareVersions']))
           self.softwareVersionsCollection.append(softwareVersions )
-          model.setItem(n,10,softwareVersions)
+          table.setItem(n,10,softwareVersions)
         if key == 'ImageCount':
-          imageCount = qt.QStandardItem(str(series['ImageCount']))
+          imageCount = qt.QTableWidgetItem(str(series['ImageCount']))
           self.imageCounts.append(imageCount )
-          model.setItem(n,11,imageCount )
+          table.setItem(n,11,imageCount )
       n += 1
 
   def clearPatientsTreeView(self):
-    model = self.patientsModel
-    # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient Sex','Collection']
-    model.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    table = self.patientsTreeView
     self.patientsIDs =[]
     self.patientNames = []
     self.patientBirthDates = []
     self.patientSexes = []
     self.ethnicGroups = []
     #self.collections = []
-    model.clear()
-
+    table.clear()
+    table.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    
   def clearStudiesTreeView(self):
-    model = self.studiesModel
-    model.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    table = self.studiesTreeView
     self.studyInstanceUIDs =[]
     self.studyDates = []
     self.studyDescriptions = []
@@ -466,11 +543,11 @@ class TCIABrowserWidget:
     self.studyIDs = []
     self.patientAges = []
     self.seriesCounts = []
-    model.clear()
-
+    table.clear()
+    table.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+   
   def clearSeriesTreeView(self):
-    model = self.seriesModel
-    model.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    table = self.seriesTreeView
     self.seriesInstanceUIDs= []
     self.modalities = []
     self.protocolNames = []
@@ -484,8 +561,9 @@ class TCIABrowserWidget:
     self.softwareVersionsCollection = []
     self.imageCounts = []
     #self.collections = []
-    model.clear()
-
+    table.clear()
+    table.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    
   def onReload(self,moduleName="TCIABrowser"):
     """Generic reload method for any scripted module.
     ModuleWizard will subsitute correct default moduleName.
