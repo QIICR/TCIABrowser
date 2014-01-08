@@ -131,8 +131,8 @@ class TCIABrowserWidget:
     #
     self.patientsTreeView = qt.QTreeView()
     self.patientsModel = qt.QStandardItemModel()
-    # patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate','Patient Sex','Ethnic Group','Collection']
-    self.patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate','Patient Sex','Ethnic Group']
+    self.patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
+        'Patient Sex','Ethnic Group']
     self.patientsModel.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
     self.patientsTreeView.setModel(self.patientsModel)
     self.patientsTreeView.expandAll()
@@ -145,7 +145,8 @@ class TCIABrowserWidget:
     #
     self.studiesTreeView = qt.QTreeView()
     self.studiesModel = qt.QStandardItemModel()
-    self.studiesTreeHeaderLabels = ['Study Instance UID','Study Date','Study Description','Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
+    self.studiesTreeHeaderLabels = ['Study Instance UID','Study Date','Study Description',
+        'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
     self.studiesModel.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
     self.studiesTreeView.setModel(self.studiesModel)
     self.studiesTreeView.expandAll()
@@ -158,7 +159,9 @@ class TCIABrowserWidget:
     #
     self.seriesTreeView = qt.QTreeView()
     self.seriesModel = qt.QStandardItemModel()
-    self.seriesTreeHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date','Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer','Manufacturer Model Name','Software Versions','Image Count']
+    self.seriesTreeHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date'
+        ,'Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer'
+        ,'Manufacturer Model Name','Software Versions','Image Count']
     self.seriesModel.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
     self.seriesTreeView.setModel(self.seriesModel)
     self.seriesTreeView.expandAll()
@@ -186,8 +189,6 @@ class TCIABrowserWidget:
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.requestButton.connect('clicked(bool)', self.onRequestButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
-    # collectionsTreeSelectionModel.connect('selectionChanged(const QItemSelection & selected, const QItemSelection & deselected)',self.onSelectionChanged)
-    # self.retrieveButton.connect('clicked(bool)', self.onRetrieveButton)
     
 
     # Add vertical spacer
@@ -199,7 +200,8 @@ class TCIABrowserWidget:
   def onConnectButton(self):
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    self.tcia_client = TCIAClient(self.apiKey, baseUrl = "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
+    self.tcia_client = TCIAClient(self.apiKey, baseUrl = 
+        "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
     try:    
       response = self.tcia_client.get_collection_values()
       # self.tcia_client.printServerResponse(response)
