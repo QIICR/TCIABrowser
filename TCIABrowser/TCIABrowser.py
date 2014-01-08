@@ -205,7 +205,7 @@ class TCIABrowserWidget:
     self.seriesTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
     seriesVerticalheader = self.seriesTreeView.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
-
+    '''
     #
     # Request Button
     #
@@ -213,7 +213,7 @@ class TCIABrowserWidget:
     self.requestButton.toolTip = "Request the selected items from server."
     self.requestButton.enabled = True
     parametersFormLayout.addRow(self.requestButton)
-
+    '''
     #
     # Load Button
     #
@@ -228,7 +228,7 @@ class TCIABrowserWidget:
     self.studiesTreeView.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTreeView.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
-    self.requestButton.connect('clicked(bool)', self.onRequestButton)
+    #self.requestButton.connect('clicked(bool)', self.onRequestButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
 
     # Add vertical spacer
@@ -251,6 +251,9 @@ class TCIABrowserWidget:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
   def collectionSelected(self,item):
+    self.clearPatientsTreeView()
+    self.clearStudiesTreeView()
+    self.clearSeriesTreeView()
     selectedCollection = item
     try:    
       response = self.tcia_client.get_patient(collection = selectedCollection)
@@ -285,13 +288,14 @@ class TCIABrowserWidget:
 
   def seriesSelected(self,row,column):
     self.selectedSeriesForDownload = self.seriesInstanceUIDs[row].text()
-
+  
+  '''
   def onRequestButton(self):
     print "onRequestButton"
     # currentCollectionsIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
     currentPatientsIndex = self.patientsTreeSelectionModel.currentIndex().row() 
     currentStudiesIndex = self.studiesTreeSelectionModel.currentIndex().row() 
-    ''' 
+     
     if self.previousCollectionsIndex != currentCollectionsIndex:
       self.previousCollectionsIndex = currentCollectionsIndex
       print "populate patient"
@@ -304,7 +308,7 @@ class TCIABrowserWidget:
       except urllib2.HTTPError, err:
         print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
     elif self.previousPatientsIndex != currentPatientsIndex:
-    '''
+    
     if self.previousPatientsIndex != currentPatientsIndex:
       self.previousPatientsIndex = currentPatientsIndex
       print "populate studies"
@@ -327,7 +331,8 @@ class TCIABrowserWidget:
         self.populateSeriesTreeView(responseString)
       except urllib2.HTTPError, err:
         print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
-
+  '''
+  
   def onLoadButton(self):
     print "onLoadButton"
     #currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
@@ -472,10 +477,8 @@ class TCIABrowserWidget:
       keys = series.keys()
       for key in keys:
         if key == 'SeriesInstanceUID':
-          print "key found"
           seriesInstanceUID = qt.QTableWidgetItem(str(series['SeriesInstanceUID']))
           self.seriesInstanceUIDs.append(seriesInstanceUID)
-          print seriesInstanceUID
           table.setItem(n,0,seriesInstanceUID)
         if key == 'Modality':
           modality = qt.QTableWidgetItem(str(series['Modality']))
