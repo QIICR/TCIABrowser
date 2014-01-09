@@ -10,15 +10,15 @@ from __main__ import vtk, qt, ctk, slicer
 class TCIABrowser:
   def __init__(self, parent):
     parent.title = "TCIABrowser" # TODO make this more human readable by adding spaces
-    parent.categories = ["Examples"]
+    parent.categories = ["Informatics"]
     parent.dependencies = []
-    parent.contributors = ["Jean-Christophe Fillion-Robin (Kitware), Steve Pieper (Isomics)"] # replace with "Firstname Lastname (Org)"
+    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]  
     parent.helpText = """
-    This is an example of scripted loadable module bundled in an extension.
+    Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. 
     """
     parent.acknowledgementText = """
-    This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc. and Steve Pieper, Isomics, Inc.  and was partially funded by NIH grant 3P41RR013218-12S1.
-""" # replace with organization, grant and thanks.
+    Supported by NIH U01CA151261 (PI Fennessy) and U24 CA180918 (PIs Kikinis and Fedorov)
+""" 
     self.parent = parent
 
     # Add this test to the SelfTest module's list for discovery when the module
@@ -51,9 +51,6 @@ class TCIABrowserWidget:
       self.setup()
       self.parent.show()
       
-    self.previousCollectionsIndex = -1
-    self.previousPatientsIndex = -1
-    self.previousStudiesIndex = -1
 
     # setup API key
     keyFile = open('C://Projects//tcia_api_key.txt','r')
@@ -91,14 +88,14 @@ class TCIABrowserWidget:
     self.reloadAndTestButton.connect('clicked()', self.onReloadAndTest)
 
     #
-    # Parameters Area
+    # Browser Area
     #
-    parametersCollapsibleButton = ctk.ctkCollapsibleButton()
-    parametersCollapsibleButton.text = "TCIA Browser"
-    self.layout.addWidget(parametersCollapsibleButton)
+    browserCollapsibleButton = ctk.ctkCollapsibleButton()
+    browserCollapsibleButton.text = "TCIA Browser"
+    self.layout.addWidget(browserCollapsibleButton)
 
     # Layout within the dummy collapsible button
-    parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
+    browserFormLayout = qt.QVBoxLayout(browserCollapsibleButton)
 
     #
     # Connect Button
@@ -106,129 +103,109 @@ class TCIABrowserWidget:
     self.connectButton = qt.QPushButton("Connect")
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
-    parametersFormLayout.addRow(self.connectButton)
+    browserFormLayout.addWidget(self.connectButton)
     #
     collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     collectionsCollapsibleGroupBox.setTitle('Collections')
-    parametersFormLayout.addWidget(collectionsCollapsibleGroupBox)  # 
+    browserFormLayout.addWidget(collectionsCollapsibleGroupBox)  # 
     collectionsFormLayout = qt.QFormLayout(collectionsCollapsibleGroupBox)
 
     self.collectionSelector = qt.QComboBox()
     self.infoPushButton = qt.QPushButton("?")
     collectionsFormLayout.addRow(self.infoPushButton,self.collectionSelector)
     self.infoPushButton.setMaximumWidth(25)
-    ''' 
-    # 
-    # Collections Tree View
+
     #
-    self.collectionsTreeView = qt.QTreeView()
-    self.collectionsModel = qt.QStandardItemModel()
-    collectionsTreeHeaderLabels = ['Collection Name','Body Part Examined','Modalities','Manufacturers']
-    self.collectionsModel.setHorizontalHeaderLabels(collectionsTreeHeaderLabels)
-    #header = self.collectionsTreeView.horizontalHeader()
-    #header.setStretchLastSection(True)
-    self.collectionsTreeView.setModel(self.collectionsModel)
-    self.collectionsTreeView.expandAll()
-    self.collectionsTreeView.resizeColumnToContents(1)
-    parametersFormLayout.addRow(self.collectionsTreeView)
-    self.collectionsTreeSelectionModel = self.collectionsTreeView.selectionModel()
-    '''
-    
-    #self.studyTable = ItemTable(self.parent,headerName='Study Name')
-    #self.layout.addWidget(self.studyTable.widget)
-   
+    # Patient Table Widget 
+    #
     patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     patientsCollapsibleGroupBox.setTitle('Patients')
-    parametersFormLayout.addWidget(patientsCollapsibleGroupBox)  # 
-    patientsFormLayout = qt.QFormLayout(patientsCollapsibleGroupBox)
-    # Patients Tree View
-    #
-    #self.patientsTreeView = qt.QTreeView()
-    self.patientsTreeView = qt.QTableWidget()
+    browserFormLayout.addWidget(patientsCollapsibleGroupBox)
+
+    patientsVBoxLayout1 = qt.QVBoxLayout(patientsCollapsibleGroupBox)
+    patientsExpdableArea = ctk.ctkExpandableWidget()
+    patientsVBoxLayout1.addWidget(patientsExpdableArea)
+    patientsVBoxLayout2 = qt.QVBoxLayout(patientsExpdableArea)
+
+    patientsVerticalLayout = qt.QVBoxLayout(patientsExpdableArea)
+    self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
-    self.patientsTreeHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
+    self.patientsTableWidgetHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
         'Patient Sex','Ethnic Group']
-    #self.patientsModel.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
-    self.patientsTreeView.setColumnCount(5)
-    self.patientsTreeView.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
-    #self.patientsTreeView.setModel(self.patientsModel)
-    #self.patientsTreeView.expandAll()
-    #self.patientsTreeView.resizeColumnToContents(1)
-    patientsFormLayout.addRow(self.patientsTreeView)
-    self.patientsTreeSelectionModel = self.patientsTreeView.selectionModel()
+    self.patientsTableWidget.setColumnCount(5)
+    self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
+    patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
+    patientsTableWidgetHeader.setStretchLastSection(True)
+    patientsVBoxLayout2.addWidget(self.patientsTableWidget)
+    self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
     abstractItemView =qt.QAbstractItemView()
-    self.patientsTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
-    verticalheader = self.patientsTreeView.verticalHeader()
+    self.patientsTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    verticalheader = self.patientsTableWidget.verticalHeader()
     verticalheader.setDefaultSectionSize(20)
+
+    # 
+    # Studies Table Widget 
     #
     studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     studiesCollapsibleGroupBox.setTitle('Studies')
-    parametersFormLayout.addWidget(studiesCollapsibleGroupBox)  # 
-    studiesFormLayout = qt.QFormLayout(studiesCollapsibleGroupBox)
-    # 
-    # Studies Tree View
-    #
-    self.studiesTreeView = qt.QTableWidget()
+    browserFormLayout.addWidget(studiesCollapsibleGroupBox) 
+    studiesVBoxLayout1 = qt.QVBoxLayout(studiesCollapsibleGroupBox)
+    studiesExpdableArea = ctk.ctkExpandableWidget()
+    studiesVBoxLayout1.addWidget(studiesExpdableArea)
+    studiesVBoxLayout2 = qt.QVBoxLayout(studiesExpdableArea)
+    self.studiesTableWidget = qt.QTableWidget()
     self.studiesModel = qt.QStandardItemModel()
-    self.studiesTreeHeaderLabels = ['Study Instance UID','Study Date','Study Description',
+    self.studiesTableHeaderLabels = ['Study Instance UID','Study Date','Study Description',
         'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
-    self.studiesTreeView.setColumnCount(7)
-    self.studiesTreeView.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
-    #self.studiesTreeView.setModel(self.studiesModel)
-    #self.studiesTreeView.expandAll()
-    #self.studiesTreeView.resizeColumnToContents(1)
-    studiesFormLayout.addRow(self.studiesTreeView)
-    self.studiesTreeSelectionModel = self.studiesTreeView.selectionModel()
-    self.studiesTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
-    studiesVerticalheader = self.studiesTreeView.verticalHeader()
+    self.studiesTableWidget.setColumnCount(7)
+    self.studiesTableWidget.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
+    studiesVBoxLayout2.addWidget(self.studiesTableWidget)
+    self.studiesTreeSelectionModel = self.studiesTableWidget.selectionModel()
+    self.studiesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    studiesVerticalheader = self.studiesTableWidget.verticalHeader()
     studiesVerticalheader.setDefaultSectionSize(20)
+    studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
+    studiesTableWidgetHeader.setStretchLastSection(True)
 
+    #
+    # Series Table Widget 
+    #
     seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     seriesCollapsibleGroupBox.setTitle('Series')
-    parametersFormLayout.addWidget(seriesCollapsibleGroupBox)  # 
-    seriesFormLayout = qt.QFormLayout(seriesCollapsibleGroupBox)
-    # 
-    # Series Tree View
-    #
-    self.seriesTreeView = qt.QTableWidget()
+    browserFormLayout.addWidget(seriesCollapsibleGroupBox)  # 
+    seriesVBoxLayout1 = qt.QVBoxLayout(seriesCollapsibleGroupBox)
+    seriesExpdableArea = ctk.ctkExpandableWidget()
+    seriesVBoxLayout1.addWidget(seriesExpdableArea)
+    seriesVBoxLayout2 = qt.QVBoxLayout(seriesExpdableArea)
+    self.seriesTableWidget = qt.QTableWidget()
     #self.seriesModel = qt.QStandardItemModel()
-    self.seriesTreeView.setColumnCount(12)
-    self.seriesTreeHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date'
+    self.seriesTableWidget.setColumnCount(12)
+    self.seriesTableHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date'
         ,'Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer'
         ,'Manufacturer Model Name','Software Versions','Image Count']
-    self.seriesTreeView.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
-    #self.seriesTreeView.setModel(self.seriesModel)
-    #self.seriesTreeView.expandAll()
-    #self.seriesTreeView.resizeColumnToContents(1)
-    seriesFormLayout.addRow(self.seriesTreeView)
-    self.seriesTreeSelectionModel = self.studiesTreeView.selectionModel()
-    self.seriesTreeView.setSelectionBehavior(abstractItemView.SelectRows) 
-    seriesVerticalheader = self.seriesTreeView.verticalHeader()
+    self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
+    seriesVBoxLayout2.addWidget(self.seriesTableWidget)
+    self.seriesTreeSelectionModel = self.studiesTableWidget.selectionModel()
+    self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
+    seriesTableWidgetHeader.setStretchLastSection(True)
+    seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
-    '''
-    #
-    # Request Button
-    #
-    self.requestButton = qt.QPushButton("Request")
-    self.requestButton.toolTip = "Request the selected items from server."
-    self.requestButton.enabled = True
-    parametersFormLayout.addRow(self.requestButton)
-    '''
+
     #
     # Load Button
     #
     self.loadButton = qt.QPushButton("Download and Load")
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = True
-    parametersFormLayout.addRow(self.loadButton)
+    browserFormLayout.addWidget(self.loadButton)
 
     # connections
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
-    self.patientsTreeView.connect('cellClicked(int,int)',self.patientSelected)
-    self.studiesTreeView.connect('cellClicked(int,int)',self.studySelected)
-    self.seriesTreeView.connect('cellClicked(int,int)',self.seriesSelected)
+    self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
+    self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
+    self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
-    #self.requestButton.connect('clicked(bool)', self.onRequestButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
 
     # Add vertical spacer
@@ -251,9 +228,9 @@ class TCIABrowserWidget:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
   def collectionSelected(self,item):
-    self.clearPatientsTreeView()
-    self.clearStudiesTreeView()
-    self.clearSeriesTreeView()
+    self.clearPatientsTableWidget()
+    self.clearStudiesTableWidget()
+    self.clearSeriesTableWidget()
     selectedCollection = item
     try:    
       response = self.tcia_client.get_patient(collection = selectedCollection)
@@ -264,8 +241,8 @@ class TCIABrowserWidget:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
   def patientSelected(self,row,column):
-    self.clearStudiesTreeView()
-    self.clearSeriesTreeView()
+    self.clearStudiesTableWidget()
+    self.clearSeriesTableWidget()
     selectedPatient = self.patientsIDs[row].text()
     try:    
       response = self.tcia_client.get_patient_study(patientId = selectedPatient)
@@ -276,7 +253,7 @@ class TCIABrowserWidget:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
   def studySelected(self,row,column):
-    self.clearSeriesTreeView()
+    self.clearSeriesTableWidget()
     selectedStudy = self.studyInstanceUIDs[row].text()
     try:    
       response = self.tcia_client.get_series(studyInstanceUID = selectedStudy)
@@ -288,51 +265,7 @@ class TCIABrowserWidget:
 
   def seriesSelected(self,row,column):
     self.selectedSeriesForDownload = self.seriesInstanceUIDs[row].text()
-  
-  '''
-  def onRequestButton(self):
-    print "onRequestButton"
-    # currentCollectionsIndex = self.collectionsTreeSelectionModel.currentIndex().row() 
-    currentPatientsIndex = self.patientsTreeSelectionModel.currentIndex().row() 
-    currentStudiesIndex = self.studiesTreeSelectionModel.currentIndex().row() 
-     
-    if self.previousCollectionsIndex != currentCollectionsIndex:
-      self.previousCollectionsIndex = currentCollectionsIndex
-      print "populate patient"
-      selectedCollection = self.collectionsItems[currentCollectionsIndex].text()
-      try:    
-        response = self.tcia_client.get_patient(collection = selectedCollection)
-        # self.tcia_client.printServerResponse(response)
-        responseString = response.read()[:]
-        self.populatePatientsTreeView(responseString)
-      except urllib2.HTTPError, err:
-        print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
-    elif self.previousPatientsIndex != currentPatientsIndex:
-    
-    if self.previousPatientsIndex != currentPatientsIndex:
-      self.previousPatientsIndex = currentPatientsIndex
-      print "populate studies"
-      selectedPatient = self.patientsIDs[currentPatientsIndex].text()
-      try:    
-        response = self.tcia_client.get_patient_study(patientId = selectedPatient)
-        # self.tcia_client.printServerResponse(response)
-        responseString = response.read()[:]
-        self.populateStudiesTreeView(responseString)
-      except urllib2.HTTPError, err:
-        print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
-    elif self.previousStudiesIndex != currentStudiesIndex:
-      self.previousStudiesIndex = currentStudiesIndex
-      print "populate series"
-      selectedStudy = self.studyInstanceUIDs[currentStudiesIndex].text()
-      try:    
-        response = self.tcia_client.get_series(studyInstanceUID = selectedStudy)
-        # self.tcia_client.printServerResponse(response)
-        responseString = response.read()[:]
-        self.populateSeriesTreeView(responseString)
-      except urllib2.HTTPError, err:
-        print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
-  '''
-  
+
   def onLoadButton(self):
     print "onLoadButton"
     #currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
@@ -366,11 +299,11 @@ class TCIABrowserWidget:
     dicomAppWidget.onImportDirectory(imagesDirectory)
     slicer.util.selectModule('DICOM')
 
-  def unzip(self,source_filename, dest_dir):
-    with zipfile.ZipFile(source_filename) as zf:
+  def unzip(self,sourceFilename, destinationDir):
+    with zipfile.ZipFile(sourceFilename) as zf:
       for member in zf.infolist():
         words = member.filename.split('/')
-        path = dest_dir
+        path = destinationDir 
         for word in words[:-1]:
           drive, word = os.path.splitdrive(word)
           head, word = os.path.split(word)
@@ -385,20 +318,9 @@ class TCIABrowserWidget:
     for collection in collections:
       self.collectionSelector.addItem(str(collections[n]['Collection']))
       n += 1
-    '''
-
-    root = self.collectionsModel.invisibleRootItem()
-    n = 0
-    self.collectionsItems =[]
-    for collection in collections:
-      item = qt.QStandardItem(str(collections[n]['Collection']))
-      self.collectionsItems.append(item)
-      root.appendRow(item)
-      n +=1
-    '''
   def populatePatientsTableWidget(self,responseString):
-    self.clearPatientsTreeView()
-    table = self.patientsTreeView
+    self.clearPatientsTableWidget()
+    table = self.patientsTableWidget
     patients = json.loads(responseString)
     table.setRowCount(len(patients))
     n = 0
@@ -428,8 +350,8 @@ class TCIABrowserWidget:
       n += 1
 
   def populateStudiesTableWidget(self,responseString):
-    self.clearStudiesTreeView()
-    table = self.studiesTreeView
+    self.clearStudiesTableWidget()
+    table = self.studiesTableWidget
     studies = json.loads(responseString)
     table.setRowCount(len(studies))
     n = 0
@@ -467,8 +389,8 @@ class TCIABrowserWidget:
       n += 1
 
   def populateSeriesTableWidget(self,responseString):
-    self.clearSeriesTreeView()
-    table = self.seriesTreeView
+    self.clearSeriesTableWidget()
+    table = self.seriesTableWidget
     seriesCollection = json.loads(responseString)
     table.setRowCount(len(seriesCollection))
   
@@ -526,8 +448,8 @@ class TCIABrowserWidget:
           table.setItem(n,11,imageCount )
       n += 1
 
-  def clearPatientsTreeView(self):
-    table = self.patientsTreeView
+  def clearPatientsTableWidget(self):
+    table = self.patientsTableWidget
     self.patientsIDs =[]
     self.patientNames = []
     self.patientBirthDates = []
@@ -535,10 +457,10 @@ class TCIABrowserWidget:
     self.ethnicGroups = []
     #self.collections = []
     table.clear()
-    table.setHorizontalHeaderLabels(self.patientsTreeHeaderLabels)
+    table.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
     
-  def clearStudiesTreeView(self):
-    table = self.studiesTreeView
+  def clearStudiesTableWidget(self):
+    table = self.studiesTableWidget
     self.studyInstanceUIDs =[]
     self.studyDates = []
     self.studyDescriptions = []
@@ -547,10 +469,10 @@ class TCIABrowserWidget:
     self.patientAges = []
     self.seriesCounts = []
     table.clear()
-    table.setHorizontalHeaderLabels(self.studiesTreeHeaderLabels)
+    table.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
    
-  def clearSeriesTreeView(self):
-    table = self.seriesTreeView
+  def clearSeriesTableWidget(self):
+    table = self.seriesTableWidget
     self.seriesInstanceUIDs= []
     self.modalities = []
     self.protocolNames = []
@@ -565,7 +487,7 @@ class TCIABrowserWidget:
     self.imageCounts = []
     #self.collections = []
     table.clear()
-    table.setHorizontalHeaderLabels(self.seriesTreeHeaderLabels)
+    table.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     
   def onReload(self,moduleName="TCIABrowser"):
     """Generic reload method for any scripted module.
@@ -575,7 +497,6 @@ class TCIABrowserWidget:
     import urllib2, urllib,sys, os
     import string, json
     import zipfile, os.path
-
 
     widgetName = moduleName + "Widget"
 
@@ -627,8 +548,6 @@ class TCIABrowserWidget:
       traceback.print_exc()
       qt.QMessageBox.warning(slicer.util.mainWindow(), 
           "Reload and Test", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
-
-
 #
 # TCIABrowserLogic
 #
