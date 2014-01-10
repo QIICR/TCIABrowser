@@ -109,24 +109,26 @@ class TCIABrowserWidget:
     collectionsCollapsibleGroupBox.setTitle('Collections')
     browserFormLayout.addWidget(collectionsCollapsibleGroupBox)  # 
     collectionsFormLayout = qt.QFormLayout(collectionsCollapsibleGroupBox)
-
+    #
+    # Collection Selector ComboBox
+    #
     self.collectionSelector = qt.QComboBox()
+    collectionsFormLayout.addRow('Current Collection:', self.collectionSelector)
+    '''
     self.infoPushButton = qt.QPushButton("?")
     collectionsFormLayout.addRow(self.infoPushButton,self.collectionSelector)
     self.infoPushButton.setMaximumWidth(25)
-
+    '''
     #
     # Patient Table Widget 
     #
     patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     patientsCollapsibleGroupBox.setTitle('Patients')
     browserFormLayout.addWidget(patientsCollapsibleGroupBox)
-
     patientsVBoxLayout1 = qt.QVBoxLayout(patientsCollapsibleGroupBox)
     patientsExpdableArea = ctk.ctkExpandableWidget()
     patientsVBoxLayout1.addWidget(patientsExpdableArea)
     patientsVBoxLayout2 = qt.QVBoxLayout(patientsExpdableArea)
-
     patientsVerticalLayout = qt.QVBoxLayout(patientsExpdableArea)
     self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
@@ -264,12 +266,12 @@ class TCIABrowserWidget:
       print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
 
   def seriesSelected(self,row,column):
-    self.selectedSeriesForDownload = self.seriesInstanceUIDs[row].text()
+    self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
 
   def onLoadButton(self):
     print "onLoadButton"
     #currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
-    selectedSeries = self.selectedSeriesForDownload
+    selectedSeries = self.selectedSeriesUIdForDownload
     #selectedseries = self.seriesinstanceuids[currentseriesindex].text()
     # get image request
     dicomAppWidget = ctk.ctkDICOMAppWidget()
@@ -297,7 +299,17 @@ class TCIABrowserWidget:
     self.unzip(fileName,imagesDirectory)
     # Import the data into dicomAppWidget and open the dicom browser
     dicomAppWidget.onImportDirectory(imagesDirectory)
-    slicer.util.selectModule('DICOM')
+    # slicer.util.selectModule('DICOM')
+    # load the data into slicer scene
+    print self.selectedSeriesUIdForDownload
+    seriesUIDs = []
+    seriesUIDs.append(self.selectedSeriesUIdForDownload)
+
+    dicomWidget = slicer.modules.DICOMWidget
+    dicomWidget.detailsPopup.offerLoadables(seriesUIDs, 'SeriesUIDList')
+    dicomWidget.detailsPopup.examineForLoading()
+    loadablesByPlugin = dicomWidget.detailsPopup.loadablesByPlugin
+    dicomWidget.detailsPopup.loadCheckedLoadables() 
 
   def unzip(self,sourceFilename, destinationDir):
     with zipfile.ZipFile(sourceFilename) as zf:
