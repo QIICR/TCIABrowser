@@ -233,9 +233,9 @@ class TCIABrowserWidget:
     self.clearPatientsTableWidget()
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
-    selectedCollection = item
+    self.selectedCollection = item
     try:    
-      response = self.tcia_client.get_patient(collection = selectedCollection)
+      response = self.tcia_client.get_patient(collection = self.selectedCollection)
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populatePatientsTableWidget(responseString)
@@ -245,9 +245,9 @@ class TCIABrowserWidget:
   def patientSelected(self,row,column):
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
-    selectedPatient = self.patientsIDs[row].text()
+    self.selectedPatient = self.patientsIDs[row].text()
     try:    
-      response = self.tcia_client.get_patient_study(patientId = selectedPatient)
+      response = self.tcia_client.get_patient_study(patientId = self.selectedPatient)
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateStudiesTableWidget(responseString)
@@ -256,9 +256,9 @@ class TCIABrowserWidget:
 
   def studySelected(self,row,column):
     self.clearSeriesTableWidget()
-    selectedStudy = self.studyInstanceUIDs[row].text()
+    self.selectedStudy = self.studyInstanceUIDs[row].text()
     try:    
-      response = self.tcia_client.get_series(studyInstanceUID = selectedStudy)
+      response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateSeriesTableWidget(responseString)
@@ -269,14 +269,18 @@ class TCIABrowserWidget:
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
 
   def onLoadButton(self):
-    print "onLoadButton"
     #currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
+    selectedCollection = self.selectedCollection
+    selectedPatient = self.selectedPatient
+    selectedStudy = self.selectedStudy
     selectedSeries = self.selectedSeriesUIdForDownload
     #selectedseries = self.seriesinstanceuids[currentseriesindex].text()
     # get image request
     dicomAppWidget = ctk.ctkDICOMAppWidget()
     databaseDirectory = dicomAppWidget.databaseDirectory
-    tempPath = databaseDirectory + "/incoming/"
+    tempPath = databaseDirectory + "/TCIA-Temp/" + str(selectedCollection) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
+    if not os.path.exists(tempPath):
+      os.makedirs(tempPath)
     fileName = tempPath + str(selectedSeries) + ".zip"
     imagesDirectory = tempPath + str(selectedSeries)
     try:
@@ -298,13 +302,13 @@ class TCIABrowserWidget:
     # Unzip the data
     self.unzip(fileName,imagesDirectory)
     # Import the data into dicomAppWidget and open the dicom browser
+    os.remove(fileName)
     dicomAppWidget.onImportDirectory(imagesDirectory)
     # slicer.util.selectModule('DICOM')
     # load the data into slicer scene
-    print self.selectedSeriesUIdForDownload
+    # print self.selectedSeriesUIdForDownload
     seriesUIDs = []
     seriesUIDs.append(self.selectedSeriesUIdForDownload)
-
 
     dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
     dicomWidget.detailsPopup.offerLoadables(seriesUIDs, 'SeriesUIDList')
