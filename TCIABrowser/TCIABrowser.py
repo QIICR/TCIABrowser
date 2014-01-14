@@ -67,7 +67,7 @@ class TCIABrowserWidget:
     #
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
-    self.layout.addWidget(reloadCollapsibleButton)
+    #self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -305,7 +305,8 @@ class TCIABrowserWidget:
     seriesUIDs = []
     seriesUIDs.append(self.selectedSeriesUIdForDownload)
 
-    dicomWidget = slicer.modules.DICOMWidget
+
+    dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
     dicomWidget.detailsPopup.offerLoadables(seriesUIDs, 'SeriesUIDList')
     dicomWidget.detailsPopup.examineForLoading()
     loadablesByPlugin = dicomWidget.detailsPopup.loadablesByPlugin
