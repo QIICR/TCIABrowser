@@ -54,9 +54,8 @@ class TCIABrowserWidget:
       
 
     # setup API key
-    #self.keyFile = open('C://Projects//tcia_api_key.txt','r')
+    self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
     self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
-    #self.apiKey= self.keyFile.readline()[:-1]
     item = qt.QStandardItem()
 
     # setup the TCIA client
@@ -215,16 +214,8 @@ class TCIABrowserWidget:
     # Layout within the dummy collapsible button
     settingsFormLayout = qt.QFormLayout(settingsCollapsibleButton)
 
-    #
-    # API Key Selector ComboBox
-    #
-    self.apiKeySelector = qt.QComboBox()
-    settingsFormLayout.addRow('API Key:', self.apiKeySelector)
-    self.readApiFiles()
-    
     # connections
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
-    self.apiKeySelector.connect('currentIndexChanged(QString)',self.apiKeySelectorInvoked)
     self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
     self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
@@ -236,41 +227,11 @@ class TCIABrowserWidget:
 
   def cleanup(self):
     pass
-  
-  def readApiFiles(self):
-    self.apiKeys = {}
-    self.userKeyFilePath = self.tciaBrowserModuleDirectoryPath+'Resources/Keys/user_api_keys.xml'
-    self.userKeyFile = open(self.userKeyFilePath)    
-    self.getApiKeys(self.userKeyFile)
-    self.userKeyFile.close()
-    slicerKeyFile = open(self.tciaBrowserModuleDirectoryPath+'Resources/Keys/slicer_api_key.xml')
-    self.getApiKeys(slicerKeyFile)
-    self.apiKey = self.apiKeys['Slicer-API-Key']
-    slicerKeyFile.close()
-    
-  def getApiKeys(self,apiFile):
-    tree = ET.parse(apiFile)
-    root = tree.getroot()
-    for child in root:
-      attribute = child.attrib
-      self.apiKeys [attribute['name']] = child.text
-    apiKeyNames = self.apiKeys.keys()
-    self.apiKeySelector.clear()
-    for keyName in apiKeyNames:
-      self.apiKeySelector.addItem(keyName)
-    self.apiKeySelector.addItem('Add/Remove API Keys')
-
-  def apiKeySelectorInvoked(self,item):
-    if item == 'Add/Remove API Keys':
-      webbrowser.open(self.userKeyFilePath)
-    else:
-      self.apiKey = self.apiKeys[item]
-      self.onConnectButton()
-
+ 
   def onConnectButton(self):
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    self.tcia_client = TCIAClient(self.apiKey, baseUrl = 
+    self.tcia_client = TCIAClient(self.slicerApiKey, baseUrl = 
         "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
     try:    
       response = self.tcia_client.get_collection_values()
