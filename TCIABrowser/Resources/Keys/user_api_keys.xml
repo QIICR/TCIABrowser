@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<KeyConfiguration>
+   <!-- If you have your own TCIA API key and want to use it add your key by uncommentting the following example keys and modify the name and key values appropriately -->
+   <!-- For changes to take affect you need to restart 3D Slicer -->
+   
+   <!-- <key name="User-Key-1">0000000000000</key> -->
+   <!-- <key name="User-Key-2">0000000000000</key> -->
+   
+</KeyConfiguration>

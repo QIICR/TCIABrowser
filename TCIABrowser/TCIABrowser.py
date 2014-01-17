@@ -1,5 +1,7 @@
 import urllib2, urllib,sys, os
 import string, json, zipfile, os.path
+import xml.etree.ElementTree as ET
+import webbrowser
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 
@@ -9,7 +11,7 @@ from __main__ import vtk, qt, ctk, slicer
 
 class TCIABrowser:
   def __init__(self, parent):
-    parent.title = "TCIABrowser" # TODO make this more human readable by adding spaces
+    parent.title = "TCIA Browser" # TODO make this more human readable by adding spaces
     parent.categories = ["Informatics"]
     parent.dependencies = []
     parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]  
@@ -33,7 +35,6 @@ class TCIABrowser:
   def runTest(self):
     tester = TCIABrowserTest()
     tester.runTest()
-
 #
 # qTCIABrowserWidget
 #
@@ -53,8 +54,9 @@ class TCIABrowserWidget:
       
 
     # setup API key
-    keyFile = open('C://Projects//tcia_api_key.txt','r')
-    self.apiKey= keyFile.readline()[:-1]
+    #self.keyFile = open('C://Projects//tcia_api_key.txt','r')
+    self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
+    #self.apiKey= self.keyFile.readline()[:-1]
     item = qt.QStandardItem()
 
     # setup the TCIA client
@@ -67,7 +69,8 @@ class TCIABrowserWidget:
     #
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
-    #self.layout.addWidget(reloadCollapsibleButton)
+    # uncomment the next line for developing and testing
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -202,8 +205,26 @@ class TCIABrowserWidget:
     self.loadButton.enabled = True
     browserFormLayout.addWidget(self.loadButton)
 
+    #
+    # Settings Area
+    #
+    settingsCollapsibleButton = ctk.ctkCollapsibleButton()
+    settingsCollapsibleButton.text = "Settings"
+    self.layout.addWidget(settingsCollapsibleButton)
+
+    # Layout within the dummy collapsible button
+    settingsFormLayout = qt.QFormLayout(settingsCollapsibleButton)
+
+    #
+    # API Key Selector ComboBox
+    #
+    self.apiKeySelector = qt.QComboBox()
+    settingsFormLayout.addRow('API Key:', self.apiKeySelector)
+    self.readApiFiles()
+    
     # connections
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
+    self.apiKeySelector.connect('currentIndexChanged(QString)',self.apiKeySelectorInvoked)
     self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
     self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
@@ -215,6 +236,36 @@ class TCIABrowserWidget:
 
   def cleanup(self):
     pass
+  
+  def readApiFiles(self):
+    self.apiKeys = {}
+    self.userKeyFilePath = self.tciaBrowserModuleDirectoryPath+'Resources/Keys/user_api_keys.xml'
+    self.userKeyFile = open(self.userKeyFilePath)    
+    self.getApiKeys(self.userKeyFile)
+    self.userKeyFile.close()
+    slicerKeyFile = open(self.tciaBrowserModuleDirectoryPath+'Resources/Keys/slicer_api_key.xml')
+    self.getApiKeys(slicerKeyFile)
+    self.apiKey = self.apiKeys['Slicer-API-Key']
+    slicerKeyFile.close()
+    
+  def getApiKeys(self,apiFile):
+    tree = ET.parse(apiFile)
+    root = tree.getroot()
+    for child in root:
+      attribute = child.attrib
+      self.apiKeys [attribute['name']] = child.text
+    apiKeyNames = self.apiKeys.keys()
+    self.apiKeySelector.clear()
+    for keyName in apiKeyNames:
+      self.apiKeySelector.addItem(keyName)
+    self.apiKeySelector.addItem('Add/Remove API Keys')
+
+  def apiKeySelectorInvoked(self,item):
+    if item == 'Add/Remove API Keys':
+      webbrowser.open(self.userKeyFilePath)
+    else:
+      self.apiKey = self.apiKeys[item]
+      self.onConnectButton()
 
   def onConnectButton(self):
     logic = TCIABrowserLogic()
@@ -512,6 +563,8 @@ class TCIABrowserWidget:
     """
     import imp, sys, os, slicer
     import urllib2, urllib,sys, os
+    import xml.etree.ElementTree as ET
+    import webbrowser
     import string, json
     import zipfile, os.path
 
