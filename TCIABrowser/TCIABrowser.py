@@ -208,11 +208,42 @@ class TCIABrowserWidget:
     # Settings Area
     #
     settingsCollapsibleButton = ctk.ctkCollapsibleButton()
-    settingsCollapsibleButton.text = "Settings"
+    settingsCollapsibleButton.text = "Advanced Settings"
     self.layout.addWidget(settingsCollapsibleButton)
+    settingsVBoxLayout = qt.QVBoxLayout(settingsCollapsibleButton)
 
+    apiSettingsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    apiSettingsCollapsibleGroupBox.setTitle('API Settings')
+    settingsVBoxLayout.addWidget(apiSettingsCollapsibleGroupBox)
+    apiSettingsFormLayout = qt.QFormLayout(apiSettingsCollapsibleGroupBox)
+
+    #
+    # API Settings Table
+    #
+    self.apiSettingsTableWidget = qt.QTableWidget()
+    self.apiSettingsTableWidget.setColumnCount(2)
+    self.apiSettingsTableHeaderLabels = ['API Name', 'API Key']
+    self.apiSettingsTableWidget.setHorizontalHeaderLabels(self.apiSettingsTableHeaderLabels)
+    apiSettingsFormLayout.addWidget(self.apiSettingsTableWidget)
+    self.apiSettingsTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    apiSettingsTableWidgetHeader = self.apiSettingsTableWidget.horizontalHeader()
+    apiSettingsTableWidgetHeader.setStretchLastSection(True)
+    apiSettingsVerticalheader = self.seriesTableWidget.verticalHeader()
+    apiSettingsVerticalheader.setDefaultSectionSize(20)
+
+    #
+    # API Settings Buttons
+    #
+    self.addApiButton = qt.QPushButton("Add API")
+    self.addApiButton.toolTip = "Add your own API Key."
+    self.addApiButton.enabled = True
+    self.removeApiButton = qt.QPushButton("Remove API")
+    self.removeApiButton .toolTip = "Add your own API Key."
+    self.removeApiButton .enabled = False 
+    apiSettingsFormLayout.addWidget(self.addApiButton)
+    apiSettingsFormLayout.addWidget(self.removeApiButton)
+    
     # Layout within the dummy collapsible button
-    settingsFormLayout = qt.QFormLayout(settingsCollapsibleButton)
 
     # connections
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
