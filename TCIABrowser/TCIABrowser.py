@@ -53,6 +53,7 @@ class TCIABrowserWidget:
       self.parent.show()
 
     self.progress = qt.QProgressDialog(slicer.util.mainWindow())
+    self.progress.setWindowTitle("TCIA Browser")
     # setup API key
     self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
     self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
@@ -286,8 +287,12 @@ class TCIABrowserWidget:
       responseString = response.read()[:]
       self.populateCollectionsTreeView(responseString)
       self.closeProgress()
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def collectionSelected(self,item):
     self.clearPatientsTableWidget()
@@ -302,8 +307,12 @@ class TCIABrowserWidget:
       responseString = response.read()[:]
       self.populatePatientsTableWidget(responseString)
       self.closeProgress()
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def patientSelected(self,row,column):
     self.clearStudiesTableWidget()
@@ -317,8 +326,12 @@ class TCIABrowserWidget:
       responseString = response.read()[:]
       self.populateStudiesTableWidget(responseString)
       self.closeProgress()
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def studySelected(self,row,column):
     self.clearSeriesTableWidget()
@@ -331,8 +344,12 @@ class TCIABrowserWidget:
       responseString = response.read()[:]
       self.populateSeriesTableWidget(responseString)
       self.closeProgress()
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def seriesSelected(self,row,column):
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
@@ -368,8 +385,12 @@ class TCIABrowserWidget:
       else:
         print "Error : " + str(response.getcode) # print error code
         print "\n" + str(response.info())
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
     progressMessage = "Extracting Images"
     # Unzip the data
@@ -825,7 +846,8 @@ class TCIAClient:
     def __init__(self, apiKey , baseUrl):
         self.apiKey = apiKey
         self.baseUrl = baseUrl
-        
+        self.networkManager = qt.QNetworkAccessManager()
+
     def execute(self, url, queryParameters={}):
         queryParameters = dict((k, v) for k, v in queryParameters.iteritems() if v)
         headers = {"api_key" : self.apiKey }
