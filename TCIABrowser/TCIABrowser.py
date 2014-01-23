@@ -1,5 +1,7 @@
 import urllib2, urllib,sys, os
 import string, json, zipfile, os.path
+import xml.etree.ElementTree as ET
+import webbrowser
 import unittest
 from __main__ import vtk, qt, ctk, slicer
 
@@ -9,7 +11,7 @@ from __main__ import vtk, qt, ctk, slicer
 
 class TCIABrowser:
   def __init__(self, parent):
-    parent.title = "TCIABrowser" # TODO make this more human readable by adding spaces
+    parent.title = "TCIA Browser" # TODO make this more human readable by adding spaces
     parent.categories = ["Informatics"]
     parent.dependencies = []
     parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]  
@@ -33,7 +35,6 @@ class TCIABrowser:
   def runTest(self):
     tester = TCIABrowserTest()
     tester.runTest()
-
 #
 # qTCIABrowserWidget
 #
@@ -50,11 +51,12 @@ class TCIABrowserWidget:
     if not parent:
       self.setup()
       self.parent.show()
-      
 
+    self.progress = qt.QProgressDialog(slicer.util.mainWindow())
+    self.progress.setWindowTitle("TCIA Browser")
     # setup API key
-    keyFile = open('C://Projects//tcia_api_key.txt','r')
-    self.apiKey= keyFile.readline()[:-1]
+    self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
+    self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     item = qt.QStandardItem()
 
     # setup the TCIA client
@@ -67,7 +69,8 @@ class TCIABrowserWidget:
     #
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
-    #self.layout.addWidget(reloadCollapsibleButton)
+    # uncomment the next line for developing and testing
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -202,6 +205,47 @@ class TCIABrowserWidget:
     self.loadButton.enabled = True
     browserFormLayout.addWidget(self.loadButton)
 
+    #
+    # Settings Area
+    #
+    settingsCollapsibleButton = ctk.ctkCollapsibleButton()
+    settingsCollapsibleButton.text = "Advanced Settings"
+    # self.layout.addWidget(settingsCollapsibleButton)
+    settingsVBoxLayout = qt.QVBoxLayout(settingsCollapsibleButton)
+
+    apiSettingsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    apiSettingsCollapsibleGroupBox.setTitle('API Settings')
+    settingsVBoxLayout.addWidget(apiSettingsCollapsibleGroupBox)
+    apiSettingsFormLayout = qt.QFormLayout(apiSettingsCollapsibleGroupBox)
+
+    #
+    # API Settings Table
+    #
+    self.apiSettingsTableWidget = qt.QTableWidget()
+    self.apiSettingsTableWidget.setColumnCount(2)
+    self.apiSettingsTableHeaderLabels = ['API Name', 'API Key']
+    self.apiSettingsTableWidget.setHorizontalHeaderLabels(self.apiSettingsTableHeaderLabels)
+    apiSettingsFormLayout.addWidget(self.apiSettingsTableWidget)
+    self.apiSettingsTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    apiSettingsTableWidgetHeader = self.apiSettingsTableWidget.horizontalHeader()
+    apiSettingsTableWidgetHeader.setStretchLastSection(True)
+    apiSettingsVerticalheader = self.seriesTableWidget.verticalHeader()
+    apiSettingsVerticalheader.setDefaultSectionSize(20)
+
+    #
+    # API Settings Buttons
+    #
+    self.addApiButton = qt.QPushButton("Add API")
+    self.addApiButton.toolTip = "Add your own API Key."
+    self.addApiButton.enabled = True
+    self.removeApiButton = qt.QPushButton("Remove API")
+    self.removeApiButton .toolTip = "Add your own API Key."
+    self.removeApiButton .enabled = False 
+    apiSettingsFormLayout.addWidget(self.addApiButton)
+    apiSettingsFormLayout.addWidget(self.removeApiButton)
+    
+    # Layout within the dummy collapsible button
+
     # connections
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
@@ -216,54 +260,96 @@ class TCIABrowserWidget:
   def cleanup(self):
     pass
 
+  def showProgress(self, message):
+    self.progress.minimumDuration = 0
+    self.progress.setValue(0)
+    self.progress.setMaximum(0)
+    self.progress.setCancelButton(0)
+    self.progress.setWindowModality(2)
+    self.progress.show()
+    self.progress.setLabelText(message)
+    slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+    self.progress.repaint()
+
+  def closeProgress(self):
+    self.progress.close()
+    self.progress.reset()
+
   def onConnectButton(self):
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    self.tcia_client = TCIAClient(self.apiKey, baseUrl = 
+    self.tcia_client = TCIAClient(self.slicerApiKey, baseUrl = 
         "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
+    self.showProgress("Getting Available Collections")
     try:    
       response = self.tcia_client.get_collection_values()
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateCollectionsTreeView(responseString)
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+      self.closeProgress()
+
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def collectionSelected(self,item):
     self.clearPatientsTableWidget()
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedCollection = item
+    progressMessage = "Getting available patients for collection: " + self.selectedCollection
+    self.showProgress(progressMessage)
     try:    
       response = self.tcia_client.get_patient(collection = self.selectedCollection)
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populatePatientsTableWidget(responseString)
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+      self.closeProgress()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def patientSelected(self,row,column):
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedPatient = self.patientsIDs[row].text()
+    progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
+    self.showProgress(progressMessage)
     try:    
       response = self.tcia_client.get_patient_study(patientId = self.selectedPatient)
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateStudiesTableWidget(responseString)
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+      self.closeProgress()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def studySelected(self,row,column):
     self.clearSeriesTableWidget()
     self.selectedStudy = self.studyInstanceUIDs[row].text()
+    progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
+    self.showProgress(progressMessage)
     try:    
       response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
       # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateSeriesTableWidget(responseString)
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+      self.closeProgress()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def seriesSelected(self,row,column):
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
@@ -283,6 +369,8 @@ class TCIABrowserWidget:
       os.makedirs(tempPath)
     fileName = tempPath + str(selectedSeries) + ".zip"
     imagesDirectory = tempPath + str(selectedSeries)
+    progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
+    self.showProgress(progressMessage)
     try:
       response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
       # Save server response as images.zip in current directory
@@ -293,14 +381,22 @@ class TCIABrowserWidget:
         fout.write(bytesRead)
         fout.close()
         print "\nDownloaded file %s.zip from the server" %fileName
+        self.closeProgress()
       else:
         print "Error : " + str(response.getcode) # print error code
         print "\n" + str(response.info())
-    except urllib2.HTTPError, err:
-      print "Error executing program:\nError Code: ", str(err.code) , "\nMessage: " , err.read()
+    
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
+    progressMessage = "Extracting Images"
     # Unzip the data
+    self.showProgress(progressMessage)
     self.unzip(fileName,imagesDirectory)
+    self.closeProgress()
     # Import the data into dicomAppWidget and open the dicom browser
     os.remove(fileName)
     dicomAppWidget.onImportDirectory(imagesDirectory)
@@ -332,6 +428,9 @@ class TCIABrowserWidget:
     collections = json.loads(responseString)
     # populate collection selector
     n = 0
+    self.collectionSelector.disconnect('currentIndexChanged(QString)')
+    self.collectionSelector.clear()
+    self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     for collection in collections:
       self.collectionSelector.addItem(str(collections[n]['Collection']))
       n += 1
@@ -512,6 +611,8 @@ class TCIABrowserWidget:
     """
     import imp, sys, os, slicer
     import urllib2, urllib,sys, os
+    import xml.etree.ElementTree as ET
+    import webbrowser
     import string, json
     import zipfile, os.path
 
@@ -745,20 +846,9 @@ class TCIAClient:
     def __init__(self, apiKey , baseUrl):
         self.apiKey = apiKey
         self.baseUrl = baseUrl
-        
+        self.networkManager = qt.QNetworkAccessManager()
+
     def execute(self, url, queryParameters={}):
-        # pop up progress dialog to prevent user from messing around
-        self.progress = qt.QProgressDialog(slicer.util.mainWindow())
-        self.progress.minimumDuration = 0
-        self.progress.show()
-        self.progress.setValue(0)
-        self.progress.setMaximum(0)
-        self.progress.setCancelButton(0)
-        self.progress.setWindowModality(2)
-        self.progress.setLabelText('Communicating with TCIA Server')
-        slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
-        self.progress.repaint()
-        
         queryParameters = dict((k, v) for k, v in queryParameters.iteritems() if v)
         headers = {"api_key" : self.apiKey }
         queryString = "?%s" % urllib.urlencode(queryParameters)
@@ -766,7 +856,6 @@ class TCIAClient:
         request = urllib2.Request(url=requestUrl , headers=headers)
         resp = urllib2.urlopen(request)
         
-        self.progress.close()
         return resp
     
     def get_modality_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
