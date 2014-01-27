@@ -52,7 +52,10 @@ class TCIABrowserWidget:
       self.setup()
       self.parent.show()
 
-    self.progress = qt.QProgressDialog(slicer.util.mainWindow())
+    self.browserWidget = qt.QWidget()
+    self.browserWidget.setWindowTitle('TCIA Browser')
+
+    self.progress = qt.QProgressDialog(self.browserWidget)
     self.progress.setWindowTitle("TCIA Browser")
     # setup API key
     self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
@@ -105,9 +108,7 @@ class TCIABrowserWidget:
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
     browserLayout.addWidget(self.connectButton)
-    self.browserWidget = qt.QWidget()
-    self.browserWidget.setWindowTitle('TCIA Browser')
-
+    
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
@@ -122,7 +123,7 @@ class TCIABrowserWidget:
     #
     # Show Browser Button
     #
-    self.showBrowserButton = qt.QPushButton("Show TCIA Browser")
+    self.showBrowserButton = qt.QPushButton("Show Browser")
     # self.showBrowserButton.toolTip = "."
     self.showBrowserButton.enabled = False 
     browserLayout.addWidget(self.showBrowserButton)
