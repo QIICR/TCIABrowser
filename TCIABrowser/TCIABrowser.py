@@ -70,7 +70,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -96,21 +96,44 @@ class TCIABrowserWidget:
     browserCollapsibleButton = ctk.ctkCollapsibleButton()
     browserCollapsibleButton.text = "TCIA Browser"
     self.layout.addWidget(browserCollapsibleButton)
-
-    # Layout within the dummy collapsible button
-    browserFormLayout = qt.QVBoxLayout(browserCollapsibleButton)
+    browserLayout = qt.QVBoxLayout(browserCollapsibleButton)
 
     #
     # Connect Button
     #
-    self.connectButton = qt.QPushButton("Connect")
+    self.connectButton = qt.QPushButton("Connect to TCIA Server")
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
-    browserFormLayout.addWidget(self.connectButton)
+    browserLayout.addWidget(self.connectButton)
+    self.browserWidget = qt.QWidget()
+    self.browserWidget.setWindowTitle('TCIA Browser')
+
+    self.popupGeometry = qt.QRect()
+    settings = qt.QSettings()
+    mainWindow = slicer.util.mainWindow()
+    width = mainWindow.width* 3/4 
+    height = mainWindow.height* 3/4 
+    self.popupGeometry.setWidth(width)
+    self.popupGeometry.setHeight(height)
+    self.popupPositioned = False
+
+    self.browserWidget.setGeometry(self.popupGeometry)
+
     #
+    # Show Browser Button
+    #
+    self.showBrowserButton = qt.QPushButton("Show TCIA Browser")
+    # self.showBrowserButton.toolTip = "."
+    self.showBrowserButton.enabled = False 
+    browserLayout.addWidget(self.showBrowserButton)
+
+    # Browser Widget Layout within the collapsible button
+    browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
+    # browserWidgetLayout = self.browserWidget.layout
+#
     collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     collectionsCollapsibleGroupBox.setTitle('Collections')
-    browserFormLayout.addWidget(collectionsCollapsibleGroupBox)  # 
+    browserWidgetLayout.addWidget(collectionsCollapsibleGroupBox)  # 
     collectionsFormLayout = qt.QFormLayout(collectionsCollapsibleGroupBox)
     #
     # Collection Selector ComboBox
@@ -127,7 +150,7 @@ class TCIABrowserWidget:
     #
     patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     patientsCollapsibleGroupBox.setTitle('Patients')
-    browserFormLayout.addWidget(patientsCollapsibleGroupBox)
+    browserWidgetLayout.addWidget(patientsCollapsibleGroupBox)
     patientsVBoxLayout1 = qt.QVBoxLayout(patientsCollapsibleGroupBox)
     patientsExpdableArea = ctk.ctkExpandableWidget()
     patientsVBoxLayout1.addWidget(patientsExpdableArea)
@@ -153,7 +176,7 @@ class TCIABrowserWidget:
     #
     studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     studiesCollapsibleGroupBox.setTitle('Studies')
-    browserFormLayout.addWidget(studiesCollapsibleGroupBox) 
+    browserWidgetLayout.addWidget(studiesCollapsibleGroupBox) 
     studiesVBoxLayout1 = qt.QVBoxLayout(studiesCollapsibleGroupBox)
     studiesExpdableArea = ctk.ctkExpandableWidget()
     studiesVBoxLayout1.addWidget(studiesExpdableArea)
@@ -177,7 +200,7 @@ class TCIABrowserWidget:
     #
     seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     seriesCollapsibleGroupBox.setTitle('Series')
-    browserFormLayout.addWidget(seriesCollapsibleGroupBox)  # 
+    browserWidgetLayout.addWidget(seriesCollapsibleGroupBox)  # 
     seriesVBoxLayout1 = qt.QVBoxLayout(seriesCollapsibleGroupBox)
     seriesExpdableArea = ctk.ctkExpandableWidget()
     seriesVBoxLayout1.addWidget(seriesExpdableArea)
@@ -203,7 +226,7 @@ class TCIABrowserWidget:
     self.loadButton = qt.QPushButton("Download and Load")
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = True
-    browserFormLayout.addWidget(self.loadButton)
+    browserWidgetLayout.addWidget(self.loadButton)
 
     #
     # Settings Area
@@ -247,6 +270,7 @@ class TCIABrowserWidget:
     # Layout within the dummy collapsible button
 
     # connections
+    self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
     self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
@@ -259,6 +283,26 @@ class TCIABrowserWidget:
 
   def cleanup(self):
     pass
+
+  def onShowBrowserButton(self):
+    self.showBrowser()
+
+  def showBrowser(self):
+
+    if not self.browserWidget.isVisible():
+      self.popupPositioned = False
+      self.browserWidget.show()
+      if self.popupGeometry.isValid():
+        self.browserWidget.setGeometry(self.popupGeometry)
+    self.browserWidget.raise_() 
+
+    if not self.popupPositioned:
+      mainWindow = slicer.util.mainWindow()
+      screenMainPos = mainWindow.pos
+      x = screenMainPos.x() + 100
+      y = screenMainPos.y() + 100
+      self.browserWidget.move(qt.QPoint(x,y))
+      self.popupPositioned = True
 
   def showProgress(self, message):
     self.progress.minimumDuration = 0
@@ -274,6 +318,7 @@ class TCIABrowserWidget:
   def closeProgress(self):
     self.progress.close()
     self.progress.reset()
+    self.showBrowser()
 
   def onConnectButton(self):
     logic = TCIABrowserLogic()
@@ -283,7 +328,6 @@ class TCIABrowserWidget:
     self.showProgress("Getting Available Collections")
     try:    
       response = self.tcia_client.get_collection_values()
-      # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateCollectionsTreeView(responseString)
       self.closeProgress()
@@ -293,6 +337,8 @@ class TCIABrowserWidget:
       message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
+    self.showBrowserButton.enabled = True
+    self.showBrowser()
 
   def collectionSelected(self,item):
     self.clearPatientsTableWidget()
@@ -303,7 +349,6 @@ class TCIABrowserWidget:
     self.showProgress(progressMessage)
     try:    
       response = self.tcia_client.get_patient(collection = self.selectedCollection)
-      # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populatePatientsTableWidget(responseString)
       self.closeProgress()
@@ -322,7 +367,6 @@ class TCIABrowserWidget:
     self.showProgress(progressMessage)
     try:    
       response = self.tcia_client.get_patient_study(patientId = self.selectedPatient)
-      # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateStudiesTableWidget(responseString)
       self.closeProgress()
@@ -340,7 +384,6 @@ class TCIABrowserWidget:
     self.showProgress(progressMessage)
     try:    
       response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
-      # self.tcia_client.printServerResponse(response)
       responseString = response.read()[:]
       self.populateSeriesTableWidget(responseString)
       self.closeProgress()
@@ -902,10 +945,3 @@ class TCIAClient:
         resp = self.execute( serviceUrl , queryParameters)
         return resp
 
-    def printServerResponse(self, response):
-      if response.getcode() == 200:
-        print "Server Returned:\n"
-        print response.read()
-        print "\n"
-      else:
-        print "Error : " + str(response.getcode) # print error code
