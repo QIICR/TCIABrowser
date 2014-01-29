@@ -231,7 +231,7 @@ class TCIABrowserWidget:
     #
     self.loadButton = qt.QPushButton("Download and Load")
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
-    self.loadButton.enabled = True
+    self.loadButton.enabled = False 
     browserWidgetLayout.addWidget(self.loadButton)
 
     #
@@ -268,8 +268,8 @@ class TCIABrowserWidget:
     self.addApiButton.toolTip = "Add your own API Key."
     self.addApiButton.enabled = True
     self.removeApiButton = qt.QPushButton("Remove API")
-    self.removeApiButton .toolTip = "Add your own API Key."
-    self.removeApiButton .enabled = False 
+    self.removeApiButton.toolTip = "Add your own API Key."
+    self.removeApiButton.enabled = False 
     apiSettingsFormLayout.addWidget(self.addApiButton)
     apiSettingsFormLayout.addWidget(self.removeApiButton)
     
@@ -347,6 +347,7 @@ class TCIABrowserWidget:
     self.showBrowser()
 
   def collectionSelected(self,item):
+    self.loadButton.enabled = False
     self.clearPatientsTableWidget()
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
@@ -366,6 +367,7 @@ class TCIABrowserWidget:
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def patientSelected(self,row,column):
+    self.loadButton.enabled = False
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedPatient = self.patientsIDs[row].text()
@@ -384,6 +386,7 @@ class TCIABrowserWidget:
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def studySelected(self,row,column):
+    self.loadButton.enabled = False
     self.clearSeriesTableWidget()
     self.selectedStudy = self.studyInstanceUIDs[row].text()
     progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
@@ -401,6 +404,7 @@ class TCIABrowserWidget:
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def seriesSelected(self,row,column):
+    self.loadButton.enabled = True
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
 
   def onLoadButton(self):
