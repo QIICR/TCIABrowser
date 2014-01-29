@@ -165,6 +165,7 @@ class TCIABrowserWidget:
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
     patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     patientsTableWidgetHeader.setStretchLastSection(True)
+    # patientsTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     patientsVBoxLayout2.addWidget(self.patientsTableWidget)
     self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
     abstractItemView =qt.QAbstractItemView()
@@ -188,6 +189,7 @@ class TCIABrowserWidget:
         'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
     self.studiesTableWidget.setColumnCount(7)
     self.studiesTableWidget.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
+    self.studiesTableWidget.resizeColumnsToContents()
     studiesVBoxLayout2.addWidget(self.studiesTableWidget)
     self.studiesTreeSelectionModel = self.studiesTableWidget.selectionModel()
     self.studiesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
@@ -195,6 +197,7 @@ class TCIABrowserWidget:
     studiesVerticalheader.setDefaultSectionSize(20)
     studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
     studiesTableWidgetHeader.setStretchLastSection(True)
+    # studiesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
 
     #
     # Series Table Widget 
@@ -213,11 +216,13 @@ class TCIABrowserWidget:
         ,'Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer'
         ,'Manufacturer Model Name','Software Versions','Image Count']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
+    self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
     self.seriesTreeSelectionModel = self.studiesTableWidget.selectionModel()
     self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
     seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
     seriesTableWidgetHeader.setStretchLastSection(True)
+    # seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
 
@@ -508,6 +513,7 @@ class TCIABrowserWidget:
           self.ethnicGroups.append(ethnicGroup)
           table.setItem(n,4,ethnicGroup)
       n += 1
+    self.patientsTableWidget.resizeColumnsToContents()
 
   def populateStudiesTableWidget(self,responseString):
     self.clearStudiesTableWidget()
@@ -547,6 +553,7 @@ class TCIABrowserWidget:
           self.seriesCounts.append(seriesCount)
           table.setItem(n,6,seriesCount)
       n += 1
+    self.studiesTableWidget.resizeColumnsToContents()
 
   def populateSeriesTableWidget(self,responseString):
     self.clearSeriesTableWidget()
@@ -607,6 +614,7 @@ class TCIABrowserWidget:
           self.imageCounts.append(imageCount )
           table.setItem(n,11,imageCount )
       n += 1
+    self.seriesTableWidget.resizeColumnsToContents()
 
   def clearPatientsTableWidget(self):
     table = self.patientsTableWidget
