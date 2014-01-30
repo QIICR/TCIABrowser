@@ -73,7 +73,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
