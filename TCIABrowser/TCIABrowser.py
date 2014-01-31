@@ -62,6 +62,10 @@ class TCIABrowserWidget:
     self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     item = qt.QStandardItem()
 
+    dicomAppWidget = ctk.ctkDICOMAppWidget()
+    databaseDirectory = dicomAppWidget.databaseDirectory
+    self.storagePath = databaseDirectory + "/TCIA-Temp/"
+    
     # setup the TCIA client
   
   def setup(self):
@@ -73,7 +77,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -102,12 +106,26 @@ class TCIABrowserWidget:
     browserLayout = qt.QVBoxLayout(browserCollapsibleButton)
 
     #
-    # Connect Button
+    # Connection Area
     #
-    self.connectButton = qt.QPushButton("Connect to TCIA Server")
+    connectWidget = qt.QWidget()
+    connectGridLayout = qt.QGridLayout(connectWidget)
+    browserLayout.addWidget(connectWidget)
+    # Add remove button
+    self.addRemoveApisButton = qt.QPushButton("+")
+    self.addRemoveApisButton.toolTip = "Add or Remove APIs"
+    self.addRemoveApisButton.enabled = True
+    self.addRemoveApisButton.setMaximumWidth(20)
+    connectGridLayout.addWidget(self.addRemoveApisButton,0,0)
+    # API selection combo box
+    self.apiSelectionComboBox = qt.QComboBox()
+    self.apiSelectionComboBox.addItem('Slicer API')
+    connectGridLayout.addWidget(self.apiSelectionComboBox,0,1)
+
+    self.connectButton = qt.QPushButton("Connect")
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
-    browserLayout.addWidget(self.connectButton)
+    connectGridLayout.addWidget(self.connectButton,0,2)
     
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
@@ -131,11 +149,23 @@ class TCIABrowserWidget:
     # Browser Widget Layout within the collapsible button
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
     # browserWidgetLayout = self.browserWidget.layout
-#
+    #
+    #
+    # Storage Path button
+    #
+    storageWidget = qt.QWidget()
+    storageFormLayout = qt.QFormLayout(storageWidget)
+    browserWidgetLayout.addWidget(storageWidget)
+    self.storagePathButton = ctk.ctkDirectoryButton()
+    self.storagePathButton.directory = self.storagePath
+    storageFormLayout.addRow("Storage Directory: ", self.storagePathButton)
+    
     collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     collectionsCollapsibleGroupBox.setTitle('Collections')
     browserWidgetLayout.addWidget(collectionsCollapsibleGroupBox)  # 
     collectionsFormLayout = qt.QFormLayout(collectionsCollapsibleGroupBox)
+    
+
     #
     # Collection Selector ComboBox
     #
@@ -222,28 +252,32 @@ class TCIABrowserWidget:
     self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
     seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
     seriesTableWidgetHeader.setStretchLastSection(True)
-    # seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
+    #seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
 
+
+    downloadButtonsWidget = qt.QWidget()
+    downloadWidgetLayout = qt.QGridLayout(downloadButtonsWidget)
+    browserWidgetLayout.addWidget(downloadButtonsWidget)
     #
     # Index Button
     #
     self.indexButton = qt.QPushButton("Download and Index Only")
-    #self.indexButton.setMaximumWidth(150)
+    self.indexButton.setMaximumWidth(150)
     self.indexButton.toolTip = "Download the selected sereies and index in Slicer DICOM Database."
     self.indexButton.enabled = False 
-    browserWidgetLayout.addWidget(self.indexButton)
+    downloadWidgetLayout.addWidget(self.indexButton,0, 0)
 
 
     #
     # Load Button
     #
     self.loadButton = qt.QPushButton("Download and Load")
-    #self.loadButton.setMaximumWidth(150)
+    self.loadButton.setMaximumWidth(150)
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = False 
-    browserWidgetLayout.addWidget(self.loadButton)
+    downloadWidgetLayout.addWidget(self.loadButton,0, 1)
 
     #
     # Settings Area
@@ -295,6 +329,7 @@ class TCIABrowserWidget:
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
+    self.storagePathButton.connect('directoryChanged(const QString &)',self.onStoragePathButton)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -337,6 +372,9 @@ class TCIABrowserWidget:
     self.progress.close()
     self.progress.reset()
     self.showBrowser()
+
+  def onStoragePathButton(self):
+    self.storagePath = self.storagePathButton.directory
 
   def onConnectButton(self):
     logic = TCIABrowserLogic()
@@ -464,9 +502,7 @@ class TCIABrowserWidget:
     selectedSeries = self.selectedSeriesUIdForDownload
     #selectedseries = self.seriesinstanceuids[currentseriesindex].text()
     # get image request
-    dicomAppWidget = ctk.ctkDICOMAppWidget()
-    databaseDirectory = dicomAppWidget.databaseDirectory
-    tempPath = databaseDirectory + "/TCIA-Temp/" + str(selectedCollection) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
+    tempPath = self.storagePath  + "/" + str(selectedCollection) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
     if not os.path.exists(tempPath):
       os.makedirs(tempPath)
     fileName = tempPath + str(selectedSeries) + ".zip"
