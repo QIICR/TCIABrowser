@@ -227,9 +227,20 @@ class TCIABrowserWidget:
     seriesVerticalheader.setDefaultSectionSize(20)
 
     #
+    # Index Button
+    #
+    self.indexButton = qt.QPushButton("Download and Index Only")
+    #self.indexButton.setMaximumWidth(150)
+    self.indexButton.toolTip = "Download the selected sereies and index in Slicer DICOM Database."
+    self.indexButton.enabled = False 
+    browserWidgetLayout.addWidget(self.indexButton)
+
+
+    #
     # Load Button
     #
     self.loadButton = qt.QPushButton("Download and Load")
+    #self.loadButton.setMaximumWidth(150)
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = False 
     browserWidgetLayout.addWidget(self.loadButton)
@@ -282,6 +293,7 @@ class TCIABrowserWidget:
     self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
+    self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
 
     # Add vertical spacer
@@ -348,6 +360,7 @@ class TCIABrowserWidget:
 
   def collectionSelected(self,item):
     self.loadButton.enabled = False
+    self.indexButton.enabled = False
     self.clearPatientsTableWidget()
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
@@ -368,6 +381,7 @@ class TCIABrowserWidget:
 
   def patientSelected(self,row,column):
     self.loadButton.enabled = False
+    self.indexButton.enabled = False
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedPatient = self.patientsIDs[row].text()
@@ -387,6 +401,7 @@ class TCIABrowserWidget:
 
   def studySelected(self,row,column):
     self.loadButton.enabled = False
+    self.indexButton.enabled = False
     self.clearSeriesTableWidget()
     self.selectedStudy = self.studyInstanceUIDs[row].text()
     progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
@@ -405,10 +420,44 @@ class TCIABrowserWidget:
 
   def seriesSelected(self,row,column):
     self.loadButton.enabled = True
+    self.indexButton.enabled = True
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
 
+  def onIndexButton(self):
+    self.downloadSelected()
+    self.addFilesToDatabase()
+
+
   def onLoadButton(self):
-    #currentSeriesIndex = self.seriesTreeSelectionModel.currentIndex().row() 
+    self.downloadSelected()
+    self.addFilesToDatabase()
+
+    progressMessage = "Examine Files to Load"
+    self.showProgress(progressMessage)
+    plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
+    loadables = plugin.examine([self.fileList])
+    self.closeProgress()
+    volume = plugin.load(loadables[0])
+
+  def addFilesToDatabase(self):
+    progressMessage = "Adding Files to DICOM Database "
+    self.showProgress(progressMessage)
+    dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
+    
+    indexer = ctk.ctkDICOMIndexer() 
+    indexer.addDirectory(slicer.dicomDatabase, self.extractedFilesDirectory)
+    indexer.waitForImportFinished()
+    seriesUID = self.selectedSeriesUIdForDownload
+    seriesUID = seriesUID.replace("'","")
+    self.dicomDatabase = slicer.dicomDatabase
+    self.fileList = slicer.dicomDatabase.filesForSeries(seriesUID)
+    originalDatabaseDirectory = os.path.split(slicer.dicomDatabase.databaseFilename)[0]
+    # change database directory to update dicom browser tables
+    dicomWidget.onDatabaseDirectoryChanged(self.extractedFilesDirectory)
+    dicomWidget.onDatabaseDirectoryChanged(originalDatabaseDirectory)
+    self.closeProgress()
+
+  def downloadSelected(self):
     selectedCollection = self.selectedCollection
     selectedPatient = self.selectedPatient
     selectedStudy = self.selectedStudy
@@ -421,19 +470,19 @@ class TCIABrowserWidget:
     if not os.path.exists(tempPath):
       os.makedirs(tempPath)
     fileName = tempPath + str(selectedSeries) + ".zip"
-    imagesDirectory = tempPath + str(selectedSeries)
+    self.extractedFilesDirectory = tempPath + str(selectedSeries)
     progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
     self.showProgress(progressMessage)
     try:
       response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
       # Save server response as images.zip in current directory
       if response.getcode() == 200:
-        print "\n" + str(response.info())
+        #print "\n" + str(response.info())
         bytesRead = response.read()
         fout = open(fileName, "wb")
         fout.write(bytesRead)
         fout.close()
-        print "\nDownloaded file %s.zip from the server" %fileName
+        # print "\nDownloaded file %s.zip from the TCIA server" %fileName
         self.closeProgress()
       else:
         print "Error : " + str(response.getcode) # print error code
@@ -448,23 +497,11 @@ class TCIABrowserWidget:
     progressMessage = "Extracting Images"
     # Unzip the data
     self.showProgress(progressMessage)
-    self.unzip(fileName,imagesDirectory)
+    self.unzip(fileName,self.extractedFilesDirectory)
     self.closeProgress()
     # Import the data into dicomAppWidget and open the dicom browser
     os.remove(fileName)
-    dicomAppWidget.onImportDirectory(imagesDirectory)
-    # slicer.util.selectModule('DICOM')
-    # load the data into slicer scene
-    # print self.selectedSeriesUIdForDownload
-    seriesUIDs = []
-    seriesUIDs.append(self.selectedSeriesUIdForDownload)
-
-    dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
-    dicomWidget.detailsPopup.offerLoadables(seriesUIDs, 'SeriesUIDList')
-    dicomWidget.detailsPopup.examineForLoading()
-    loadablesByPlugin = dicomWidget.detailsPopup.loadablesByPlugin
-    dicomWidget.detailsPopup.loadCheckedLoadables() 
-
+    
   def unzip(self,sourceFilename, destinationDir):
     with zipfile.ZipFile(sourceFilename) as zf:
       for member in zf.infolist():
