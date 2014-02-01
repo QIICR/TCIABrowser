@@ -59,6 +59,7 @@ class TCIABrowserWidget:
     self.progress.setWindowTitle("TCIA Browser")
     # setup API key
     self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
+    self.currentAPIKey = self.slicerApiKey
     self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     item = qt.QStandardItem()
 
@@ -68,6 +69,14 @@ class TCIABrowserWidget:
     
     # setup the TCIA client
   
+  def enter(self):
+    if self.showBrowserButton != None and self.showBrowserButton.enabled == True:
+      self.showBrowser()
+
+  def exit(self):
+    print 'exit'
+    #self.browserWidget.hide()
+
   def setup(self):
     # Instantiate and connect widgets ...
 
@@ -77,7 +86,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -109,23 +118,29 @@ class TCIABrowserWidget:
     # Connection Area
     #
     connectWidget = qt.QWidget()
-    connectGridLayout = qt.QGridLayout(connectWidget)
+    connectGridLayout = qt.QHBoxLayout(connectWidget)
     browserLayout.addWidget(connectWidget)
     # Add remove button
     self.addRemoveApisButton = qt.QPushButton("+")
     self.addRemoveApisButton.toolTip = "Add or Remove APIs"
     self.addRemoveApisButton.enabled = True
     self.addRemoveApisButton.setMaximumWidth(20)
-    connectGridLayout.addWidget(self.addRemoveApisButton,0,0)
+    connectGridLayout.addWidget(self.addRemoveApisButton)
     # API selection combo box
     self.apiSelectionComboBox = qt.QComboBox()
     self.apiSelectionComboBox.addItem('Slicer API')
-    connectGridLayout.addWidget(self.apiSelectionComboBox,0,1)
+    connectGridLayout.addWidget(self.apiSelectionComboBox)
+    settings = qt.QSettings()
+    settings.beginGroup("TCIABrowser/API-Keys")
+    self.userApiNames = settings.childKeys()
+    for api in self.userApiNames:
+      self.apiSelectionComboBox.addItem(api)
+    settings.endGroup()
 
     self.connectButton = qt.QPushButton("Connect")
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
-    connectGridLayout.addWidget(self.connectButton,0,2)
+    connectGridLayout.addWidget(self.connectButton)
     
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
@@ -258,33 +273,34 @@ class TCIABrowserWidget:
 
 
     downloadButtonsWidget = qt.QWidget()
-    downloadWidgetLayout = qt.QGridLayout(downloadButtonsWidget)
+    downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
+    downloadWidgetLayout.addStretch(1)
     browserWidgetLayout.addWidget(downloadButtonsWidget)
     #
     # Index Button
     #
-    self.indexButton = qt.QPushButton("Download and Index Only")
-    self.indexButton.setMaximumWidth(150)
+    self.indexButton = qt.QPushButton("Download and Index")
+    # self.indexButton.setMaximumWidth(150)
     self.indexButton.toolTip = "Download the selected sereies and index in Slicer DICOM Database."
     self.indexButton.enabled = False 
-    downloadWidgetLayout.addWidget(self.indexButton,0, 0)
+    downloadWidgetLayout.addWidget(self.indexButton)
 
 
     #
     # Load Button
     #
     self.loadButton = qt.QPushButton("Download and Load")
-    self.loadButton.setMaximumWidth(150)
+    # self.loadButton.setMaximumWidth(150)
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = False 
-    downloadWidgetLayout.addWidget(self.loadButton,0, 1)
+    downloadWidgetLayout.addWidget(self.loadButton)
 
     #
     # Settings Area
     #
     settingsCollapsibleButton = ctk.ctkCollapsibleButton()
     settingsCollapsibleButton.text = "Advanced Settings"
-    # self.layout.addWidget(settingsCollapsibleButton)
+    #self.layout.addWidget(settingsCollapsibleButton)
     settingsVBoxLayout = qt.QVBoxLayout(settingsCollapsibleButton)
 
     apiSettingsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
@@ -317,11 +333,13 @@ class TCIABrowserWidget:
     self.removeApiButton.enabled = False 
     apiSettingsFormLayout.addWidget(self.addApiButton)
     apiSettingsFormLayout.addWidget(self.removeApiButton)
-    
-    # Layout within the dummy collapsible button
+
+    self.apiSettingsPopup = settingsAPI()
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
+    self.addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
+    self.apiSelectionComboBox.connect('currentIndexChanged(QString)',self.apiKeySelected)
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
     self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
@@ -336,6 +354,16 @@ class TCIABrowserWidget:
 
   def cleanup(self):
     pass
+
+  def apiKeySelected(self):
+    settings = qt.QSettings()
+    settings.beginGroup("TCIABrowser/API-Keys")
+    
+    if self.apiSelectionComboBox.currentText == 'Slicer API':
+      self.currentAPIKey = self.slicerApiKey 
+    else:
+      self.currentAPIKey = settings.value(self.apiSelectionComboBox.currentText)
+
 
   def onShowBrowserButton(self):
     self.showBrowser()
@@ -379,7 +407,7 @@ class TCIABrowserWidget:
   def onConnectButton(self):
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    self.tcia_client = TCIAClient(self.slicerApiKey, baseUrl = 
+    self.tcia_client = TCIAClient(self.currentAPIKey, baseUrl = 
         "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
     self.showProgress("Getting Available Collections")
     try:    
@@ -1031,3 +1059,272 @@ class TCIAClient:
         resp = self.execute( serviceUrl , queryParameters)
         return resp
 
+class settingsAPI:
+  def __init__(self):
+    self.window = qt.QWidget()
+    self.window.setWindowTitle('API Settings')
+    self.settingsAPILayout = qt.QVBoxLayout(self.window)
+    self.setup()
+    self.numberOfRows = 0
+    self.apiNameTableItems = []
+    self.apiKeyTableItems = []
+    self.makeSharedApiModalObjects()
+    self.addAPIDialogBox = None
+    self.deleteDialogBox = None
+    self.populateAPITable()
+
+  def setup(self):
+    self.manageAPIsWidget = qt.QWidget()
+    self.settingsAPILayout.addWidget(self.manageAPIsWidget)
+    self.manageAPIsLayout = qt.QVBoxLayout(self.manageAPIsWidget)
+    label = qt.QLabel('Manage APIs')
+    self.manageAPIsLayout.addWidget(label)
+
+    self.apiTable = APITable()
+    self.apiTable.connect('cellClicked(int,int)',self.apiSelected)
+    self.manageAPIsLayout.addWidget(self.apiTable)
+
+    self.manageButtonsWidget = qt.QWidget()
+    self.manageButtonsLayout = qt.QHBoxLayout(self.manageButtonsWidget)
+    self.manageAPIsLayout.addWidget(self.manageButtonsWidget)
+    self.manageButtonsLayout.addStretch(1)
+
+    self.addAPIButton = qt.QPushButton('Add')
+    self.manageButtonsLayout.addWidget(self.addAPIButton)
+
+    self.editAPIButton = qt.QPushButton('Edit')
+    self.editAPIButton.enabled = False
+    self.manageButtonsLayout.addWidget(self.editAPIButton)
+
+    self.deleteAPIButton = qt.QPushButton('Delete')
+    self.deleteAPIButton.enabled = False
+    self.manageButtonsLayout.addWidget(self.deleteAPIButton)
+    
+    self.restartLabel = qt.QLabel('')
+    self.restartLabel.setVisible(False)
+    self.restartLabel.setText("<font color='red'>* Restart Required</font>")
+    self.settingsAPILayout.addWidget(self.restartLabel)
+
+    self.settingsAPIButtonsWidget = qt.QWidget()
+    self.settingsAPIButtonsLayout = qt.QHBoxLayout(self.settingsAPIButtonsWidget)
+    self.settingsAPIButtonsLayout.addStretch(1)
+    self.settingsAPILayout.addWidget(self.settingsAPIButtonsWidget)
+
+    self.doneButton = qt.QPushButton('Done')
+    self.settingsAPIButtonsLayout.addWidget(self.doneButton)
+
+    self.cancelButton = qt.QPushButton('Cancel')
+    self.settingsAPIButtonsLayout.addWidget(self.cancelButton)
+
+    # Connections
+    self.addAPIButton.connect('clicked(bool)', self.onAddApiButton)
+    self.editAPIButton.connect('clicked(bool)', self.onEditApiButton)
+    self.deleteAPIButton.connect('clicked(bool)', self.onDeleteApiButton)
+    self.doneButton.connect('clicked(bool)', self.onDoneButton)
+    self.cancelButton.connect('clicked(bool)', self.onCancelButton)
+
+  def open(self):
+    if not self.window.isVisible():
+      self.window.show()
+    self.window.raise_()
+
+  def onAddApiButton(self):
+    self.dialogRole = 'Add'
+    self.apiNameLineEdit.clear()
+    self.apiKeyLineEdit.clear()
+    self.showAddAPIModal()
+
+  def onEditApiButton(self):
+    self.dialogRole = 'Edit'
+    self.showAddAPIModal()
+    self.apiNameLineEdit.text = self.apiNameTableItems[self.currentAPIRow].text()
+    self.apiKeyLineEdit.text = self.apiKeyTableItems[self.currentAPIRow].text()
+
+  def onDeleteApiButton(self):
+    if self.deleteDialogBox== None:
+      self.deleteDialogBox= self.makeDeleteApiDialoge()
+    self.deleteDialogBox.show()
+
+  def onDoneButton(self):
+    
+    settings = qt.QSettings()
+    table = self.apiTable
+    settings.beginGroup("TCIABrowser/API-Keys")
+    userApiNames = settings.childKeys()
+
+    # remove all
+    for userApi in userApiNames:
+      settings.remove(userApi)
+    settings.sync()
+
+    # add modified 
+    for api in range(0,self.numberOfRows):
+      apiName = table.item(api,0).text()
+      apiKey = table.item(api,1).text()
+      settings.setValue(apiName,apiKey)
+    settings.endGroup()
+    self.window.hide()
+
+  def onCancelButton(self):
+    self.window.hide()
+
+  def showAddAPIModal(self):
+    if self.addAPIDialogBox== None:
+      self.addAPIDialogBox= self.makeAddAPIDialog()
+    self.addAPIDialogBox.show()
+
+  def makeAddAPIDialog (self):
+
+    self.apiNameLineEdit.clear()
+    self.apiKeyLineEdit.clear()
+
+    saveButton = qt.QPushButton("OK")
+    cancelButton = qt.QPushButton("Cancel")
+
+    currLayout = qt.QFormLayout()
+    currLayout.addRow("API Name:", self.apiNameLineEdit)
+    currLayout.addRow("API Key:", self.apiKeyLineEdit)
+
+    buttonLayout = qt.QHBoxLayout()
+    buttonLayout.addStretch(1)
+    buttonLayout.addWidget(cancelButton)
+    buttonLayout.addWidget(saveButton)
+
+    masterForm = qt.QFormLayout()    
+    masterForm.addRow(currLayout)
+    masterForm.addRow(buttonLayout)
+
+    addApiDialog = qt.QDialog(self.addAPIButton)
+    addApiDialog.setWindowTitle("Add API")
+    addApiDialog.setFixedWidth(300)
+    addApiDialog.setLayout(masterForm)
+    addApiDialog.setWindowModality(1)
+
+    cancelButton.connect("clicked()", addApiDialog.hide)
+    saveButton.connect("clicked()", self.saveApi)   
+    
+    return addApiDialog
+
+  def makeDeleteApiDialoge(self):
+    
+    okButton = qt.QPushButton("OK")
+    cancelButton = qt.QPushButton("Cancel")
+
+    messageLabel = qt.QTextEdit()
+    messageLabel.setReadOnly(True)
+    messageLabel.insertPlainText("Are you sure you want to delete the selected API?") 
+    messageLabel.setFontWeight(100)    
+    messageLabel.setFixedHeight(40)
+    messageLabel.setFrameShape(0)
+
+    currLayout = qt.QVBoxLayout()
+    currLayout.addWidget(messageLabel)
+    #currLayout.addStretch(1)
+    
+    buttonLayout = qt.QHBoxLayout()
+    buttonLayout.addStretch(1)
+    buttonLayout.addWidget(cancelButton)
+    buttonLayout.addWidget(okButton)
+    
+    masterForm = qt.QFormLayout()    
+    masterForm.addRow(currLayout)
+    masterForm.addRow(buttonLayout)
+
+    deleteApiDialog = qt.QDialog(self.apiTable)
+    deleteApiDialog.setWindowTitle("Delete API")
+    deleteApiDialog.setLayout(masterForm)
+    deleteApiDialog.setWindowModality(1)
+
+    cancelButton.connect("clicked()", deleteApiDialog.hide)
+    okButton.connect("clicked()", self.deleteApi) 
+    
+    return deleteApiDialog
+
+  def saveApi(self):
+    print 'add to table'
+    table = self.apiTable
+    apiNameTableItem = qt.QTableWidgetItem(str(self.apiNameLineEdit.text))
+    apiKeyTableItem = qt.QTableWidgetItem(str(self.apiKeyLineEdit.text))
+    self.apiKeyTableItems.append(apiKeyTableItem)
+    self.apiNameTableItems.append(apiNameTableItem)
+    if self.dialogRole == 'Add':
+      self.numberOfRows += 1
+      table.setRowCount(self.numberOfRows)
+      table.setItem(self.numberOfRows -1, 0, apiNameTableItem)
+      table.setItem(self.numberOfRows -1, 1, apiKeyTableItem)
+    elif self.dialogRole == 'Edit':
+      table.setItem(self.currentAPIRow, 0, apiNameTableItem)
+      table.setItem(self.currentAPIRow, 1, apiKeyTableItem)
+    
+    self.addAPIDialogBox.hide()
+    self.restartLabel.setVisible(True)
+
+  def deleteApi(self):
+    self.apiTable.removeRow(self.currentAPIRow)
+    self.numberOfRows -= 1
+    print 'delete api'
+    self.deleteDialogBox.hide()
+    self.restartLabel.setVisible(True)
+
+  def populateAPITable(self):
+
+    settings = qt.QSettings()
+    table = self.apiTable
+    settings.beginGroup("TCIABrowser/API-Keys")
+    userApiNames = settings.childKeys()
+    self.numberOfRows = len(userApiNames)
+    table.setRowCount(self.numberOfRows)
+    row = 0
+    for api in userApiNames:
+      apiNameTableItem = qt.QTableWidgetItem(str(api))
+      apiKeyTableItem = qt.QTableWidgetItem(str(settings.value(api)))
+      table.setItem( row, 0, apiNameTableItem) 
+      self.apiNameTableItems.append(apiNameTableItem)
+      table.setItem( row, 1, apiKeyTableItem) 
+      self.apiKeyTableItems.append(apiKeyTableItem)
+      row += 1
+    settings.endGroup()
+
+  def makeSharedApiModalObjects(self):
+    self.apiNameLineEdit = qt.QLineEdit()
+    self.apiKeyLineEdit = qt.QLineEdit()
+
+  def apiSelected(self,row,column):
+    self.editAPIButton.enabled = True
+    self.deleteAPIButton.enabled = True
+    self.currentAPIRow = row
+
+class APITable(qt.QTableWidget):
+  def __init__(self):
+    super(APITable, self).__init__(self)
+    
+    self.addAPIDialogBox.hide()
+
+  def populateTable(self):
+    print 'populate api table'
+
+  def makeSharedApiModalObjects(self):
+    self.apiNameLineEdit = qt.QLineEdit()
+    self.apiKeyLineEdit = qt.QLineEdit()
+
+  def apiSelected(self,row,column):
+    self.editAPIButton.enabled = True
+    self.deleteAPIButton.enabled = True
+    self.currentAPIRow = row
+
+class APITable(qt.QTableWidget):
+  def __init__(self):
+    super(APITable, self).__init__(self)
+    self.setup()
+
+  def setup(self):
+    #--------------------
+    # Setup columns.
+    #--------------------
+    self.setColumnCount(2)
+    self.apiSettingsTableHeaderLabels = ['API Name', 'API Key']
+    self.setHorizontalHeaderLabels(self.apiSettingsTableHeaderLabels)
+    abstractItemView =qt.QAbstractItemView()
+    self.setSelectionBehavior(abstractItemView.SelectRows) 
+    apiSettingsTableWidgetHeader = self.horizontalHeader()
+    apiSettingsTableWidgetHeader.setStretchLastSection(True)
