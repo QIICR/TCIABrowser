@@ -408,7 +408,7 @@ class TCIABrowserWidget:
   def onConnectButton(self):
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    self.tcia_client = TCIAClient(self.currentAPIKey, baseUrl = 
+    self.tcia_client = TCIABrowserLib.TCIAClient(self.currentAPIKey, baseUrl = 
         "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
     self.showProgress("Getting Available Collections")
     try:    
