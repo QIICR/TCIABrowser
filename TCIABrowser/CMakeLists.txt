@@ -1,9 +1,12 @@
 #-----------------------------------------------------------------------------
 set(MODULE_NAME TCIABrowser)
+set(LIB_NAME TCIABrowserLib)
 
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
+  ${LIB_NAME}/__init__.py
+  ${LIB_NAME}/TCIAClient.py
   )
 
 set(MODULE_PYTHON_RESOURCES

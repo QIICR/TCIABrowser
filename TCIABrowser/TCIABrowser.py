@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import webbrowser
 import unittest
 from __main__ import vtk, qt, ctk, slicer
+import TCIABrowserLib
 
 #
 # TCIABrowser
@@ -984,6 +985,7 @@ class TCIABrowserTest(unittest.TestCase):
     logic = TCIABrowserLogic()
     self.assertTrue( logic.hasImageData(volumeNode) )
     self.delayDisplay('Test passed!')
+<<<<<<< HEAD
 
 
 
@@ -1328,3 +1330,5 @@ class APITable(qt.QTableWidget):
     self.setSelectionBehavior(abstractItemView.SelectRows) 
     apiSettingsTableWidgetHeader = self.horizontalHeader()
     apiSettingsTableWidgetHeader.setStretchLastSection(True)
+=======
+>>>>>>> ENH: restructuring and new functionality for TCIA summary reporting
