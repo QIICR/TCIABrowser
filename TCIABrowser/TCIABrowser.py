@@ -1,4 +1,5 @@
 import urllib2, urllib,sys, os
+import time
 import string, json, zipfile, os.path
 import xml.etree.ElementTree as ET
 import webbrowser
@@ -199,10 +200,10 @@ class TCIABrowserWidget:
     #
     # Patient Table Widget 
     #
-    patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-    patientsCollapsibleGroupBox.setTitle('Patients')
-    browserWidgetLayout.addWidget(patientsCollapsibleGroupBox)
-    patientsVBoxLayout1 = qt.QVBoxLayout(patientsCollapsibleGroupBox)
+    self.patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.patientsCollapsibleGroupBox.setTitle('Patients')
+    browserWidgetLayout.addWidget(self.patientsCollapsibleGroupBox)
+    patientsVBoxLayout1 = qt.QVBoxLayout(self.patientsCollapsibleGroupBox)
     patientsExpdableArea = ctk.ctkExpandableWidget()
     patientsVBoxLayout1.addWidget(patientsExpdableArea)
     patientsVBoxLayout2 = qt.QVBoxLayout(patientsExpdableArea)
@@ -226,10 +227,10 @@ class TCIABrowserWidget:
     # 
     # Studies Table Widget 
     #
-    studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-    studiesCollapsibleGroupBox.setTitle('Studies')
-    browserWidgetLayout.addWidget(studiesCollapsibleGroupBox) 
-    studiesVBoxLayout1 = qt.QVBoxLayout(studiesCollapsibleGroupBox)
+    self.studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.studiesCollapsibleGroupBox.setTitle('Studies')
+    browserWidgetLayout.addWidget(self.studiesCollapsibleGroupBox) 
+    studiesVBoxLayout1 = qt.QVBoxLayout(self.studiesCollapsibleGroupBox)
     studiesExpdableArea = ctk.ctkExpandableWidget()
     studiesVBoxLayout1.addWidget(studiesExpdableArea)
     studiesVBoxLayout2 = qt.QVBoxLayout(studiesExpdableArea)
@@ -252,10 +253,10 @@ class TCIABrowserWidget:
     #
     # Series Table Widget 
     #
-    seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-    seriesCollapsibleGroupBox.setTitle('Series')
-    browserWidgetLayout.addWidget(seriesCollapsibleGroupBox)  # 
-    seriesVBoxLayout1 = qt.QVBoxLayout(seriesCollapsibleGroupBox)
+    self.seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.seriesCollapsibleGroupBox.setTitle('Series')
+    browserWidgetLayout.addWidget(self.seriesCollapsibleGroupBox)  # 
+    seriesVBoxLayout1 = qt.QVBoxLayout(self.seriesCollapsibleGroupBox)
     seriesExpdableArea = ctk.ctkExpandableWidget()
     seriesVBoxLayout1.addWidget(seriesExpdableArea)
     seriesVBoxLayout2 = qt.QVBoxLayout(seriesExpdableArea)
@@ -279,15 +280,22 @@ class TCIABrowserWidget:
 
     downloadButtonsWidget = qt.QWidget()
     downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
-    downloadWidgetLayout.addStretch(1)
     browserWidgetLayout.addWidget(downloadButtonsWidget)
+    ##
+    # Use Cache CheckBox
     #
+    self.useCacheCeckBox= qt.QCheckBox("Use Cache")
+    downloadWidgetLayout.addWidget(self.useCacheCeckBox)
+    self.useCacheCeckBox.setCheckState(True)
+    self.useCacheCeckBox.setTristate(False)
+
     # Index Button
     #
     self.indexButton = qt.QPushButton("Download and Index")
     # self.indexButton.setMaximumWidth(150)
     self.indexButton.toolTip = "Download the selected sereies and index in Slicer DICOM Database."
     self.indexButton.enabled = False 
+    downloadWidgetLayout.addStretch(1)
     downloadWidgetLayout.addWidget(self.indexButton)
 
 
@@ -350,6 +358,7 @@ class TCIABrowserWidget:
     self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
+    self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
     self.storagePathButton.connect('directoryChanged(const QString &)',self.onStoragePathButton)
@@ -369,9 +378,11 @@ class TCIABrowserWidget:
     else:
       self.currentAPIKey = settings.value(self.apiSelectionComboBox.currentText)
 
-
   def onShowBrowserButton(self):
     self.showBrowser()
+
+  def onUseCacheStateChanged(self,state):
+    print state
 
   def showBrowser(self):
 
@@ -440,6 +451,8 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showProgress(self.progressMessage)
     if os.path.isfile(cacheFile) and self.useCacheFlag:
+      groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
       f = open(cacheFile,'r')
       responseString = f.read()[:]
       f.close()
@@ -454,6 +467,8 @@ class TCIABrowserWidget:
           outputFile.write(responseString)
           outputFile.close()
         self.populatePatientsTableWidget(responseString)
+        groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+        self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
     
       except Exception, error:
@@ -472,6 +487,8 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
     self.showProgress(self.progressMessage)
     if os.path.isfile(cacheFile) and self.useCacheFlag:
+      groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
       f = open(cacheFile,'r')
       responseString = f.read()[:]
       f.close()
@@ -486,6 +503,8 @@ class TCIABrowserWidget:
           outputFile.write(responseString)
           outputFile.close()
         self.populateStudiesTableWidget(responseString)
+        groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
       
       except Exception, error:
@@ -503,6 +522,8 @@ class TCIABrowserWidget:
     self.showProgress(self.progressMessage)
     cacheFile = self.cachePath+self.selectedStudy+'.json'
     if os.path.isfile(cacheFile) and self.useCacheFlag:
+      groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
       f = open(cacheFile,'r')
       responseString = f.read()[:]
       f.close()
@@ -519,6 +540,8 @@ class TCIABrowserWidget:
           outputFile.write(responseString)
           outputFile.close()
         self.populateSeriesTableWidget(responseString)
+        groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+        self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
         
       except Exception, error:
@@ -810,6 +833,7 @@ class TCIABrowserWidget:
     ModuleWizard will subsitute correct default moduleName.
     """
     import imp, sys, os, slicer
+    import time
     import urllib2, urllib,sys, os
     import xml.etree.ElementTree as ET
     import webbrowser
