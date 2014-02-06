@@ -67,6 +67,10 @@ class TCIABrowserWidget:
     dicomAppWidget = ctk.ctkDICOMAppWidget()
     databaseDirectory = dicomAppWidget.databaseDirectory
     self.storagePath = databaseDirectory + "/TCIA-Temp/"
+    self.cachePath = self.storagePath + "/TCIA-Cache/"
+    if not os.path.exists(self.cachePath):
+      os.makedirs(self.cachePath)
+    self.useCacheFlag = True  
     
     # setup the TCIA client
   
@@ -87,7 +91,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -432,18 +436,30 @@ class TCIABrowserWidget:
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedCollection = item
-    progressMessage = "Getting available patients for collection: " + self.selectedCollection
-    self.showProgress(progressMessage)
-    try:    
-      response = self.tcia_client.get_patient(collection = self.selectedCollection)
-      responseString = response.read()[:]
+    cacheFile = self.cachePath+self.selectedCollection+'.json'
+    self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
+    self.showProgress(self.progressMessage)
+    if os.path.isfile(cacheFile) and self.useCacheFlag:
+      f = open(cacheFile,'r')
+      responseString = f.read()[:]
+      f.close()
       self.populatePatientsTableWidget(responseString)
       self.closeProgress()
+
+    else:
+      try:    
+        response = self.tcia_client.get_patient(collection = self.selectedCollection)
+        responseString = response.read()[:]
+        with open(cacheFile, 'w') as outputFile:
+          outputFile.write(responseString)
+          outputFile.close()
+        self.populatePatientsTableWidget(responseString)
+        self.closeProgress()
     
-    except Exception, error:
-      self.closeProgress()
-      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
-      qt.QMessageBox.critical(slicer.util.mainWindow(),
+      except Exception, error:
+        self.closeProgress()
+        message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+        qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def patientSelected(self,row,column):
@@ -452,38 +468,64 @@ class TCIABrowserWidget:
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedPatient = self.patientsIDs[row].text()
-    progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
-    self.showProgress(progressMessage)
-    try:    
-      response = self.tcia_client.get_patient_study(patientId = self.selectedPatient)
-      responseString = response.read()[:]
+    cacheFile = self.cachePath+self.selectedPatient+'.json'
+    self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
+    self.showProgress(self.progressMessage)
+    if os.path.isfile(cacheFile) and self.useCacheFlag:
+      f = open(cacheFile,'r')
+      responseString = f.read()[:]
+      f.close()
       self.populateStudiesTableWidget(responseString)
       self.closeProgress()
-    
-    except Exception, error:
-      self.closeProgress()
-      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
-      qt.QMessageBox.critical(slicer.util.mainWindow(),
-                        'TCIA Browser', message, qt.QMessageBox.Ok)
+
+    else:
+      try:    
+        response = self.tcia_client.get_patient_study(patientId = self.selectedPatient)
+        responseString = response.read()[:]
+        with open(cacheFile, 'w') as outputFile:
+          outputFile.write(responseString)
+          outputFile.close()
+        self.populateStudiesTableWidget(responseString)
+        self.closeProgress()
+      
+      except Exception, error:
+        self.closeProgress()
+        message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+        qt.QMessageBox.critical(slicer.util.mainWindow(),
+                          'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def studySelected(self,row,column):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
     self.clearSeriesTableWidget()
     self.selectedStudy = self.studyInstanceUIDs[row].text()
-    progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
-    self.showProgress(progressMessage)
-    try:    
-      response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
-      responseString = response.read()[:]
+    self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
+    self.showProgress(self.progressMessage)
+    cacheFile = self.cachePath+self.selectedStudy+'.json'
+    if os.path.isfile(cacheFile) and self.useCacheFlag:
+      f = open(cacheFile,'r')
+      responseString = f.read()[:]
+      f.close()
       self.populateSeriesTableWidget(responseString)
       self.closeProgress()
-    
-    except Exception, error:
-      self.closeProgress()
-      message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
-      qt.QMessageBox.critical(slicer.util.mainWindow(),
-                        'TCIA Browser', message, qt.QMessageBox.Ok)
+
+    else:
+      self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
+      self.showProgress(self.progressMessage)
+      try:    
+        response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
+        responseString = response.read()[:]
+        with open(cacheFile, 'w') as outputFile:
+          outputFile.write(responseString)
+          outputFile.close()
+        self.populateSeriesTableWidget(responseString)
+        self.closeProgress()
+        
+      except Exception, error:
+        self.closeProgress()
+        message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
+        qt.QMessageBox.critical(slicer.util.mainWindow(),
+                          'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def seriesSelected(self,row,column):
     self.loadButton.enabled = True
@@ -494,21 +536,20 @@ class TCIABrowserWidget:
     self.downloadSelected()
     self.addFilesToDatabase()
 
-
   def onLoadButton(self):
     self.downloadSelected()
     self.addFilesToDatabase()
 
-    progressMessage = "Examine Files to Load"
-    self.showProgress(progressMessage)
+    self.progressMessage = "Examine Files to Load"
+    self.showProgress(self.progressMessage)
     plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
     loadables = plugin.examine([self.fileList])
     self.closeProgress()
     volume = plugin.load(loadables[0])
 
   def addFilesToDatabase(self):
-    progressMessage = "Adding Files to DICOM Database "
-    self.showProgress(progressMessage)
+    self.progressMessage = "Adding Files to DICOM Database "
+    self.showProgress(self.progressMessage)
     dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
     
     indexer = ctk.ctkDICOMIndexer() 
@@ -536,8 +577,8 @@ class TCIABrowserWidget:
       os.makedirs(tempPath)
     fileName = tempPath + str(selectedSeries) + ".zip"
     self.extractedFilesDirectory = tempPath + str(selectedSeries)
-    progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
-    self.showProgress(progressMessage)
+    self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
+    self.showProgress(self.progressMessage)
     try:
       response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
       # Save server response as images.zip in current directory
@@ -559,9 +600,9 @@ class TCIABrowserWidget:
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
-    progressMessage = "Extracting Images"
+    self.progressMessage = "Extracting Images"
     # Unzip the data
-    self.showProgress(progressMessage)
+    self.showProgress(self.progressMessage)
     self.unzip(fileName,self.extractedFilesDirectory)
     self.closeProgress()
     # Import the data into dicomAppWidget and open the dicom browser
@@ -600,6 +641,7 @@ class TCIABrowserWidget:
       for key in keys:
         if key == 'PatientID':
           patientID = qt.QTableWidgetItem(str(patient['PatientID']))
+          patientID.setCheckState(False)
           self.patientsIDs.append(patientID)
           table.setItem(n,0,patientID)
         if key == 'PatientName':
