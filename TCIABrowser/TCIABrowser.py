@@ -92,7 +92,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -667,7 +667,6 @@ class TCIABrowserWidget:
       for key in keys:
         if key == 'PatientID':
           patientID = qt.QTableWidgetItem(str(patient['PatientID']))
-          patientID.setCheckState(False)
           self.patientsIDs.append(patientID)
           table.setItem(n,0,patientID)
         if key == 'PatientName':
