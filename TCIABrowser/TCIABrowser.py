@@ -382,7 +382,10 @@ class TCIABrowserWidget:
     self.showBrowser()
 
   def onUseCacheStateChanged(self,state):
-    print state
+    if state == 0:
+      self.useCacheFlag = False
+    elif state ==2:
+      self.useCacheFlag= True
 
   def showBrowser(self):
 
@@ -451,13 +454,13 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showProgress(self.progressMessage)
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-      self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
       f = open(cacheFile,'r')
       responseString = f.read()[:]
       f.close()
       self.populatePatientsTableWidget(responseString)
       self.closeProgress()
+      groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
       try:    
@@ -487,13 +490,13 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
     self.showProgress(self.progressMessage)
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-      self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
       f = open(cacheFile,'r')
       responseString = f.read()[:]
       f.close()
       self.populateStudiesTableWidget(responseString)
       self.closeProgress()
+      groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
       try:    
@@ -522,13 +525,13 @@ class TCIABrowserWidget:
     self.showProgress(self.progressMessage)
     cacheFile = self.cachePath+self.selectedStudy+'.json'
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-      self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
       f = open(cacheFile,'r')
       responseString = f.read()[:]
       f.close()
       self.populateSeriesTableWidget(responseString)
       self.closeProgress()
+      groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
       self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
@@ -789,6 +792,7 @@ class TCIABrowserWidget:
 
   def clearPatientsTableWidget(self):
     table = self.patientsTableWidget
+    self.patientsCollapsibleGroupBox.setTitle('Patients')
     self.patientsIDs =[]
     self.patientNames = []
     self.patientBirthDates = []
@@ -800,6 +804,7 @@ class TCIABrowserWidget:
     
   def clearStudiesTableWidget(self):
     table = self.studiesTableWidget
+    self.studiesCollapsibleGroupBox.setTitle('Studies')
     self.studyInstanceUIDs =[]
     self.studyDates = []
     self.studyDescriptions = []
@@ -812,6 +817,7 @@ class TCIABrowserWidget:
    
   def clearSeriesTableWidget(self):
     table = self.seriesTableWidget
+    self.seriesCollapsibleGroupBox.setTitle('Series')
     self.seriesInstanceUIDs= []
     self.modalities = []
     self.protocolNames = []
