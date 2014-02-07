@@ -1,6 +1,7 @@
 import urllib2, urllib,sys, os
 import time
 import string, json, zipfile, os.path
+import csv
 import xml.etree.ElementTree as ET
 import webbrowser
 import unittest
@@ -86,13 +87,16 @@ class TCIABrowserWidget:
   def setup(self):
     # Instantiate and connect widgets ...
 
+    self.reportIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/report.png')
+    self.browserIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/TCIABrowser.png')
+    self.browserWidget.setWindowIcon(self.browserIcon)
     #
     # Reload and Test area
     #
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -211,8 +215,8 @@ class TCIABrowserWidget:
     self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
     self.patientsTableWidgetHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
-        'Patient Sex','Ethnic Group']
-    self.patientsTableWidget.setColumnCount(5)
+        'Patient Sex','Ethnic Group','Clinical Data']
+    self.patientsTableWidget.setColumnCount(6)
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
     patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     patientsTableWidgetHeader.setStretchLastSection(True)
@@ -298,7 +302,6 @@ class TCIABrowserWidget:
     downloadWidgetLayout.addStretch(1)
     downloadWidgetLayout.addWidget(self.indexButton)
 
-
     #
     # Load Button
     #
@@ -307,6 +310,16 @@ class TCIABrowserWidget:
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = False 
     downloadWidgetLayout.addWidget(self.loadButton)
+
+    #
+    # context menu
+    #
+    self.patientsTableWidget.setContextMenuPolicy(2)
+    self.clinicalDataRetrieveAction = qt.QAction("Get Clincal Data", self.patientsTableWidget)
+    self.patientsTableWidget.addAction(self.clinicalDataRetrieveAction)
+    #self.contextMenu = qt.QMenu(self.patientsTableWidget)
+    #self.contextMenu.addAction(self.clinicalDataRetrieveAction)
+    self.clinicalDataRetrieveAction.enabled = False 
 
     #
     # Settings Area
@@ -348,6 +361,7 @@ class TCIABrowserWidget:
     apiSettingsFormLayout.addWidget(self.removeApiButton)
 
     self.apiSettingsPopup = settingsAPI()
+    self.clinicalPopup = clinicalDataPopup(self.cachePath,self.reportIcon)
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
@@ -362,6 +376,8 @@ class TCIABrowserWidget:
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
     self.storagePathButton.connect('directoryChanged(const QString &)',self.onStoragePathButton)
+    self.clinicalDataRetrieveAction.connect('triggered()', self.onContextMenuTriggered)
+    self.clinicalDataRetrieveAction.connect('triggered()', self.clinicalPopup.open)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -386,6 +402,9 @@ class TCIABrowserWidget:
       self.useCacheFlag = False
     elif state ==2:
       self.useCacheFlag= True
+
+  def onContextMenuTriggered(self):
+    self.clinicalPopup.getData(self.selectedCollection,self.selectedPatient)
 
   def showBrowser(self):
 
@@ -453,6 +472,11 @@ class TCIABrowserWidget:
     cacheFile = self.cachePath+self.selectedCollection+'.json'
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showProgress(self.progressMessage)
+    if self.selectedCollection[0:4] != 'TCGA':
+      self.clinicalDataRetrieveAction.enabled = False 
+    else:
+      self.clinicalDataRetrieveAction.enabled = True
+
     if os.path.isfile(cacheFile) and self.useCacheFlag:
       f = open(cacheFile,'r')
       responseString = f.read()[:]
@@ -507,7 +531,7 @@ class TCIABrowserWidget:
           outputFile.close()
         self.populateStudiesTableWidget(responseString)
         groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
+        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle) 
         self.closeProgress()
       
       except Exception, error:
@@ -654,8 +678,10 @@ class TCIABrowserWidget:
     self.collectionSelector.clear()
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     for collection in collections:
-      self.collectionSelector.addItem(str(collections[n]['Collection']))
+      collectionText = str(collections[n]['Collection'])
+      self.collectionSelector.addItem(collectionText)
       n += 1
+
   def populatePatientsTableWidget(self,responseString):
     self.clearPatientsTableWidget()
     table = self.patientsTableWidget
@@ -666,9 +692,12 @@ class TCIABrowserWidget:
       keys = patient.keys()
       for key in keys:
         if key == 'PatientID':
-          patientID = qt.QTableWidgetItem(str(patient['PatientID']))
+          patientIDString = str(patient['PatientID'])
+          patientID = qt.QTableWidgetItem(patientIDString)
           self.patientsIDs.append(patientID)
           table.setItem(n,0,patientID)
+          if patientIDString[0:4] == 'TCGA':
+            patientID.setIcon(self.reportIcon)
         if key == 'PatientName':
           patientName = qt.QTableWidgetItem(str(patient['PatientName']))
           self.patientNames.append(patientName)
@@ -843,6 +872,7 @@ class TCIABrowserWidget:
     import xml.etree.ElementTree as ET
     import webbrowser
     import string, json
+    import csv
     import zipfile, os.path
 
     widgetName = moduleName + "Widget"
@@ -1239,7 +1269,6 @@ class settingsAPI:
     return deleteApiDialog
 
   def saveApi(self):
-    print 'add to table'
     table = self.apiTable
     apiNameTableItem = qt.QTableWidgetItem(str(self.apiNameLineEdit.text))
     apiKeyTableItem = qt.QTableWidgetItem(str(self.apiKeyLineEdit.text))
@@ -1253,14 +1282,11 @@ class settingsAPI:
     elif self.dialogRole == 'Edit':
       table.setItem(self.currentAPIRow, 0, apiNameTableItem)
       table.setItem(self.currentAPIRow, 1, apiKeyTableItem)
-    
-    self.addAPIDialogBox.hide()
     self.restartLabel.setVisible(True)
 
   def deleteApi(self):
     self.apiTable.removeRow(self.currentAPIRow)
     self.numberOfRows -= 1
-    print 'delete api'
     self.deleteDialogBox.hide()
     self.restartLabel.setVisible(True)
 
@@ -1326,3 +1352,156 @@ class APITable(qt.QTableWidget):
     self.setSelectionBehavior(abstractItemView.SelectRows) 
     apiSettingsTableWidgetHeader = self.horizontalHeader()
     apiSettingsTableWidgetHeader.setStretchLastSection(True)
+
+class clinicalDataPopup:
+  def __init__(self,cachePath,icon):
+    self.cachePath = cachePath
+    self.window = qt.QWidget()
+    self.window.setWindowTitle('Clinical Data (From cBioportal for Cancer Genomics)')
+    self.window.setWindowIcon(icon)
+    self.layout= qt.QVBoxLayout(self.window)
+    self.setup()
+    self.progress = qt.QProgressDialog(self.window)
+    self.progress.setWindowTitle("Clinical Data")
+
+  def setup(self):
+    self.tableAreaWidget = qt.QWidget()
+    self.layout.addWidget(self.tableAreaWidget)
+    self.tableLayout= qt.QVBoxLayout(self.tableAreaWidget)
+    label = qt.QLabel('Clinical Data')
+    #self.tableLayout.addWidget(label)
+    self.clinicalDataTableWidget = qt.QTableWidget()
+    self.tableLayout.addWidget(self.clinicalDataTableWidget)
+    verticalheader = self.clinicalDataTableWidget.verticalHeader()
+    verticalheader.setDefaultSectionSize(20)
+
+    self.buttonsWidget = qt.QWidget()
+    self.buttonsLayout = qt.QHBoxLayout(self.buttonsWidget)
+    self.layout.addWidget(self.buttonsWidget)
+
+    self.accessLabel = qt.QLabel('')
+    self.buttonsLayout.addWidget(self.accessLabel)
+    self.buttonsLayout.addStretch(1)
+    self.updateButton = qt.QPushButton('Update Cache')
+    self.updateButton.toolTip = 'Connect to cBioPortal and update the data'
+    self.buttonsLayout.addWidget(self.updateButton)
+
+    self.closeButton= qt.QPushButton('Close')
+    self.buttonsLayout.addWidget(self.closeButton)
+
+    # Connections
+    self.updateButton.connect('clicked(bool)', self.onUpdateButton)
+    self.closeButton.connect('clicked(bool)', self.onCloseButton)
+
+  def getData(self, collection, patient):
+    self.onCloseButton()
+    self.collection = collection
+    self.patient = patient
+    cacheFile = self.cachePath + collection+'.csv'
+    if os.path.isfile(cacheFile):
+      self.readResponseCSVFile(cacheFile)
+    else:
+      self.requestClinicalData(cacheFile)
+
+  def readResponseCSVFile(self,cacheFile):
+    table = self.clinicalDataTableWidget
+    self.tableItems = []
+    table.clear()
+    accessLabelText = 'Accessed: '+ time.ctime(os.path.getmtime(cacheFile))
+    self.accessLabel.setText(accessLabelText)
+    data = []
+    data = list(csv.reader(open(cacheFile, 'rb'), delimiter='\t'))
+    headers = data[0]
+    table.setRowCount(len(headers))
+    table.setColumnCount(1)
+    table.setVerticalHeaderLabels(headers)
+    horizontalHeader = table.horizontalHeader()
+    horizontalHeader.hide()
+    horizontalHeader.setStretchLastSection(True)
+
+    for row in data:
+      for item in row:
+        if self.patient in item:
+          patient = row
+
+    if patient != None:
+      for index,item in enumerate(patient):
+        tableItem = qt.QTableWidgetItem(str(item))
+        table.setItem(index, 0, tableItem)
+        self.tableItems.append(tableItem)
+    else:
+      print 'patient not in the query'
+    
+  def open(self):
+    if not self.window.isVisible():
+      self.window.show()
+    self.window.raise_()
+
+  def onCloseButton(self):
+    self.window.hide()
+
+  def onUpdateButton(self):
+    self.requestClinicalData()
+
+  def requestClinicalData(self,cacheFile):
+    if self.collection == 'TCGA-GBM':
+      queryString = 'gbm_tcga_pub_all'
+    elif self.collection == 'TCGA-BRCA':
+      queryString = 'brca_tcga_pub_all'
+    elif self.collection == 'TCGA-LGG':
+      queryString = 'lgg_tcga_all'
+    elif self.collection == 'TCGA-KIRC':
+      queryString = 'kirc_tcga_pub_all'
+    elif self.collection == 'TCGA-LUAD':
+      queryString = 'luad_tcga_pub_all'
+    elif self.collection == 'TCGA-PRAD':
+      queryString = 'prad_tcga_all'
+    elif self.collection == 'TCGA-LIHC':
+      queryString = 'lihc_tcga_all'
+    elif self.collection == 'TCGA-KIRP':
+      queryString = 'kirp_tcga_all'
+    elif self.collection == 'TCGA-OV':
+      queryString = 'ov_tcga_pub_all'
+    elif self.collection == 'TCGA-HNSC':
+      queryString = 'hnsc_tcga_all'
+    self.progressMessage = "Please wait while retreiving information from cBioportal for Cancer Genomics server."
+    self.showProgress(self.progressMessage)
+    try:    
+      
+      url = 'http://www.cbioportal.org/public-portal/webservice.do?cmd=getClinicalData&case_set_id='
+      requestUrl = url + queryString 
+      request = urllib2.Request(url=requestUrl)
+      response = urllib2.urlopen(request)
+      responseString = response.read()[:]
+      if responseString[:7] == 'CASE_ID': 
+        with open(cacheFile, 'w') as outputFile:
+          outputFile.write(responseString)
+          outputFile.close()
+        self.readResponseCSVFile(cacheFile)
+        self.closeProgress()
+      else:
+        self.closeProgress()
+        message = "Error in getting response from cBioportal Server" 
+        qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
+    except Exception, error:
+      self.closeProgress()
+      message = "Error in getting response from cBioportal Server" 
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
+
+  def showProgress(self, message):
+    self.progress.minimumDuration = 0
+    self.progress.setValue(0)
+    self.progress.setMaximum(0)
+    self.progress.setCancelButton(0)
+    self.progress.setWindowModality(2)
+    self.progress.show()
+    self.progress.setLabelText(message)
+    slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+    self.progress.repaint()
+
+  def closeProgress(self):
+    self.progress.close()
+    self.progress.reset()
+
