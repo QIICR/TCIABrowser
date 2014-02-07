@@ -1,6 +1,7 @@
 import urllib2, urllib,sys, os
 import time
 import string, json, zipfile, os.path
+import csv
 import xml.etree.ElementTree as ET
 import webbrowser
 import unittest
@@ -92,7 +93,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -298,7 +299,6 @@ class TCIABrowserWidget:
     downloadWidgetLayout.addStretch(1)
     downloadWidgetLayout.addWidget(self.indexButton)
 
-
     #
     # Load Button
     #
@@ -307,6 +307,16 @@ class TCIABrowserWidget:
     self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
     self.loadButton.enabled = False 
     downloadWidgetLayout.addWidget(self.loadButton)
+
+    #
+    # context menu
+    #
+    self.patientsTableWidget.setContextMenuPolicy(2)
+    self.clinicalDataRetrieveAction = qt.QAction("Get Clincal Data", self.patientsTableWidget)
+    self.patientsTableWidget.addAction(self.clinicalDataRetrieveAction)
+    #self.contextMenu = qt.QMenu(self.patientsTableWidget)
+    #self.contextMenu.addAction(self.clinicalDataRetrieveAction)
+    self.clinicalDataRetrieveAction.enabled = False 
 
     #
     # Settings Area
@@ -348,6 +358,7 @@ class TCIABrowserWidget:
     apiSettingsFormLayout.addWidget(self.removeApiButton)
 
     self.apiSettingsPopup = settingsAPI()
+    self.clinicalPopup = clinicalDataPopup(self.cachePath)
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
@@ -362,6 +373,8 @@ class TCIABrowserWidget:
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
     self.storagePathButton.connect('directoryChanged(const QString &)',self.onStoragePathButton)
+    self.clinicalDataRetrieveAction.connect('triggered()', self.onContextMenuTriggered)
+    self.clinicalDataRetrieveAction.connect('triggered()', self.clinicalPopup.open)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -386,6 +399,9 @@ class TCIABrowserWidget:
       self.useCacheFlag = False
     elif state ==2:
       self.useCacheFlag= True
+
+  def onContextMenuTriggered(self):
+    self.clinicalPopup.getData(self.selectedCollection,self.selectedPatient)
 
   def showBrowser(self):
 
@@ -453,6 +469,11 @@ class TCIABrowserWidget:
     cacheFile = self.cachePath+self.selectedCollection+'.json'
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showProgress(self.progressMessage)
+    if self.selectedCollection[0:4] != 'TCGA':
+      self.clinicalDataRetrieveAction.enabled = False 
+    else:
+      self.clinicalDataRetrieveAction.enabled = True
+
     if os.path.isfile(cacheFile) and self.useCacheFlag:
       f = open(cacheFile,'r')
       responseString = f.read()[:]
@@ -654,8 +675,10 @@ class TCIABrowserWidget:
     self.collectionSelector.clear()
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     for collection in collections:
-      self.collectionSelector.addItem(str(collections[n]['Collection']))
+      collectionText = str(collections[n]['Collection'])
+      self.collectionSelector.addItem(collectionText)
       n += 1
+
   def populatePatientsTableWidget(self,responseString):
     self.clearPatientsTableWidget()
     table = self.patientsTableWidget
@@ -843,6 +866,7 @@ class TCIABrowserWidget:
     import xml.etree.ElementTree as ET
     import webbrowser
     import string, json
+    import csv
     import zipfile, os.path
 
     widgetName = moduleName + "Widget"
@@ -1326,3 +1350,154 @@ class APITable(qt.QTableWidget):
     self.setSelectionBehavior(abstractItemView.SelectRows) 
     apiSettingsTableWidgetHeader = self.horizontalHeader()
     apiSettingsTableWidgetHeader.setStretchLastSection(True)
+
+class clinicalDataPopup:
+  def __init__(self,cachePath = '.'):
+    self.cachePath = cachePath
+    self.window = qt.QWidget()
+    self.window.setWindowTitle('Clinical Data')
+    self.layout= qt.QVBoxLayout(self.window)
+    self.setup()
+    self.progress = qt.QProgressDialog(self.window)
+    self.progress.setWindowTitle("TCIA Browser")
+
+  def setup(self):
+    self.tableAreaWidget = qt.QWidget()
+    self.layout.addWidget(self.tableAreaWidget)
+    self.tableLayout= qt.QVBoxLayout(self.tableAreaWidget)
+    label = qt.QLabel('Clinical Data')
+    #self.tableLayout.addWidget(label)
+    self.clinicalDataTableWidget = qt.QTableWidget()
+    self.tableLayout.addWidget(self.clinicalDataTableWidget)
+    verticalheader = self.clinicalDataTableWidget.verticalHeader()
+    verticalheader.setDefaultSectionSize(20)
+
+    self.buttonsWidget = qt.QWidget()
+    self.buttonsLayout = qt.QHBoxLayout(self.buttonsWidget)
+    self.layout.addWidget(self.buttonsWidget)
+
+    self.accessLabel = qt.QLabel('')
+    self.buttonsLayout.addWidget(self.accessLabel)
+    self.buttonsLayout.addStretch(1)
+    self.updateButton = qt.QPushButton('Update Cache')
+    self.buttonsLayout.addWidget(self.updateButton)
+
+    self.closeButton= qt.QPushButton('Close')
+    self.buttonsLayout.addWidget(self.closeButton)
+
+    # Connections
+    self.updateButton.connect('clicked(bool)', self.onUpdateButton)
+    self.closeButton.connect('clicked(bool)', self.onCloseButton)
+
+  def getData(self, collection, patient):
+    self.collection = collection
+    self.patient = patient
+    self.cacheFile = self.cachePath + collection+'.csv'
+    #self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
+    #self.showProgress(self.progressMessage)
+    if os.path.isfile(self.cacheFile):
+      print 'file exists'
+      #self.populatePatientsTableWidget(responseString)
+      #self.closeProgress()
+      #groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      self.readCsvFile(self.cacheFile)
+      #self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
+    else:
+      self.requestClinicalData()
+
+  def readCsvFile(self,cacheFile):
+    accessLabelText = 'Accessed: '+ time.ctime(os.path.getmtime(cacheFile))
+    self.accessLabel.setText(accessLabelText)
+    table = self.clinicalDataTableWidget
+    data = list(csv.reader(open(cacheFile, 'rb'), delimiter='\t'))
+    headers = data[0]
+    table.setRowCount(len(headers))
+    table.setColumnCount(1)
+    table.setVerticalHeaderLabels(headers)
+    horizontalHeader = table.horizontalHeader()
+    horizontalHeader.hide()
+    horizontalHeader.setStretchLastSection(True)
+    for row in data:
+      for item in row:
+        if self.patient in item:
+          patient = row
+        else:
+          print 'patient not in the query'
+    self.tableItems = []
+    if patient != None:
+      for index,item in enumerate(patient):
+        print item
+        tableItem = qt.QTableWidgetItem(str(item))
+        table.setItem(index, 0, tableItem)
+        self.tableItems.append(tableItem)
+    
+  def open(self):
+    if not self.window.isVisible():
+      self.window.show()
+    self.window.raise_()
+    print 'open window'
+
+  def onCloseButton(self):
+    self.window.hide()
+
+  def onUpdateButton(self):
+    self.requestClinicalData()
+
+  def requestClinicalData(self):
+    if self.collection == 'TCGA-GBM':
+      queryString = 'gbm_tcga_pub'
+    elif self.collection == 'TCGA-BRCA':
+      queryString = 'brca_tcga_pub'
+    elif self.collection == 'TCGA-LGG':
+      queryString = 'lgg_tcga'
+    elif self.collection == 'TCGA-KIRC':
+      queryString = 'kirc_tcga_pub'
+    elif self.collection == 'TCGA-LUAD':
+      queryString = 'luad_tcga_pub'
+    elif self.collection == 'TCGA-PRAD':
+      queryString = 'prad_tcga_pub'
+    elif self.collection == 'TCGA-LIHC':
+      queryString = 'lihc_tcga'
+    elif self.collection == 'TCGA-KIRP':
+      queryString = 'kirp_tcga'
+    elif self.collection == 'TCGA-OV':
+      queryString = 'ov_tcga_pub'
+    elif self.collection == 'TCGA-HNSC':
+      queryString = 'hnsc_tcga'
+    self.progressMessage = "Please Wait ..."
+    self.showProgress(self.progressMessage)
+    try:    
+      
+      url = 'http://www.cbioportal.org/public-portal/webservice.do?cmd=getClinicalData&case_set_id='
+      requestUrl = url + queryString + '_all'
+      request = urllib2.Request(url=requestUrl)
+      response = urllib2.urlopen(request)
+      responseString = response.read()[:]
+      #if responseString = erorr
+      with open(self.cacheFile, 'w') as outputFile:
+        outputFile.write(responseString)
+        outputFile.close()
+      self.readCsvFile(self.cacheFile)
+      #self.populatePatientsTableWidget(responseString)
+      #groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      #self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
+      self.closeProgress()
+    except Exception, error:
+      print error
+
+  def showProgress(self, message):
+    self.progress.minimumDuration = 0
+    self.progress.setValue(0)
+    self.progress.setMaximum(0)
+    self.progress.setCancelButton(0)
+    self.progress.setWindowModality(2)
+    self.progress.show()
+    self.progress.setLabelText(message)
+    slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+    self.progress.repaint()
+
+  def closeProgress(self):
+    self.progress.close()
+    self.progress.reset()
+    self.showBrowser()
+
