@@ -48,20 +48,20 @@ class clinicalDataPopup:
     self.onCloseButton()
     self.collection = collection
     self.patient = patient
-    cacheFile = self.cachePath + collection+'.csv'
-    if os.path.isfile(cacheFile):
-      self.readResponseCSVFile(cacheFile)
+    self.cacheFile = self.cachePath + collection+'.csv'
+    if os.path.isfile(self.cacheFile):
+      self.readResponseCSVFile(self.cacheFile)
     else:
-      self.requestClinicalData(cacheFile)
+      self.requestClinicalData(self.cacheFile)
 
   def readResponseCSVFile(self,cacheFile):
     table = self.clinicalDataTableWidget
     self.tableItems = []
     table.clear()
-    accessLabelText = 'Accessed: '+ time.ctime(os.path.getmtime(cacheFile))
+    accessLabelText = 'Accessed: '+ time.ctime(os.path.getmtime(self.cacheFile))
     self.accessLabel.setText(accessLabelText)
     data = []
-    data = list(csv.reader(open(cacheFile, 'rb'), delimiter='\t'))
+    data = list(csv.reader(open(self.cacheFile, 'rb'), delimiter='\t'))
     headers = data[0]
     table.setRowCount(len(headers))
     table.setColumnCount(1)
@@ -69,6 +69,7 @@ class clinicalDataPopup:
     horizontalHeader = table.horizontalHeader()
     horizontalHeader.hide()
     horizontalHeader.setStretchLastSection(True)
+    patient = None
 
     for row in data:
       for item in row:
@@ -81,6 +82,9 @@ class clinicalDataPopup:
         table.setItem(index, 0, tableItem)
         self.tableItems.append(tableItem)
     else:
+      message = "The Selected Patient is not in the list provided by cBioportal Server" 
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
       print 'patient not in the query'
     
   def open(self):
@@ -92,7 +96,7 @@ class clinicalDataPopup:
     self.window.hide()
 
   def onUpdateButton(self):
-    self.requestClinicalData()
+    self.requestClinicalData(self.cacheFile)
 
   def requestClinicalData(self,cacheFile):
     if self.collection == 'TCGA-GBM':
@@ -104,7 +108,7 @@ class clinicalDataPopup:
     elif self.collection == 'TCGA-KIRC':
       queryString = 'kirc_tcga_pub_all'
     elif self.collection == 'TCGA-LUAD':
-      queryString = 'luad_tcga_pub_all'
+      queryString = 'luad_tcga_all'
     elif self.collection == 'TCGA-PRAD':
       queryString = 'prad_tcga_all'
     elif self.collection == 'TCGA-LIHC':
@@ -125,10 +129,10 @@ class clinicalDataPopup:
       response = urllib2.urlopen(request)
       responseString = response.read()[:]
       if responseString[:7] == 'CASE_ID': 
-        with open(cacheFile, 'w') as outputFile:
+        with open(self.cacheFile, 'w') as outputFile:
           outputFile.write(responseString)
           outputFile.close()
-        self.readResponseCSVFile(cacheFile)
+        self.readResponseCSVFile(self.cacheFile)
         self.closeProgress()
       else:
         self.closeProgress()
