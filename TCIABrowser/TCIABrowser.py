@@ -87,6 +87,7 @@ class TCIABrowserWidget:
   def setup(self):
     # Instantiate and connect widgets ...
 
+    self.reportIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/report.png')
     #
     # Reload and Test area
     #
@@ -212,8 +213,8 @@ class TCIABrowserWidget:
     self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
     self.patientsTableWidgetHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
-        'Patient Sex','Ethnic Group']
-    self.patientsTableWidget.setColumnCount(5)
+        'Patient Sex','Ethnic Group','Clinical Data']
+    self.patientsTableWidget.setColumnCount(6)
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
     patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     patientsTableWidgetHeader.setStretchLastSection(True)
@@ -528,7 +529,7 @@ class TCIABrowserWidget:
           outputFile.close()
         self.populateStudiesTableWidget(responseString)
         groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
+        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle) 
         self.closeProgress()
       
       except Exception, error:
@@ -689,9 +690,12 @@ class TCIABrowserWidget:
       keys = patient.keys()
       for key in keys:
         if key == 'PatientID':
-          patientID = qt.QTableWidgetItem(str(patient['PatientID']))
+          patientIDString = str(patient['PatientID'])
+          patientID = qt.QTableWidgetItem(patientIDString)
           self.patientsIDs.append(patientID)
           table.setItem(n,0,patientID)
+          if patientIDString[0:4] == 'TCGA':
+            patientID.setIcon(self.reportIcon)
         if key == 'PatientName':
           patientName = qt.QTableWidgetItem(str(patient['PatientName']))
           self.patientNames.append(patientName)
