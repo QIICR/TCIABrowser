@@ -1263,7 +1263,6 @@ class settingsAPI:
     return deleteApiDialog
 
   def saveApi(self):
-    print 'add to table'
     table = self.apiTable
     apiNameTableItem = qt.QTableWidgetItem(str(self.apiNameLineEdit.text))
     apiKeyTableItem = qt.QTableWidgetItem(str(self.apiKeyLineEdit.text))
@@ -1277,14 +1276,11 @@ class settingsAPI:
     elif self.dialogRole == 'Edit':
       table.setItem(self.currentAPIRow, 0, apiNameTableItem)
       table.setItem(self.currentAPIRow, 1, apiKeyTableItem)
-    
-    self.addAPIDialogBox.hide()
     self.restartLabel.setVisible(True)
 
   def deleteApi(self):
     self.apiTable.removeRow(self.currentAPIRow)
     self.numberOfRows -= 1
-    print 'delete api'
     self.deleteDialogBox.hide()
     self.restartLabel.setVisible(True)
 
@@ -1355,11 +1351,11 @@ class clinicalDataPopup:
   def __init__(self,cachePath = '.'):
     self.cachePath = cachePath
     self.window = qt.QWidget()
-    self.window.setWindowTitle('Clinical Data')
+    self.window.setWindowTitle('Clinical Data (From cBioportal for Cancer Genomics)')
     self.layout= qt.QVBoxLayout(self.window)
     self.setup()
     self.progress = qt.QProgressDialog(self.window)
-    self.progress.setWindowTitle("TCIA Browser")
+    self.progress.setWindowTitle("Clinical Data")
 
   def setup(self):
     self.tableAreaWidget = qt.QWidget()
@@ -1380,6 +1376,7 @@ class clinicalDataPopup:
     self.buttonsLayout.addWidget(self.accessLabel)
     self.buttonsLayout.addStretch(1)
     self.updateButton = qt.QPushButton('Update Cache')
+    self.updateButton.toolTip = 'Connect to cBioPortal and update the data'
     self.buttonsLayout.addWidget(self.updateButton)
 
     self.closeButton= qt.QPushButton('Close')
@@ -1390,25 +1387,22 @@ class clinicalDataPopup:
     self.closeButton.connect('clicked(bool)', self.onCloseButton)
 
   def getData(self, collection, patient):
+    self.onCloseButton()
     self.collection = collection
     self.patient = patient
-    self.cacheFile = self.cachePath + collection+'.csv'
-    #self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
-    #self.showProgress(self.progressMessage)
-    if os.path.isfile(self.cacheFile):
-      print 'file exists'
-      #self.populatePatientsTableWidget(responseString)
-      #self.closeProgress()
-      #groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-      self.readCsvFile(self.cacheFile)
-      #self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
+    cacheFile = self.cachePath + collection+'.csv'
+    if os.path.isfile(cacheFile):
+      self.readResponseCSVFile(cacheFile)
     else:
-      self.requestClinicalData()
+      self.requestClinicalData(cacheFile)
 
-  def readCsvFile(self,cacheFile):
+  def readResponseCSVFile(self,cacheFile):
+    table = self.clinicalDataTableWidget
+    self.tableItems = []
+    table.clear()
     accessLabelText = 'Accessed: '+ time.ctime(os.path.getmtime(cacheFile))
     self.accessLabel.setText(accessLabelText)
-    table = self.clinicalDataTableWidget
+    data = []
     data = list(csv.reader(open(cacheFile, 'rb'), delimiter='\t'))
     headers = data[0]
     table.setRowCount(len(headers))
@@ -1417,25 +1411,24 @@ class clinicalDataPopup:
     horizontalHeader = table.horizontalHeader()
     horizontalHeader.hide()
     horizontalHeader.setStretchLastSection(True)
+
     for row in data:
       for item in row:
         if self.patient in item:
           patient = row
-        else:
-          print 'patient not in the query'
-    self.tableItems = []
+
     if patient != None:
       for index,item in enumerate(patient):
-        print item
         tableItem = qt.QTableWidgetItem(str(item))
         table.setItem(index, 0, tableItem)
         self.tableItems.append(tableItem)
+    else:
+      print 'patient not in the query'
     
   def open(self):
     if not self.window.isVisible():
       self.window.show()
     self.window.raise_()
-    print 'open window'
 
   def onCloseButton(self):
     self.window.hide()
@@ -1443,47 +1436,52 @@ class clinicalDataPopup:
   def onUpdateButton(self):
     self.requestClinicalData()
 
-  def requestClinicalData(self):
+  def requestClinicalData(self,cacheFile):
     if self.collection == 'TCGA-GBM':
-      queryString = 'gbm_tcga_pub'
+      queryString = 'gbm_tcga_pub_all'
     elif self.collection == 'TCGA-BRCA':
-      queryString = 'brca_tcga_pub'
+      queryString = 'brca_tcga_pub_all'
     elif self.collection == 'TCGA-LGG':
-      queryString = 'lgg_tcga'
+      queryString = 'lgg_tcga_all'
     elif self.collection == 'TCGA-KIRC':
-      queryString = 'kirc_tcga_pub'
+      queryString = 'kirc_tcga_pub_all'
     elif self.collection == 'TCGA-LUAD':
-      queryString = 'luad_tcga_pub'
+      queryString = 'luad_tcga_pub_all'
     elif self.collection == 'TCGA-PRAD':
-      queryString = 'prad_tcga_pub'
+      queryString = 'prad_tcga_all'
     elif self.collection == 'TCGA-LIHC':
-      queryString = 'lihc_tcga'
+      queryString = 'lihc_tcga_all'
     elif self.collection == 'TCGA-KIRP':
-      queryString = 'kirp_tcga'
+      queryString = 'kirp_tcga_all'
     elif self.collection == 'TCGA-OV':
-      queryString = 'ov_tcga_pub'
+      queryString = 'ov_tcga_pub_all'
     elif self.collection == 'TCGA-HNSC':
-      queryString = 'hnsc_tcga'
-    self.progressMessage = "Please Wait ..."
+      queryString = 'hnsc_tcga_all'
+    self.progressMessage = "Please wait while retreiving information from cBioportal for Cancer Genomics server."
     self.showProgress(self.progressMessage)
     try:    
       
       url = 'http://www.cbioportal.org/public-portal/webservice.do?cmd=getClinicalData&case_set_id='
-      requestUrl = url + queryString + '_all'
+      requestUrl = url + queryString 
       request = urllib2.Request(url=requestUrl)
       response = urllib2.urlopen(request)
       responseString = response.read()[:]
-      #if responseString = erorr
-      with open(self.cacheFile, 'w') as outputFile:
-        outputFile.write(responseString)
-        outputFile.close()
-      self.readCsvFile(self.cacheFile)
-      #self.populatePatientsTableWidget(responseString)
-      #groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-      #self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
-      self.closeProgress()
+      if responseString[:7] == 'CASE_ID': 
+        with open(cacheFile, 'w') as outputFile:
+          outputFile.write(responseString)
+          outputFile.close()
+        self.readResponseCSVFile(cacheFile)
+        self.closeProgress()
+      else:
+        self.closeProgress()
+        message = "Error in getting response from cBioportal Server" 
+        qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
     except Exception, error:
-      print error
+      self.closeProgress()
+      message = "Error in getting response from cBioportal Server" 
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                        'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def showProgress(self, message):
     self.progress.minimumDuration = 0
@@ -1499,5 +1497,4 @@ class clinicalDataPopup:
   def closeProgress(self):
     self.progress.close()
     self.progress.reset()
-    self.showBrowser()
 
