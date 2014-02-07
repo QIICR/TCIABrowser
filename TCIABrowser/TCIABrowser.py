@@ -88,6 +88,8 @@ class TCIABrowserWidget:
     # Instantiate and connect widgets ...
 
     self.reportIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/report.png')
+    self.downloadAndIndexIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/downloadAndIndex.png')
+    self.downloadAndLoadIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/downloadAndLoad.png')
     self.browserIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/TCIABrowser.png')
     self.browserWidget.setWindowIcon(self.browserIcon)
     #
@@ -179,14 +181,27 @@ class TCIABrowserWidget:
     collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     collectionsCollapsibleGroupBox.setTitle('Collections')
     browserWidgetLayout.addWidget(collectionsCollapsibleGroupBox)  # 
-    collectionsFormLayout = qt.QFormLayout(collectionsCollapsibleGroupBox)
+    collectionsFormLayout = qt.QHBoxLayout(collectionsCollapsibleGroupBox)
     
 
     #
     # Collection Selector ComboBox
     #
+    self.collectionSelectorLabel = qt.QLabel('Current Collection:')
+    collectionsFormLayout.addWidget(self.collectionSelectorLabel)
+    # Selector ComboBox
     self.collectionSelector = qt.QComboBox()
-    collectionsFormLayout.addRow('Current Collection:', self.collectionSelector)
+    self.collectionSelector.setMinimumWidth(200)
+    collectionsFormLayout.addWidget( self.collectionSelector)
+    ##
+    # Use Cache CheckBox
+    #
+    collectionsFormLayout.addStretch(4)
+    self.useCacheCeckBox= qt.QCheckBox("Use Cache")
+    self.useCacheCeckBox.toolTip = "If checked the browser will use previous cached queries (saved on disk) else it will request new queries from the server and updates cache."
+    collectionsFormLayout.addWidget(self.useCacheCeckBox)
+    self.useCacheCeckBox.setCheckState(True)
+    self.useCacheCeckBox.setTristate(False)
     '''
     self.infoPushButton = qt.QPushButton("?")
     collectionsFormLayout.addRow(self.infoPushButton,self.collectionSelector)
@@ -272,35 +287,36 @@ class TCIABrowserWidget:
     seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
 
-
     downloadButtonsWidget = qt.QWidget()
     downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
     browserWidgetLayout.addWidget(downloadButtonsWidget)
-    ##
-    # Use Cache CheckBox
-    #
-    self.useCacheCeckBox= qt.QCheckBox("Use Cache")
-    downloadWidgetLayout.addWidget(self.useCacheCeckBox)
-    self.useCacheCeckBox.setCheckState(True)
-    self.useCacheCeckBox.setTristate(False)
-
+    
     # Index Button
     #
-    self.indexButton = qt.QPushButton("Download and Index")
-    # self.indexButton.setMaximumWidth(150)
-    self.indexButton.toolTip = "Download the selected sereies and index in Slicer DICOM Database."
+    self.indexButton = qt.QPushButton()
+    self.indexButton.setMinimumWidth(50)
+    self.indexButton.toolTip = "Download and Index: The browser will download the selected sereies and index them in 3D Slicer DICOM Database."
+    self.indexButton.setIcon(self.downloadAndIndexIcon)
+    iconSize = qt.QSize(50,50)
+    self.indexButton.setIconSize(iconSize)
+    self.indexButton.setMinimumHeight(50)
     self.indexButton.enabled = False 
-    downloadWidgetLayout.addStretch(1)
+    downloadWidgetLayout.addStretch(4)
     downloadWidgetLayout.addWidget(self.indexButton)
 
+    downloadWidgetLayout.addStretch(1)
     #
     # Load Button
     #
-    self.loadButton = qt.QPushButton("Download and Load")
-    # self.loadButton.setMaximumWidth(150)
-    self.loadButton.toolTip = "Download the selected sereies and load in Slicer scene."
+    self.loadButton = qt.QPushButton("")
+    self.loadButton.setMinimumWidth(50)
+    self.loadButton.setIcon(self.downloadAndLoadIcon)
+    self.loadButton.setIconSize(iconSize)
+    self.loadButton.setMinimumHeight(50)
+    self.loadButton.toolTip = "Download and Load: The browser will download the selected sereies and Load them in 3D Slicer scene."
     self.loadButton.enabled = False 
     downloadWidgetLayout.addWidget(self.loadButton)
+    downloadWidgetLayout.addStretch(4)
 
     #
     # context menu
