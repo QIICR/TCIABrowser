@@ -175,15 +175,6 @@ class TCIABrowserWidget:
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
     # browserWidgetLayout = self.browserWidget.layout
     #
-    #
-    # Storage Path button
-    #
-    storageWidget = qt.QWidget()
-    storageFormLayout = qt.QFormLayout(storageWidget)
-    browserWidgetLayout.addWidget(storageWidget)
-    self.storagePathButton = ctk.ctkDirectoryButton()
-    self.storagePathButton.directory = self.storagePath
-    storageFormLayout.addRow("Storage Directory: ", self.storagePathButton)
     
     collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     collectionsCollapsibleGroupBox.setTitle('Collections')
@@ -326,9 +317,19 @@ class TCIABrowserWidget:
     #
     settingsCollapsibleButton = ctk.ctkCollapsibleButton()
     settingsCollapsibleButton.text = "Settings"
-    #self.layout.addWidget(settingsCollapsibleButton)
-    settingsVBoxLayout = qt.QVBoxLayout(settingsCollapsibleButton)
+    self.layout.addWidget(settingsCollapsibleButton)
+    settingsFormLayout = qt.QFormLayout(settingsCollapsibleButton)
+#
+    # Storage Path button
+    #
+    #storageWidget = qt.QWidget()
+    #storageFormLayout = qt.QFormLayout(storageWidget)
+    #settingsVBoxLayout.addWidget(storageWidget)
+    self.storagePathButton = ctk.ctkDirectoryButton()
+    self.storagePathButton.directory = self.storagePath
 
+    settingsFormLayout.addRow("Storage Directory: ", self.storagePathButton)
+    
     self.apiSettingsPopup = TCIABrowserLib.APISettingsPopup()
     self.clinicalPopup = TCIABrowserLib.clinicalDataPopup(self.cachePath,self.reportIcon)
 
