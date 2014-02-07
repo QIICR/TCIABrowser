@@ -88,6 +88,8 @@ class TCIABrowserWidget:
     # Instantiate and connect widgets ...
 
     self.reportIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/report.png')
+    self.browserIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/TCIABrowser.png')
+    self.browserWidget.setWindowIcon(self.browserIcon)
     #
     # Reload and Test area
     #
@@ -359,7 +361,7 @@ class TCIABrowserWidget:
     apiSettingsFormLayout.addWidget(self.removeApiButton)
 
     self.apiSettingsPopup = settingsAPI()
-    self.clinicalPopup = clinicalDataPopup(self.cachePath)
+    self.clinicalPopup = clinicalDataPopup(self.cachePath,self.reportIcon)
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
@@ -1352,10 +1354,11 @@ class APITable(qt.QTableWidget):
     apiSettingsTableWidgetHeader.setStretchLastSection(True)
 
 class clinicalDataPopup:
-  def __init__(self,cachePath = '.'):
+  def __init__(self,cachePath,icon):
     self.cachePath = cachePath
     self.window = qt.QWidget()
     self.window.setWindowTitle('Clinical Data (From cBioportal for Cancer Genomics)')
+    self.window.setWindowIcon(icon)
     self.layout= qt.QVBoxLayout(self.window)
     self.setup()
     self.progress = qt.QProgressDialog(self.window)
