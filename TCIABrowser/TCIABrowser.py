@@ -1,3 +1,4 @@
+from __future__  import division
 import urllib2, urllib,sys, os
 import time
 import string, json, zipfile, os.path
@@ -58,6 +59,10 @@ class TCIABrowserWidget:
     self.browserWidget = qt.QWidget()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
+    self.progressLabels = []
+    self.downloadProgressBars = []
+    self.downloadProgressBarWidgets = []
+
     self.progress = qt.QProgressDialog(self.browserWidget)
     self.progress.setWindowTitle("TCIA Browser")
     # setup API key
@@ -98,7 +103,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -217,7 +222,7 @@ class TCIABrowserWidget:
     patientsExpdableArea = ctk.ctkExpandableWidget()
     patientsVBoxLayout1.addWidget(patientsExpdableArea)
     patientsVBoxLayout2 = qt.QVBoxLayout(patientsExpdableArea)
-    patientsVerticalLayout = qt.QVBoxLayout(patientsExpdableArea)
+    #patientsVerticalLayout = qt.QVBoxLayout(patientsExpdableArea)
     self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
     self.patientsTableWidgetHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
@@ -349,6 +354,19 @@ class TCIABrowserWidget:
     self.apiSettingsPopup = TCIABrowserLib.APISettingsPopup()
     self.clinicalPopup = TCIABrowserLib.clinicalDataPopup(self.cachePath,self.reportIcon)
 
+    #
+    # Download Status Area
+    #
+    downloadStatusCollapsibleButton = ctk.ctkCollapsibleButton()
+    downloadStatusCollapsibleButton.text = "Download Status"
+    self.layout.addWidget(downloadStatusCollapsibleButton)
+    downloadVBoxLayout = qt.QVBoxLayout(downloadStatusCollapsibleButton)
+    #
+    downloadStatusExpdableArea = ctk.ctkExpandableWidget()
+    downloadVBoxLayout.addWidget(downloadStatusExpdableArea)
+    self.downloadFormLayout = qt.QFormLayout(downloadStatusExpdableArea)
+    self.layout.addStretch(1)
+    
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
     self.addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
@@ -414,10 +432,9 @@ class TCIABrowserWidget:
     self.progress.setValue(0)
     self.progress.setMaximum(0)
     self.progress.setCancelButton(0)
-    self.progress.setWindowModality(2)
     self.progress.show()
     self.progress.setLabelText(message)
-    slicer.app.processEvents(qt.QEventLoop.ExcludeUserInputEvents)
+    slicer.app.processEvents()
     self.progress.repaint()
 
   def closeProgress(self):
@@ -429,6 +446,7 @@ class TCIABrowserWidget:
     self.storagePath = self.storagePathButton.directory
 
   def onConnectButton(self):
+    self.connectButton.enabled = False 
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
     self.tcia_client = TCIABrowserLib.TCIAClient(self.currentAPIKey, baseUrl = 
@@ -566,6 +584,8 @@ class TCIABrowserWidget:
   def seriesSelected(self,row,column):
     self.loadButton.enabled = True
     self.indexButton.enabled = True
+    self.selectedSeriesUIdForDownloadRow = row
+    self.selectedSeriesImageCount = self.imageCounts[row].text()
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
 
   def onIndexButton(self):
@@ -614,16 +634,18 @@ class TCIABrowserWidget:
     fileName = tempPath + str(selectedSeries) + ".zip"
     self.extractedFilesDirectory = tempPath + str(selectedSeries)
     self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
-    self.showProgress(self.progressMessage)
+    #self.showProgress(self.progressMessage)
     try:
       response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
+      slicer.app.processEvents()
       # Save server response as images.zip in current directory
       if response.getcode() == 200:
         #print "\n" + str(response.info())
-        bytesRead = response.read()
-        fout = open(fileName, "wb")
-        fout.write(bytesRead)
-        fout.close()
+        self.makeDownloadProgressBar(self.selectedPatient)
+        destinationFile = open(fileName, "wb")
+        self.__bufferRead(destinationFile, response)
+        
+        destinationFile.close()
         # print "\nDownloaded file %s.zip from the TCIA server" %fileName
         self.closeProgress()
       else:
@@ -643,7 +665,70 @@ class TCIABrowserWidget:
     self.closeProgress()
     # Import the data into dicomAppWidget and open the dicom browser
     os.remove(fileName)
+
+  def makeDownloadProgressBar(self, title):
+    downloadProgressBarWidget = qt.QWidget()
+    self.downloadHBoxLayout = qt.QHBoxLayout(downloadProgressBarWidget)
+    #self.downloadVBoxLayout.addWidget(downloadProgressBarWidget)
+    self.downloadProgressBarWidgets.append(downloadProgressBarWidget)
+    self.downloadProgressBar = qt.QProgressBar()
+    self.downloadProgressBar.setMinimumWidth(250)
+    titleLabel = qt.QLabel(title)
+    #self.downloadHBoxLayout.addWidget(titleLabel)
+    #self.downloadHBoxLayout.addWidget(self.downloadProgressBar)
+    self.downloadProgressBars.append(self.downloadProgressBar)
+    self.progressLabel = qt.QLabel('0 KB')
+    self.progressLabels.append(self.progressLabel)
+    #self.downloadHBoxLayout.addWidget(self.progressLabel)
+    #self.downloadHBoxLayout.addStretch(1)
+    self.downloadFormLayout.addRow(self.progressLabel,self.downloadProgressBar)
     
+  def __bufferRead(self, dstFile, response, bufferSize=8192):
+
+    #--------------------
+    # Define the buffer read loop
+    #--------------------
+    self.downloadSize = 0
+    while 1:     
+      '''
+        #
+        # If DOWNLOAD CANCELLED
+        #              
+        if not self.inDownloadQueue(_src):
+            print "Cancelling download of '%s'"%(_src)
+            dstFile.close()
+            os.remove(dstFile.name)
+            self.runEventCallbacks('downloadCancelled', _src)
+            break
+      '''
+
+      #
+      # If DOWNLOAD FINISHED
+      #
+      buffer = response.read(bufferSize)
+      slicer.app.processEvents()
+      if not buffer: 
+        # Pop from the queue
+        self.downloadProgressBar.setMaximum(100)
+        self.downloadProgressBar.setValue(100)
+        break
+      #
+      # Otherwise, Write buffer chunk to file
+      #
+      slicer.app.processEvents()
+      dstFile.write(buffer)
+      #
+      # And update progress indicators
+      #
+      self.downloadSize += len(buffer)
+      self.downloadProgressBar.setValue(0)
+      self.downloadProgressBar.setMaximum(0)
+      self.downloadProgressBar.repaint()
+      self.progressLabel.text = str(int(self.downloadSize/1024)) + " KB"
+      print self.downloadSize
+
+    return self.downloadSize
+
   def unzip(self,sourceFilename, destinationDir):
     with zipfile.ZipFile(sourceFilename) as zf:
       for member in zf.infolist():
