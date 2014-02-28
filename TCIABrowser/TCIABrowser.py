@@ -669,6 +669,7 @@ class TCIABrowserWidget:
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].checkState() == 2:
+        self.seriesInstanceUIDs[n].setCheckState(0)
         selectedCollection = self.selectedCollection
         selectedPatient = self.selectedPatient
         selectedStudy = self.selectedStudy
