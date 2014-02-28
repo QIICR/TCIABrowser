@@ -662,7 +662,6 @@ class TCIABrowserWidget:
     seriesUID = seriesUID.replace("'","")
     self.dicomDatabase = slicer.dicomDatabase
     self.fileList = slicer.dicomDatabase.filesForSeries(seriesUID)
-    print self.fileList
     originalDatabaseDirectory = os.path.split(slicer.dicomDatabase.databaseFilename)[0]
     # change database directory to update dicom browser tables
     dicomWidget.onDatabaseDirectoryChanged(self.extractedFilesDirectory)
@@ -700,31 +699,29 @@ class TCIABrowserWidget:
       self.extractedFilesDirectory = tempPath + str(selectedSeries)
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       #self.showProgress(self.progressMessage)
-      #try:
-      response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
-      slicer.app.processEvents()
-      # Save server response as images.zip in current directory
-      if response.getcode() == 200:
-        #print "\n" + str(response.info())
-        #self.makeDownloadProgressBar(selectedSeries)
-        destinationFile = open(fileName, "wb")
-        self.__bufferRead(destinationFile, response, selectedSeries)
-        
-        destinationFile.close()
-        # print "\nDownloaded file %s.zip from the TCIA server" %fileName
-        self.closeProgress()
+      try:
+        response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
+        slicer.app.processEvents()
+        # Save server response as images.zip in current directory
+        if response.getcode() == 200:
+          #print "\n" + str(response.info())
+          #self.makeDownloadProgressBar(selectedSeries)
+          destinationFile = open(fileName, "wb")
+          self.__bufferRead(destinationFile, response, selectedSeries)
+          
+          destinationFile.close()
+          # print "\nDownloaded file %s.zip from the TCIA server" %fileName
+          self.closeProgress()
 
-      else:
-        print "Error : " + str(response.getcode) # print error code
-        print "\n" + str(response.info())
-    
-      '''
+        else:
+          print "Error : " + str(response.getcode) # print error code
+          print "\n" + str(response.info())
+      
       except Exception, error:
         self.closeProgress()
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                           'TCIA Browser', message, qt.QMessageBox.Ok)
-      '''
 
       self.progressMessage = "Extracting Images"
       # Unzip the data
@@ -816,9 +813,11 @@ class TCIABrowserWidget:
       slicer.app.processEvents()
       if not buffer: 
         # Pop from the queue
-
         currentDownloadProgressBar .setMaximum(100)
         currentDownloadProgressBar .setValue(100)
+        currentDownloadProgressBar.setVisible(False)
+        currentProgressLabel.setVisible(False)
+
         self.downloadQueueTempathDict.pop(selectedSeries, None)
         break
       #
