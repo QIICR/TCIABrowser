@@ -669,7 +669,6 @@ class TCIABrowserWidget:
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected() == True:
-        self.seriesTableWidget.clearSelection()
         selectedCollection = self.selectedCollection
         selectedPatient = self.selectedPatient
         selectedStudy = self.selectedStudy
@@ -685,6 +684,8 @@ class TCIABrowserWidget:
         # make progress bar
         self.makeDownloadProgressBar(selectedSeries)
         # run downloader
+
+    self.seriesTableWidget.clearSelection()
     self.downloadSelectedSeries()
 
   def downloadSelectedSeries(self):
