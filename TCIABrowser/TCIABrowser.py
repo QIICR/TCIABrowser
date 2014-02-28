@@ -56,6 +56,8 @@ class TCIABrowserWidget:
       self.setup()
       self.parent.show()
 
+    self.loadToScene = False
+
     self.browserWidget = qt.QWidget()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
@@ -108,7 +110,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -464,7 +466,7 @@ class TCIABrowserWidget:
   def closeProgress(self):
     self.progress.close()
     self.progress.reset()
-    self.showBrowser()
+    #self.showBrowser()
 
   def onStoragePathButton(self):
     self.storagePath = self.storagePathButton.directory
@@ -636,19 +638,14 @@ class TCIABrowserWidget:
     self.selectedSereiesRow = row
 
   def onIndexButton(self):
-    self.downloadSelected()
+    self.loadToScene = False
+    self.addSelectedToDownloadQueue()
     #self.addFilesToDatabase()
 
   def onLoadButton(self):
-    self.downloadSelected()
+    self.loadToScene = True
+    self.addSelectedToDownloadQueue()
     #self.addFilesToDatabase()
-
-    self.progressMessage = "Examine Files to Load"
-    self.showProgress(self.progressMessage)
-    plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
-    loadables = plugin.examine([self.fileList])
-    self.closeProgress()
-    volume = plugin.load(loadables[0])
 
   def addFilesToDatabase(self,seriesUID):
     self.progressMessage = "Adding Files to DICOM Database "
@@ -668,7 +665,7 @@ class TCIABrowserWidget:
     dicomWidget.onDatabaseDirectoryChanged(originalDatabaseDirectory)
     self.closeProgress()
 
-  def downloadSelected(self):
+  def addSelectedToDownloadQueue(self):
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].checkState() == 2:
@@ -731,6 +728,13 @@ class TCIABrowserWidget:
       # Import the data into dicomAppWidget and open the dicom browser
       os.remove(fileName)
       self.addFilesToDatabase(selectedSeries)
+      if self.loadToScene == True:
+        self.progressMessage = "Examine Files to Load"
+        self.showProgress(self.progressMessage)
+        plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
+        loadables = plugin.examine([self.fileList])
+        self.closeProgress()
+        volume = plugin.load(loadables[0])
 
   def makeDownloadProgressBar(self, selectedSeries):
     #downloadProgressBarWidget = qt.QWidget()
