@@ -293,7 +293,7 @@ class TCIABrowserWidget:
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
     self.seriesTreeSelectionModel = self.studiesTableWidget.selectionModel()
     self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
-    self.seriesTableWidget.setSelectionMode(abstractItemView.ContiguousSelection) 
+    self.seriesTableWidget.setSelectionMode(3) 
     seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
     seriesTableWidgetHeader.setStretchLastSection(True)
     #seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
@@ -493,12 +493,18 @@ class TCIABrowserWidget:
     self.showBrowser()
 
   def onSelectAllButton(self):
+    self.seriesTableWidget.selectAll()
+    '''
     for n in range(len(self.seriesInstanceUIDs)):
-      self.seriesInstanceUIDs[n].setCheckState(2)
+      self.seriesInstanceUIDs[n].setSelected(True)
+    '''
 
   def onSelectNoneButton(self):
+    self.seriesTableWidget.clearSelection()
+    '''
     for n in range(len(self.seriesInstanceUIDs)):
-      self.seriesInstanceUIDs[n].setCheckState(0)
+      self.seriesInstanceUIDs[n].setSelected(False)
+    '''
    
   def collectionSelected(self,item):
     self.loadButton.enabled = False
@@ -628,12 +634,6 @@ class TCIABrowserWidget:
   def seriesSelected(self,row,column):
     #self.selectedSeriesUIdForDownloadRow = row
     self.selectedSeriesImageCount = self.imageCounts[row].text()
-    '''
-    if self.seriesInstanceUIDs[row].checkState() == 0:
-      self.seriesInstanceUIDs[row].setCheckState(2)
-    elif self.seriesInstanceUIDs[row].checkState() == 2:
-      self.seriesInstanceUIDs[row].setCheckState(0)
-    '''
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
     self.selectedSereiesRow = row
 
@@ -668,8 +668,7 @@ class TCIABrowserWidget:
   def addSelectedToDownloadQueue(self):
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
-      if self.seriesInstanceUIDs[n].checkState() == 2:
-        self.seriesInstanceUIDs[n].setCheckState(0)
+      if self.seriesInstanceUIDs[n].isSelected() == True:
         selectedCollection = self.selectedCollection
         selectedPatient = self.selectedPatient
         selectedStudy = self.selectedStudy
@@ -957,7 +956,6 @@ class TCIABrowserWidget:
       for key in keys:
         if key == 'SeriesInstanceUID':
           seriesInstanceUID = qt.QTableWidgetItem(str(series['SeriesInstanceUID']))
-          seriesInstanceUID.setCheckState(0)
           self.seriesInstanceUIDs.append(seriesInstanceUID)
           table.setItem(n,0,seriesInstanceUID)
         if key == 'Modality':
