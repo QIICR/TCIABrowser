@@ -669,6 +669,7 @@ class TCIABrowserWidget:
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected() == True:
+        self.seriesTableWidget.clearSelection()
         selectedCollection = self.selectedCollection
         selectedPatient = self.selectedPatient
         selectedStudy = self.selectedStudy
