@@ -61,6 +61,8 @@ class TCIABrowserWidget:
     self.browserWidget = qt.QWidget()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
+    self.seriesTableRowCount = 0
+    self.studiesTableRowCount = 0
     self.downloadProgressBarCounts = 0 
     self.downloadProgressBarDict = {}
     self.selectedSereisNicknamesDic = {} 
@@ -257,6 +259,7 @@ class TCIABrowserWidget:
     studiesVBoxLayout1.addWidget(studiesExpdableArea)
     studiesVBoxLayout2 = qt.QVBoxLayout(studiesExpdableArea)
     self.studiesTableWidget = qt.QTableWidget()
+    self.studiesTableWidget.setCornerButtonEnabled(True)
     self.studiesModel = qt.QStandardItemModel()
     self.studiesTableHeaderLabels = ['Study Instance UID','Study Date','Study Description',
         'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
@@ -271,6 +274,22 @@ class TCIABrowserWidget:
     studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
     studiesTableWidgetHeader.setStretchLastSection(True)
     # studiesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
+
+    studiesSelectOptionsWidget = qt.QWidget()
+    studiesSelectOptionsLayout = qt.QHBoxLayout(studiesSelectOptionsWidget )
+    studiesSelectOptionsLayout.setMargin(0)
+    studiesVBoxLayout2.addWidget(studiesSelectOptionsWidget )
+    studiesSelectLabel = qt.QLabel('Select:')
+    studiesSelectOptionsLayout.addWidget(studiesSelectLabel)
+    self.studiesSelectAllButton = qt.QPushButton('All')
+    self.studiesSelectAllButton.enabled = False
+    self.studiesSelectAllButton.setMaximumWidth(50)
+    studiesSelectOptionsLayout.addWidget(self.studiesSelectAllButton)
+    self.studiesSelectNoneButton = qt.QPushButton('None')
+    self.studiesSelectNoneButton.enabled = False
+    self.studiesSelectNoneButton.setMaximumWidth(50)
+    studiesSelectOptionsLayout.addWidget(self.studiesSelectNoneButton)
+    studiesSelectOptionsLayout.addStretch(1)
 
     #
     # Series Table Widget 
@@ -300,20 +319,21 @@ class TCIABrowserWidget:
     seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
 
-    selectOptionsWidget = qt.QWidget()
-    selectOptionsLayout = qt.QHBoxLayout(selectOptionsWidget)
-    seriesVBoxLayout2.addWidget(selectOptionsWidget)
-    selectLabel = qt.QLabel('Select:')
-    selectOptionsLayout.addWidget(selectLabel)
-    self.selectAllButton = qt.QPushButton('All')
-    self.selectAllButton.enabled = False
-    self.selectAllButton.setMaximumWidth(50)
-    selectOptionsLayout.addWidget(self.selectAllButton)
-    self.selectNoneButton = qt.QPushButton('None')
-    self.selectNoneButton.enabled = False
-    self.selectNoneButton.setMaximumWidth(50)
-    selectOptionsLayout.addWidget(self.selectNoneButton)
-    selectOptionsLayout.addStretch(1)
+    seriesSelectOptionsWidget = qt.QWidget()
+    seriesSelectOptionsLayout = qt.QHBoxLayout(seriesSelectOptionsWidget )
+    seriesVBoxLayout2.addWidget(seriesSelectOptionsWidget )
+    seriesSelectOptionsLayout.setMargin(0)
+    seriesSelectLabel = qt.QLabel('Select:')
+    seriesSelectOptionsLayout.addWidget(seriesSelectLabel)
+    self.seriesSelectAllButton = qt.QPushButton('All')
+    self.seriesSelectAllButton.enabled = False
+    self.seriesSelectAllButton.setMaximumWidth(50)
+    seriesSelectOptionsLayout.addWidget(self.seriesSelectAllButton)
+    self.seriesSelectNoneButton = qt.QPushButton('None')
+    self.seriesSelectNoneButton.enabled = False
+    self.seriesSelectNoneButton.setMaximumWidth(50)
+    seriesSelectOptionsLayout.addWidget(self.seriesSelectNoneButton)
+    seriesSelectOptionsLayout.addStretch(1)
 
     downloadButtonsWidget = qt.QWidget()
     downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
@@ -395,8 +415,10 @@ class TCIABrowserWidget:
     self.addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
     self.apiSelectionComboBox.connect('currentIndexChanged(QString)',self.apiKeySelected)
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
-    self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
-    self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
+    self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
+    #self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
+    self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
+    #self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
@@ -405,8 +427,10 @@ class TCIABrowserWidget:
     self.storagePathButton.connect('directoryChanged(const QString &)',self.onStoragePathButton)
     self.clinicalDataRetrieveAction.connect('triggered()', self.onContextMenuTriggered)
     self.clinicalDataRetrieveAction.connect('triggered()', self.clinicalPopup.open)
-    self.selectAllButton.connect('clicked(bool)', self.onSelectAllButton)
-    self.selectNoneButton.connect('clicked(bool)', self.onSelectNoneButton)
+    self.seriesSelectAllButton.connect('clicked(bool)', self.onSeriesSelectAllButton)
+    self.seriesSelectNoneButton.connect('clicked(bool)', self.onSeriesSelectNoneButton)
+    self.studiesSelectAllButton.connect('clicked(bool)', self.onStudiesSelectAllButton)
+    self.studiesSelectNoneButton.connect('clicked(bool)', self.onStudiesSelectNoneButton)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -492,20 +516,18 @@ class TCIABrowserWidget:
     self.showBrowserButton.enabled = True
     self.showBrowser()
 
-  def onSelectAllButton(self):
-    self.seriesTableWidget.selectAll()
-    '''
-    for n in range(len(self.seriesInstanceUIDs)):
-      self.seriesInstanceUIDs[n].setSelected(True)
-    '''
+  def onStudiesSelectAllButton(self):
+    self.studiesTableWidget.selectAll()
 
-  def onSelectNoneButton(self):
+  def onStudiesSelectNoneButton(self):
+    self.studiesTableWidget.clearSelection()
+
+  def onSeriesSelectAllButton(self):
+    self.seriesTableWidget.selectAll()
+
+  def onSeriesSelectNoneButton(self):
     self.seriesTableWidget.clearSelection()
-    '''
-    for n in range(len(self.seriesInstanceUIDs)):
-      self.seriesInstanceUIDs[n].setSelected(False)
-    '''
-   
+
   def collectionSelected(self,item):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
@@ -555,10 +577,20 @@ class TCIABrowserWidget:
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
-  def patientSelected(self,row,column):
+  def patientsTableSelectionChanged(self):
+    self.clearStudiesTableWidget()
+    self.clearSeriesTableWidget()
+    self.studiesTableRowCount = 0
+    self.numberOfSelectedPatinets = 0
+    for n in range(len(self.patientsIDs)):
+      if self.patientsIDs[n].isSelected() == True:
+        self.numberOfSelectedPatinets += 1
+        self.patientSelected(n)
+
+  def patientSelected(self,row):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
-    self.clearStudiesTableWidget()
+    #self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedPatient = self.patientsIDs[row].text()
     cacheFile = self.cachePath+self.selectedPatient+'.json'
@@ -570,7 +602,11 @@ class TCIABrowserWidget:
       f.close()
       self.populateStudiesTableWidget(responseString)
       self.closeProgress()
-      groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      if self.numberOfSelectedPatinets == 1:
+        groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      else:
+        groupBoxTitle = 'Studies '
+
       self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
@@ -583,8 +619,12 @@ class TCIABrowserWidget:
         f = open(cacheFile,'r')
         responseString = f.read()[:]
         self.populateStudiesTableWidget(responseString)
-        groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
-        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle) 
+        if self.numberOfSelectedPatinets == 1:
+          groupBoxTitle = 'Studies (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+        else:
+          groupBoxTitle = 'Studies '
+
+        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
       
       except Exception, error:
@@ -593,10 +633,19 @@ class TCIABrowserWidget:
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                           'TCIA Browser', message, qt.QMessageBox.Ok)
 
-  def studySelected(self,row,column):
+  def studiesTableSelectionChanged(self):
+    self.clearSeriesTableWidget()
+    self.seriesTableRowCount = 0
+    self.numberOfSelectedStudies = 0
+    for n in range(len(self.studyInstanceUIDs)):
+      if self.studyInstanceUIDs[n].isSelected() == True:
+        self.numberOfSelectedStudies += 1
+        self.studySelected(n)
+
+  def studySelected(self,row):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
-    self.clearSeriesTableWidget()
+    #self.clearSeriesTableWidget()
     self.selectedStudy = self.studyInstanceUIDs[row].text()
     self.selectedStudyRow = row
     self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
@@ -608,7 +657,11 @@ class TCIABrowserWidget:
       f.close()
       self.populateSeriesTableWidget(responseString)
       self.closeProgress()
-      groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      if self.numberOfSelectedStudies == 1:
+        groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+      else:
+        groupBoxTitle = 'Series '
+
       self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
@@ -621,7 +674,12 @@ class TCIABrowserWidget:
           outputFile.write(responseString)
           outputFile.close()
         self.populateSeriesTableWidget(responseString)
-        groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+
+        if self.numberOfSelectedStudies == 1:
+          groupBoxTitle = 'Series (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
+        else:
+          groupBoxTitle = 'Series '
+
         self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
         
@@ -630,6 +688,10 @@ class TCIABrowserWidget:
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                           'TCIA Browser', message, qt.QMessageBox.Ok)
+
+    self.onSeriesSelectAllButton()
+    self.loadButton.enabled = True
+    self.indexButton.enabled = True
 
   def seriesSelected(self,row,column):
     #self.selectedSeriesUIdForDownloadRow = row
@@ -905,11 +967,15 @@ class TCIABrowserWidget:
     self.patientsTableWidget.resizeColumnsToContents()
 
   def populateStudiesTableWidget(self,responseString):
-    self.clearStudiesTableWidget()
+    self.studiesSelectAllButton.enabled = True
+    self.studiesSelectNoneButton.enabled = True
+    #self.clearStudiesTableWidget()
     table = self.studiesTableWidget
     studies = json.loads(responseString)
-    table.setRowCount(len(studies))
-    n = 0
+
+    n = self.studiesTableRowCount
+    table.setRowCount(n+len(studies))
+
     for study in studies:
       keys = study.keys()
       for key in keys:
@@ -944,15 +1010,18 @@ class TCIABrowserWidget:
       n += 1
     self.studiesTableWidget.resizeColumnsToContents()
 
+    self.studiesTableRowCount = n
+
   def populateSeriesTableWidget(self,responseString):
-    self.clearSeriesTableWidget()
+    #self.clearSeriesTableWidget()
     table = self.seriesTableWidget
     seriesCollection = json.loads(responseString)
-    table.setRowCount(len(seriesCollection))
-    self.selectAllButton.enabled = True 
-    self.selectNoneButton.enabled = True 
-  
-    n = 0
+    self.seriesSelectAllButton.enabled = True
+    self.seriesSelectNoneButton.enabled = True
+
+    n = self.seriesTableRowCount
+    table.setRowCount(n+len(seriesCollection))
+
     for series in seriesCollection:
       keys = series.keys()
       for key in keys:
@@ -1006,6 +1075,7 @@ class TCIABrowserWidget:
           table.setItem(n,11,imageCount )
       n += 1
     self.seriesTableWidget.resizeColumnsToContents()
+    self.seriesTableRowCount = n
 
   def clearPatientsTableWidget(self):
     table = self.patientsTableWidget
@@ -1020,6 +1090,7 @@ class TCIABrowserWidget:
     table.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
     
   def clearStudiesTableWidget(self):
+    self.studiesTableRowCount = 0
     table = self.studiesTableWidget
     self.studiesCollapsibleGroupBox.setTitle('Studies')
     self.studyInstanceUIDs =[]
@@ -1033,6 +1104,7 @@ class TCIABrowserWidget:
     table.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
    
   def clearSeriesTableWidget(self):
+    self.seriesTableRowCount = 0
     table = self.seriesTableWidget
     self.seriesCollapsibleGroupBox.setTitle('Series')
     self.seriesInstanceUIDs= []
@@ -1269,27 +1341,18 @@ class TCIABrowserTest(unittest.TestCase):
       selectedPatient = patientsTable.item(0,0).text()
       if selectedPatient != '':
         print 'current patient:', selectedPatient
-        model = patientsTable.model()
-        index = model.index(0,0)
-        patientsTable.clicked(index)
+        patientsTable.selectRow(0)
 
       studiesTable = tableWidgets[1]
       selectedStudy = studiesTable.item(0,0).text()
       if selectedStudy != '':
         print 'current study:', selectedStudy
-        model = studiesTable.model()
-        index = model.index(0,0)
-        studiesTable.clicked(index)
+        studiesTable.selectRow(0)
 
       seriesTable = tableWidgets[2]
       selectedSeries = seriesTable.item(0,0).text()
       if selectedSeries != '':
         print 'current series:', selectedSeries
-        '''
-        model = seriesTable.model()
-        index = model.index(0,0)
-        seriesTable.clicked(index)
-        '''
         seriesTable.selectRow(0)
 
       pushButtons = browserWindow.findChildren('QPushButton')
