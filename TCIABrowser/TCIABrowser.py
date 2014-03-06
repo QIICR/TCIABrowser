@@ -110,7 +110,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -1233,45 +1233,79 @@ class TCIABrowserTest(unittest.TestCase):
     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
     """
     slicer.mrmlScene.Clear(0)
+    mainWindow = slicer.util.mainWindow()
+    mainWindow.moduleSelector().selectModule('TCIABrowser')
+    module = slicer.modules.tciabrowser
+    self.moduleWidget = module.widgetRepresentation()
 
   def runTest(self):
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    self.test_TCIABrowser1()
+    self.test_download_series()
 
-  def test_TCIABrowser1(self):
-    """ Ideally you should have several levels of tests.  At the lowest level
-    tests sould exercise the functionality of the logic with different inputs
-    (both valid and invalid).  At higher levels your tests should emulate the
-    way the user would interact with your code and confirm that it still works
-    the way you intended.
-    One of the most important features of the tests is that it should alert other
-    developers when their changes will have an impact on the behavior of your
-    module.  For example, if a developer removes a feature that you depend on,
-    your test should break so they know that the feature is needed.
-    """
+  def test_download_series(self):
 
     self.delayDisplay("Starting the test")
-    #
-    # first, get some data
-    #
-    import urllib
-    downloads = (
-        ('http://slicer.kitware.com/midas3/download?items=5767', 'FA.nrrd', slicer.util.loadVolume),
-        )
 
-    for url,name,loader in downloads:
-      filePath = slicer.app.temporaryPath + '/' + name
-      if not os.path.exists(filePath) or os.stat(filePath).st_size == 0:
-        print('Requesting download %s from %s...\n' % (name, url))
-        urllib.urlretrieve(url, filePath)
-      if loader:
-        print('Loading %s...\n' % (name,))
-        loader(filePath)
-    self.delayDisplay('Finished with download and loading\n')
+    children = self.moduleWidget.findChildren('QPushButton')
+    for child in children:
+      if child.text == 'Connect':
+        connectButton = child
+    connectButton.click()
+    activeWindow = slicer.app.activeWindow()
+    if activeWindow.windowTitle == 'TCIA Browser':
+      browserWindow = activeWindow
+    if browserWindow != None:
+      collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
+      currentCollection = collectionsCombobox.currentText
+      if currentCollection != '':
+        print 'connected to the server successfully'
+        print 'current collection :', currentCollection
 
-    volumeNode = slicer.util.getNode(pattern="FA")
-    logic = TCIABrowserLogic()
-    self.assertTrue( logic.hasImageData(volumeNode) )
-    self.delayDisplay('Test passed!')
+      tableWidgets = browserWindow.findChildren('QTableWidget')
+
+      patientsTable = tableWidgets[0]
+      selectedPatient = patientsTable.item(0,0).text()
+      if selectedPatient != '':
+        print 'current patient:', selectedPatient
+        model = patientsTable.model()
+        index = model.index(0,0)
+        patientsTable.clicked(index)
+
+      studiesTable = tableWidgets[1]
+      selectedStudy = studiesTable.item(0,0).text()
+      if selectedStudy != '':
+        print 'current study:', selectedStudy
+        model = studiesTable.model()
+        index = model.index(0,0)
+        studiesTable.clicked(index)
+
+      seriesTable = tableWidgets[2]
+      selectedSeries = seriesTable.item(0,0).text()
+      if selectedSeries != '':
+        print 'current series:', selectedSeries
+        '''
+        model = seriesTable.model()
+        index = model.index(0,0)
+        seriesTable.clicked(index)
+        '''
+        seriesTable.selectRow(0)
+
+      pushButtons = browserWindow.findChildren('QPushButton')
+      for pushButton in pushButtons:
+        toolTip = pushButton.toolTip
+        if toolTip[16:20] == 'Load':
+          print toolTip[16:20]
+          loadButton = pushButton
+
+      if loadButton != None:
+        print 'load button clicked'
+        loadButton.click()
+      else:
+        print 'could not find Load button'
+
+      scene = slicer.mrmlScene
+      self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
+      self.delayDisplay('Test Passed!')
+
