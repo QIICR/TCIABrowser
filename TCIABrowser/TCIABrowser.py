@@ -110,7 +110,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -636,6 +636,8 @@ class TCIABrowserWidget:
     self.selectedSeriesImageCount = self.imageCounts[row].text()
     self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
     self.selectedSereiesRow = row
+    self.loadButton.enabled = True
+    self.indexButton.enabled = True
 
   def onIndexButton(self):
     self.loadToScene = False
@@ -949,8 +951,6 @@ class TCIABrowserWidget:
     table.setRowCount(len(seriesCollection))
     self.selectAllButton.enabled = True 
     self.selectNoneButton.enabled = True 
-    self.loadButton.enabled = True
-    self.indexButton.enabled = True
   
     n = 0
     for series in seriesCollection:
