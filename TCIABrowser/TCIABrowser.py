@@ -1324,6 +1324,10 @@ class TCIABrowserTest(unittest.TestCase):
 
     self.delayDisplay("Starting the test")
 
+    import socket
+    # Checking whether ssl is available in python
+    ssl = socket.ssl
+    self.assertIsNotNone(ssl)
     children = self.moduleWidget.findChildren('QPushButton')
     for child in children:
       if child.text == 'Connect':
