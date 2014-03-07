@@ -68,6 +68,8 @@ class TCIABrowserWidget:
     self.selectedSereisNicknamesDic = {} 
     self.downloadQueueTempathDict = {}
 
+    self.imagesToDownloadCount = 0
+
     self.progressLabels = []
     self.downloadProgressBars = []
     self.downloadProgressBarWidgets = []
@@ -336,6 +338,9 @@ class TCIABrowserWidget:
     self.seriesSelectNoneButton.setMaximumWidth(50)
     seriesSelectOptionsLayout.addWidget(self.seriesSelectNoneButton)
     seriesSelectOptionsLayout.addStretch(1)
+    self.imagesCountLabel = qt.QLabel()
+    self.imagesCountLabel.text = 'Selected Images Count: ' + str(self.imagesToDownloadCount) + ' '
+    seriesSelectOptionsLayout.addWidget(self.imagesCountLabel)
 
     downloadButtonsWidget = qt.QWidget()
     downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
@@ -421,7 +426,8 @@ class TCIABrowserWidget:
     #self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
     #self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
-    self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
+    self.seriesTableWidget.connect('itemSelectionChanged()',self.seriesSelected)
+    #self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
@@ -695,11 +701,15 @@ class TCIABrowserWidget:
     self.loadButton.enabled = True
     self.indexButton.enabled = True
 
-  def seriesSelected(self,row,column):
-    #self.selectedSeriesUIdForDownloadRow = row
-    self.selectedSeriesImageCount = self.imageCounts[row].text()
-    self.selectedSeriesUIdForDownload = self.seriesInstanceUIDs[row].text()
-    self.selectedSereiesRow = row
+  #def seriesSelected(self,row,column):
+  def seriesSelected(self):
+    self.imagesToDownloadCount = 0
+    for n in range(len(self.seriesInstanceUIDs)):
+      #print self.seriesInstanceUIDs[n]
+      if self.seriesInstanceUIDs[n].isSelected() == True:
+        self.imagesToDownloadCount += int(self.imageCounts[n].text())
+    self.imagesCountLabel.text = 'Selected Images Count: ' + str(self.imagesToDownloadCount) + ' '
+
     self.loadButton.enabled = True
     self.indexButton.enabled = True
 
