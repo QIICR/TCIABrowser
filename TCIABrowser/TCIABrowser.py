@@ -239,6 +239,7 @@ class TCIABrowserWidget:
     self.patientsTableWidgetHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
         'Patient Sex','Ethnic Group','Clinical Data']
     self.patientsTableWidget.setColumnCount(6)
+    self.patientsTableWidget.sortingEnabled = True
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
     self.patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     self.patientsTableWidgetHeader.setStretchLastSection(True)
@@ -266,6 +267,7 @@ class TCIABrowserWidget:
     self.studiesTableHeaderLabels = ['Study Instance UID','Study Date','Study Description',
         'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
     self.studiesTableWidget.setColumnCount(7)
+    self.studiesTableWidget.sortingEnabled = True
     self.studiesTableWidget.hideColumn(0)
     self.studiesTableWidget.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
     self.studiesTableWidget.resizeColumnsToContents()
@@ -307,6 +309,7 @@ class TCIABrowserWidget:
     self.seriesTableWidget = qt.QTableWidget()
     #self.seriesModel = qt.QStandardItemModel()
     self.seriesTableWidget.setColumnCount(12)
+    self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
     self.seriesTableHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date'
         ,'Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer'
