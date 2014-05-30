@@ -18,14 +18,14 @@ class TCIABrowser:
     parent.title = "TCIA Browser" # TODO make this more human readable by adding spaces
     parent.categories = ["Informatics"]
     parent.dependencies = []
-    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]  
+    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]
     parent.helpText = """
     Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. 
     """
     parent.acknowledgementText = """
     <img src=':Logos/QIICR.png'><br><br>
     Supported by NIH U01CA151261 (PI Fennessy) and U24 CA180918 (PIs Kikinis and Fedorov)
-""" 
+    """ 
     self.parent = parent
 
     # Add this test to the SelfTest module's list for discovery when the module
@@ -80,7 +80,7 @@ class TCIABrowserWidget:
     # setup API key
     self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
     self.currentAPIKey = self.slicerApiKey
-    self.tciaBrowserModuleDirectoryPath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
+    self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     item = qt.QStandardItem()
 
     dicomAppWidget = ctk.ctkDICOMAppWidget()
@@ -97,25 +97,24 @@ class TCIABrowserWidget:
     if self.showBrowserButton != None and self.showBrowserButton.enabled == True:
       self.showBrowser()
 
-  def exit(self):
-    print 'exit'
-    #self.browserWidget.hide()
-
   def setup(self):
     # Instantiate and connect widgets ...
-
-    self.reportIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/report.png')
-    self.downloadAndIndexIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/downloadAndIndex.png')
-    self.downloadAndLoadIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/downloadAndLoad.png')
-    self.browserIcon = qt.QIcon(self.tciaBrowserModuleDirectoryPath+'/Resources/Icons/TCIABrowser.png')
+    self.reportIcon = qt.QIcon(self.modulePath +'/Resources/Icons/report.png')
+    self.downloadAndIndexIcon = qt.QIcon(self.modulePath +
+        '/Resources/Icons/downloadAndIndex.png')
+    self.downloadAndLoadIcon = qt.QIcon(self.modulePath +
+        '/Resources/Icons/downloadAndLoad.png')
+    self.browserIcon = qt.QIcon(self.modulePath +
+        '/Resources/Icons/TCIABrowser.png')
     self.browserWidget.setWindowIcon(self.browserIcon)
+
     #
     # Reload and Test area
     #
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -162,6 +161,7 @@ class TCIABrowserWidget:
     settings = qt.QSettings()
     settings.beginGroup("TCIABrowser/API-Keys")
     self.userApiNames = settings.childKeys()
+
     for api in self.userApiNames:
       self.apiSelectionComboBox.addItem(api)
     settings.endGroup()
@@ -170,7 +170,7 @@ class TCIABrowserWidget:
     self.connectButton.toolTip = "Connect to TCIA Server."
     self.connectButton.enabled = True
     connectGridLayout.addWidget(self.connectButton)
-    
+ 
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
@@ -192,14 +192,12 @@ class TCIABrowserWidget:
 
     # Browser Widget Layout within the collapsible button
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
-    # browserWidgetLayout = self.browserWidget.layout
     #
-    
+
     collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     collectionsCollapsibleGroupBox.setTitle('Collections')
     browserWidgetLayout.addWidget(collectionsCollapsibleGroupBox)  # 
     collectionsFormLayout = qt.QHBoxLayout(collectionsCollapsibleGroupBox)
-    
 
     #
     # Collection Selector ComboBox
@@ -210,12 +208,15 @@ class TCIABrowserWidget:
     self.collectionSelector = qt.QComboBox()
     self.collectionSelector.setMinimumWidth(200)
     collectionsFormLayout.addWidget( self.collectionSelector)
-    ##
+
+    #
     # Use Cache CheckBox
     #
     collectionsFormLayout.addStretch(4)
     self.useCacheCeckBox= qt.QCheckBox("Use Cache")
-    self.useCacheCeckBox.toolTip = "If checked the browser will use previous cached queries (saved on disk) else it will request new queries from the server and updates cache."
+    self.useCacheCeckBox.toolTip = "If checked the browser will use previous "\
+    "cached queries (saved on disk) else it will request new queries from the"\
+    " server and updates cache."
     collectionsFormLayout.addWidget(self.useCacheCeckBox)
     self.useCacheCeckBox.setCheckState(True)
     self.useCacheCeckBox.setTristate(False)
@@ -224,6 +225,7 @@ class TCIABrowserWidget:
     collectionsFormLayout.addRow(self.infoPushButton,self.collectionSelector)
     self.infoPushButton.setMaximumWidth(25)
     '''
+
     #
     # Patient Table Widget 
     #
@@ -237,11 +239,11 @@ class TCIABrowserWidget:
     #patientsVerticalLayout = qt.QVBoxLayout(patientsExpdableArea)
     self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
-    self.patientsTableWidgetHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
+    self.patientsTableHeaderLabels = ['Patient ID','Patient Name','Patient BirthDate',
         'Patient Sex','Ethnic Group','Clinical Data']
     self.patientsTableWidget.setColumnCount(6)
     self.patientsTableWidget.sortingEnabled = True
-    self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
+    self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
     self.patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     self.patientsTableWidgetHeader.setStretchLastSection(True)
     # patientsTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
@@ -252,8 +254,8 @@ class TCIABrowserWidget:
     verticalheader = self.patientsTableWidget.verticalHeader()
     verticalheader.setDefaultSectionSize(20)
 
-    # 
-    # Studies Table Widget 
+    #
+    # Studies Table Widget
     #
     self.studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.studiesCollapsibleGroupBox.setTitle('Studies')
@@ -279,7 +281,6 @@ class TCIABrowserWidget:
     studiesVerticalheader.setDefaultSectionSize(20)
     self.studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
     self.studiesTableWidgetHeader.setStretchLastSection(True)
-    # studiesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
 
     studiesSelectOptionsWidget = qt.QWidget()
     studiesSelectOptionsLayout = qt.QHBoxLayout(studiesSelectOptionsWidget )
@@ -302,7 +303,7 @@ class TCIABrowserWidget:
     #
     self.seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.seriesCollapsibleGroupBox.setTitle('Series')
-    browserWidgetLayout.addWidget(self.seriesCollapsibleGroupBox)  # 
+    browserWidgetLayout.addWidget(self.seriesCollapsibleGroupBox)
     seriesVBoxLayout1 = qt.QVBoxLayout(self.seriesCollapsibleGroupBox)
     seriesExpdableArea = ctk.ctkExpandableWidget()
     seriesVBoxLayout1.addWidget(seriesExpdableArea)
@@ -312,9 +313,10 @@ class TCIABrowserWidget:
     self.seriesTableWidget.setColumnCount(12)
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
-    self.seriesTableHeaderLabels = ['Series Instance UID','Modality','Protocol Name','Series Date'
-        ,'Series Description','Body Part Examined','Series Number','Annotation Flag','Manufacturer'
-        ,'Manufacturer Model Name','Software Versions','Image Count']
+    self.seriesTableHeaderLabels = ['Series Instance UID','Modality',
+        'Protocol Name','Series Date','Series Description','Body Part Examined',
+        'Series Number','Annotation Flag','Manufacturer',
+        'Manufacturer Model Name','Software Versions','Image Count']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
@@ -343,7 +345,8 @@ class TCIABrowserWidget:
     seriesSelectOptionsLayout.addWidget(self.seriesSelectNoneButton)
     seriesSelectOptionsLayout.addStretch(1)
     self.imagesCountLabel = qt.QLabel()
-    self.imagesCountLabel.text = 'Selected Images Count: ' + str(self.imagesToDownloadCount) + ' '
+    self.imagesCountLabel.text = 'Selected Images Count: ' + str(
+        self.imagesToDownloadCount) + ' '
     seriesSelectOptionsLayout.addWidget(self.imagesCountLabel)
 
     downloadButtonsWidget = qt.QWidget()
@@ -354,7 +357,8 @@ class TCIABrowserWidget:
     #
     self.indexButton = qt.QPushButton()
     self.indexButton.setMinimumWidth(50)
-    self.indexButton.toolTip = "Download and Index: The browser will download the selected sereies and index them in 3D Slicer DICOM Database."
+    self.indexButton.toolTip = "Download and Index: The browser will download"\
+        " the selected sereies and index them in 3D Slicer DICOM Database."
     self.indexButton.setIcon(self.downloadAndIndexIcon)
     iconSize = qt.QSize(50,50)
     self.indexButton.setIconSize(iconSize)
@@ -372,7 +376,8 @@ class TCIABrowserWidget:
     self.loadButton.setIcon(self.downloadAndLoadIcon)
     self.loadButton.setIconSize(iconSize)
     self.loadButton.setMinimumHeight(50)
-    self.loadButton.toolTip = "Download and Load: The browser will download the selected sereies and Load them in 3D Slicer scene."
+    self.loadButton.toolTip = "Download and Load: The browser will download"\
+        " the selected sereies and Load them in 3D Slicer scene."
     self.loadButton.enabled = False 
     downloadWidgetLayout.addWidget(self.loadButton)
     downloadWidgetLayout.addStretch(4)
@@ -394,7 +399,7 @@ class TCIABrowserWidget:
     settingsCollapsibleButton.text = "Settings"
     self.layout.addWidget(settingsCollapsibleButton)
     settingsFormLayout = qt.QFormLayout(settingsCollapsibleButton)
-#
+
     # Storage Path button
     #
     #storageWidget = qt.QWidget()
@@ -404,7 +409,7 @@ class TCIABrowserWidget:
     self.storagePathButton.directory = self.storagePath
 
     settingsFormLayout.addRow("Storage Directory: ", self.storagePathButton)
-    
+
     self.apiSettingsPopup = TCIABrowserLib.APISettingsPopup()
     self.clinicalPopup = TCIABrowserLib.clinicalDataPopup(self.cachePath,self.reportIcon)
 
@@ -427,11 +432,8 @@ class TCIABrowserWidget:
     self.apiSelectionComboBox.connect('currentIndexChanged(QString)',self.apiKeySelected)
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
-    #self.patientsTableWidget.connect('cellClicked(int,int)',self.patientSelected)
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
-    #self.studiesTableWidget.connect('cellClicked(int,int)',self.studySelected)
     self.seriesTableWidget.connect('itemSelectionChanged()',self.seriesSelected)
-    #self.seriesTableWidget.connect('cellClicked(int,int)',self.seriesSelected)
     self.connectButton.connect('clicked(bool)', self.onConnectButton)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
@@ -453,10 +455,10 @@ class TCIABrowserWidget:
   def apiKeySelected(self):
     settings = qt.QSettings()
     settings.beginGroup("TCIABrowser/API-Keys")
-    
+
     self.connectButton.enabled = True
     if self.apiSelectionComboBox.currentText == 'Slicer API':
-      self.currentAPIKey = self.slicerApiKey 
+      self.currentAPIKey = self.slicerApiKey
     else:
       self.currentAPIKey = settings.value(self.apiSelectionComboBox.currentText)
 
@@ -502,7 +504,6 @@ class TCIABrowserWidget:
   def closeProgress(self):
     self.progress.close()
     self.progress.reset()
-    #self.showBrowser()
 
   def onStoragePathButton(self):
     self.storagePath = self.storagePathButton.directory
@@ -514,7 +515,7 @@ class TCIABrowserWidget:
     self.tcia_client = TCIABrowserLib.TCIAClient(self.currentAPIKey, baseUrl = 
         "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
     self.showProgress("Getting Available Collections")
-    try:    
+    try:
       response = self.tcia_client.get_collection_values()
       responseString = response.read()[:]
       self.populateCollectionsTreeView(responseString)
@@ -565,14 +566,9 @@ class TCIABrowserWidget:
       self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
-      try:    
+      try:
         response = self.tcia_client.get_patient(collection = self.selectedCollection)
-        '''
-        responseString = response.read()[:]
-        with open(cacheFile, 'w') as outputFile:
-          outputFile.write(responseString)
-          outputFile.close()
-        '''
+
         with open(cacheFile, 'w') as outputFile:
           self.stringBufferRead(outputFile, response)
         outputFile.close()
@@ -582,7 +578,7 @@ class TCIABrowserWidget:
         groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
         self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
-    
+
       except Exception, error:
         self.closeProgress()
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
@@ -638,7 +634,7 @@ class TCIABrowserWidget:
 
         self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
-      
+
       except Exception, error:
         self.closeProgress()
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
@@ -657,7 +653,6 @@ class TCIABrowserWidget:
   def studySelected(self,row):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
-    #self.clearSeriesTableWidget()
     self.selectedStudy = self.studyInstanceUIDs[row].text()
     self.selectedStudyRow = row
     self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
@@ -679,7 +674,7 @@ class TCIABrowserWidget:
     else:
       self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
       self.showProgress(self.progressMessage)
-      try:    
+      try:
         response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
         responseString = response.read()[:]
         with open(cacheFile, 'w') as outputFile:
@@ -694,7 +689,7 @@ class TCIABrowserWidget:
 
         self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.closeProgress()
-        
+
       except Exception, error:
         self.closeProgress()
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
@@ -731,11 +726,10 @@ class TCIABrowserWidget:
     self.progressMessage = "Adding Files to DICOM Database "
     self.showProgress(self.progressMessage)
     dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
-    
-    indexer = ctk.ctkDICOMIndexer() 
+
+    indexer = ctk.ctkDICOMIndexer()
     indexer.addDirectory(slicer.dicomDatabase, self.extractedFilesDirectory)
     indexer.waitForImportFinished()
-    #seriesUID = self.selectedSeriesUIdForDownload
     seriesUID = seriesUID.replace("'","")
     self.dicomDatabase = slicer.dicomDatabase
     self.fileList = slicer.dicomDatabase.filesForSeries(seriesUID)
@@ -754,10 +748,12 @@ class TCIABrowserWidget:
         selectedStudy = self.selectedStudy
         selectedSeries =  self.seriesInstanceUIDs[n].text()
         # selectedSeries = self.selectedSeriesUIdForDownload
-        self.selectedSereisNicknamesDic [selectedSeries] = str(selectedPatient)+'-' +str(self.selectedStudyRow+1)+'-'+str(n+1) 
+        self.selectedSereisNicknamesDic[selectedSeries] = str(selectedPatient
+            )+'-' +str(self.selectedStudyRow+1)+'-'+str(n+1)
 
         # get image request
-        tempPath = self.storagePath  + "/" + str(selectedCollection) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
+        tempPath = self.storagePath  + "/" + str(selectedCollection
+            ) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
         # create download queue
         self.downloadQueueTempathDict  [selectedSeries] = tempPath
 
@@ -779,15 +775,13 @@ class TCIABrowserWidget:
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       #self.showProgress(self.progressMessage)
       try:
-        response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries );
+        response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries)
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
-          #print "\n" + str(response.info())
-          #self.makeDownloadProgressBar(selectedSeries)
           destinationFile = open(fileName, "wb")
           self.__bufferRead(destinationFile, response, selectedSeries)
-          
+
           destinationFile.close()
           # print "\nDownloaded file %s.zip from the TCIA server" %fileName
           self.closeProgress()
@@ -795,7 +789,7 @@ class TCIABrowserWidget:
         else:
           print "Error : " + str(response.getcode) # print error code
           print "\n" + str(response.info())
-      
+
       except Exception, error:
         self.closeProgress()
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
@@ -819,37 +813,21 @@ class TCIABrowserWidget:
         volume = plugin.load(loadables[0])
 
   def makeDownloadProgressBar(self, selectedSeries):
-    #downloadProgressBarWidget = qt.QWidget()
-    #self.downloadHBoxLayout = qt.QHBoxLayout(downloadProgressBarWidget)
-    #self.downloadVBoxLayout.addWidget(downloadProgressBarWidget)
-    #self.downloadProgressBarWidgets.append(downloadProgressBarWidget)
     self.downloadProgressBar = qt.QProgressBar()
     self.downloadProgressBarDict [selectedSeries] = self.downloadProgressBarCounts
-    #self.downloadProgressBar.setMinimumWidth(250)
     titleLabel = qt.QLabel(selectedSeries)
-    #self.downloadHBoxLayout.addWidget(titleLabel)
-    #self.downloadHBoxLayout.addWidget(self.downloadProgressBar)
     self.downloadProgressBars.append(self.downloadProgressBar)
     self.progressLabel = qt.QLabel(self.selectedSereisNicknamesDic[selectedSeries]+' (0 KB)')
     self.progressLabels.append(self.progressLabel)
     #self.downloadHBoxLayout.addWidget(self.progressLabel)
     #self.downloadHBoxLayout.addStretch(1)
     self.downloadFormLayout.addRow(self.progressLabel,self.downloadProgressBar)
-    '''
-    # show in folder
-    showInFolderPushButton = qt.QPushButton('Show in folder')
-    showInFolderPushButton.setFlat(True)
-    # remove from list
-    removeFromListPushButton = qt.QPushButton('Remove from list')
-    removeFromListPushButton.setFlat(True) 
-    self.downloadFormLayout.addRow(showInFolderPushButton,removeFromListPushButton)
-    '''
 
     self.downloadProgressBarCounts += 1
     
   def stringBufferRead(self, dstFile, response, bufferSize=819):
     self.downloadSize = 0
-    while 1:     
+    while 1:
 
       #
       # If DOWNLOAD FINISHED
@@ -870,45 +848,30 @@ class TCIABrowserWidget:
       self.downloadSize += len(buffer)
       #print self.downloadSize
 
-
+  # This part was adopted from XNATSlicer module
   def __bufferRead(self, dstFile, response, selectedSeries, bufferSize=8192):
 
     currentDownloadProgressBar = self.downloadProgressBars[self.downloadProgressBarDict[selectedSeries]]
     currentProgressLabel = self.progressLabels[self.downloadProgressBarDict[selectedSeries]]
-    #--------------------
-    # Define the buffer read loop
-    #--------------------
-    self.downloadSize = 0
-    while 1:     
-      '''
-        #
-        # If DOWNLOAD CANCELLED
-        #              
-        if not self.inDownloadQueue(_src):
-            print "Cancelling download of '%s'"%(_src)
-            dstFile.close()
-            os.remove(dstFile.name)
-            self.runEventCallbacks('downloadCancelled', _src)
-            break
-      '''
 
-      #
+    # Define the buffer read loop
+    self.downloadSize = 0
+    while 1:
+ 
       # If DOWNLOAD FINISHED
-      #
       buffer = response.read(bufferSize)
       slicer.app.processEvents()
       if not buffer: 
         # Pop from the queue
-        currentDownloadProgressBar .setMaximum(100)
-        currentDownloadProgressBar .setValue(100)
+        currentDownloadProgressBar.setMaximum(100)
+        currentDownloadProgressBar.setValue(100)
         currentDownloadProgressBar.setVisible(False)
         currentProgressLabel.setVisible(False)
 
         self.downloadQueueTempathDict.pop(selectedSeries, None)
         break
-      #
+
       # Otherwise, Write buffer chunk to file
-      #
       slicer.app.processEvents()
       dstFile.write(buffer)
       #
@@ -918,9 +881,8 @@ class TCIABrowserWidget:
       currentDownloadProgressBar .setValue(0)
       currentDownloadProgressBar .setValue(0)
       currentDownloadProgressBar .setMaximum(0)
-      currentProgressLabel.text = self.selectedSereisNicknamesDic[selectedSeries]+' ('+str(int(self.downloadSize/1024)) + " KB)"
-      #print self.downloadSize
-
+      currentProgressLabel.text = self.selectedSereisNicknamesDic[
+          selectedSeries]+' ('+str(int(self.downloadSize/1024)) + " KB)"
     return self.downloadSize
 
   def unzip(self,sourceFilename, destinationDir):
@@ -1105,7 +1067,7 @@ class TCIABrowserWidget:
     self.ethnicGroups = []
     #self.collections = []
     table.clear()
-    table.setHorizontalHeaderLabels(self.patientsTableWidgetHeaderLabels)
+    table.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
     
   def clearStudiesTableWidget(self):
     self.studiesTableRowCount = 0
