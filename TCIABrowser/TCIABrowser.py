@@ -23,6 +23,7 @@ class TCIABrowser:
     Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. 
     """
     parent.acknowledgementText = """
+    <img src=':Logos/QIICR.png'><br><br>
     Supported by NIH U01CA151261 (PI Fennessy) and U24 CA180918 (PIs Kikinis and Fedorov)
 """ 
     self.parent = parent
