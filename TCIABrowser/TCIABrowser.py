@@ -24,7 +24,7 @@ class TCIABrowser:
     """
     parent.acknowledgementText = """
     <img src=':Logos/QIICR.png'><br><br>
-    Supported by NIH U01CA151261 (PI Fennessy) and U24 CA180918 (PIs Kikinis and Fedorov)
+    Supported by NIH U24 CA180918 (PIs Kikinis and Fedorov)
     """ 
     self.parent = parent
 
