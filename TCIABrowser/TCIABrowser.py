@@ -268,7 +268,7 @@ class TCIABrowserWidget:
     self.studiesTableWidget.setCornerButtonEnabled(True)
     self.studiesModel = qt.QStandardItemModel()
     self.studiesTableHeaderLabels = ['Study Instance UID','Study Date','Study Description',
-        'Admitting Diagnosis Descrition','Study ID','Patient Age','Series Count']
+        'Admitting Diagnosis Description','Study ID','Patient Age','Series Count']
     self.studiesTableWidget.setColumnCount(7)
     self.studiesTableWidget.sortingEnabled = True
     self.studiesTableWidget.hideColumn(0)
