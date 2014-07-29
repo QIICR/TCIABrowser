@@ -20,7 +20,7 @@ class TCIABrowser:
     parent.dependencies = []
     parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]
     parent.helpText = """
-    Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. 
+    Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. See documentation at <a href=\"http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/TCIABrowser\">
     """
     parent.acknowledgementText = """
     <img src=':Logos/QIICR.png'><br><br>
