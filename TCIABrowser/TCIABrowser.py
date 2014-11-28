@@ -78,7 +78,7 @@ class TCIABrowserWidget:
     self.progress = qt.QProgressDialog(self.browserWidget)
     self.progress.setWindowTitle("TCIA Browser")
     # setup API key
-    self.slicerApiKey = '2a38f167-95f1-4f03-99c1-0bc45472d64a'
+    self.slicerApiKey = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
     self.currentAPIKey = self.slicerApiKey
     self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     item = qt.QStandardItem()

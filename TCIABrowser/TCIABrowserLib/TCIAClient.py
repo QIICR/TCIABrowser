@@ -15,7 +15,7 @@ class TCIAClient:
     GET_PATIENT = "getPatient"
     
     # use Slicer API key by default
-    def __init__(self, apiKey='2a38f167-95f1-4f03-99c1-0bc45472d64a', baseUrl='https://services.cancerimagingarchive.net/services/TCIA/TCIA/query'):
+    def __init__(self, apiKey='f88ff53d-882b-4c0d-b60c-0fb560e82cf1', baseUrl='https://services.cancerimagingarchive.net/services/TCIA/TCIA/query'):
         self.apiKey = apiKey
         self.baseUrl = baseUrl
 
