@@ -66,7 +66,7 @@ class TCIABrowserWidget:
     self.studiesTableRowCount = 0
     self.downloadProgressBarCounts = 0 
     self.downloadProgressBarDict = {}
-    self.selectedSereisNicknamesDic = {} 
+    self.selectedSeriesNicknamesDic = {} 
     self.downloadQueueTempathDict = {}
 
     self.imagesToDownloadCount = 0
@@ -749,7 +749,7 @@ class TCIABrowserWidget:
         selectedStudy = self.selectedStudy
         selectedSeries =  self.seriesInstanceUIDs[n].text()
         # selectedSeries = self.selectedSeriesUIdForDownload
-        self.selectedSereisNicknamesDic[selectedSeries] = str(selectedPatient
+        self.selectedSeriesNicknamesDic[selectedSeries] = str(selectedPatient
             )+'-' +str(self.selectedStudyRow+1)+'-'+str(n+1)
 
         # get image request
@@ -819,7 +819,7 @@ class TCIABrowserWidget:
     self.downloadProgressBarDict [selectedSeries] = self.downloadProgressBarCounts
     titleLabel = qt.QLabel(selectedSeries)
     self.downloadProgressBars.append(self.downloadProgressBar)
-    self.progressLabel = qt.QLabel(self.selectedSereisNicknamesDic[selectedSeries]+' (0 KB)')
+    self.progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries]+' (0 KB)')
     self.progressLabels.append(self.progressLabel)
     #self.downloadHBoxLayout.addWidget(self.progressLabel)
     #self.downloadHBoxLayout.addStretch(1)
@@ -882,7 +882,7 @@ class TCIABrowserWidget:
       self.downloadSize += len(buffer)
       currentDownloadProgressBar.setValue(self.downloadSize/seriesSize*100)
       #currentDownloadProgressBar.setMaximum(0)
-      currentProgressLabel.text = self.selectedSereisNicknamesDic[
+      currentProgressLabel.text = self.selectedSeriesNicknamesDic[
           selectedSeries]+' ('+ str(int(self.downloadSize/1024)
               ) + ' of ' + str(int(seriesSize/1024)) + " KB)"
     return self.downloadSize
