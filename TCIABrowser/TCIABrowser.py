@@ -66,7 +66,7 @@ class TCIABrowserWidget:
     self.studiesTableRowCount = 0
     self.downloadProgressBarCounts = 0 
     self.downloadProgressBarDict = {}
-    self.selectedSereisNicknamesDic = {} 
+    self.selectedSeriesNicknamesDic = {} 
     self.downloadQueueTempathDict = {}
 
     self.imagesToDownloadCount = 0
@@ -114,7 +114,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    #self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -509,7 +509,7 @@ class TCIABrowserWidget:
     self.storagePath = self.storagePathButton.directory
 
   def onConnectButton(self):
-    self.connectButton.enabled = False 
+    self.connectButton.enabled = False
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
     self.tcia_client = TCIABrowserLib.TCIAClient(self.currentAPIKey, baseUrl = 
@@ -522,6 +522,7 @@ class TCIABrowserWidget:
       self.closeProgress()
 
     except Exception, error:
+      self.connectButton.enabled = True
       self.closeProgress()
       message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
       qt.QMessageBox.critical(slicer.util.mainWindow(),
@@ -748,7 +749,7 @@ class TCIABrowserWidget:
         selectedStudy = self.selectedStudy
         selectedSeries =  self.seriesInstanceUIDs[n].text()
         # selectedSeries = self.selectedSeriesUIdForDownload
-        self.selectedSereisNicknamesDic[selectedSeries] = str(selectedPatient
+        self.selectedSeriesNicknamesDic[selectedSeries] = str(selectedPatient
             )+'-' +str(self.selectedStudyRow+1)+'-'+str(n+1)
 
         # get image request
@@ -774,13 +775,14 @@ class TCIABrowserWidget:
       self.extractedFilesDirectory = tempPath + str(selectedSeries)
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       #self.showProgress(self.progressMessage)
+      seriesSize = self.getSeriesSize(selectedSeries)
       try:
         response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries)
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
           destinationFile = open(fileName, "wb")
-          self.__bufferRead(destinationFile, response, selectedSeries)
+          self.__bufferRead(destinationFile, response, selectedSeries, seriesSize)
 
           destinationFile.close()
           # print "\nDownloaded file %s.zip from the TCIA server" %fileName
@@ -817,7 +819,7 @@ class TCIABrowserWidget:
     self.downloadProgressBarDict [selectedSeries] = self.downloadProgressBarCounts
     titleLabel = qt.QLabel(selectedSeries)
     self.downloadProgressBars.append(self.downloadProgressBar)
-    self.progressLabel = qt.QLabel(self.selectedSereisNicknamesDic[selectedSeries]+' (0 KB)')
+    self.progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries]+' (0 KB)')
     self.progressLabels.append(self.progressLabel)
     #self.downloadHBoxLayout.addWidget(self.progressLabel)
     #self.downloadHBoxLayout.addStretch(1)
@@ -849,7 +851,7 @@ class TCIABrowserWidget:
       #print self.downloadSize
 
   # This part was adopted from XNATSlicer module
-  def __bufferRead(self, dstFile, response, selectedSeries, bufferSize=8192):
+  def __bufferRead(self, dstFile, response, selectedSeries, seriesSize, bufferSize=8192):
 
     currentDownloadProgressBar = self.downloadProgressBars[self.downloadProgressBarDict[selectedSeries]]
     currentProgressLabel = self.progressLabels[self.downloadProgressBarDict[selectedSeries]]
@@ -878,11 +880,11 @@ class TCIABrowserWidget:
       # And update progress indicators
       #
       self.downloadSize += len(buffer)
-      currentDownloadProgressBar .setValue(0)
-      currentDownloadProgressBar .setValue(0)
-      currentDownloadProgressBar .setMaximum(0)
-      currentProgressLabel.text = self.selectedSereisNicknamesDic[
-          selectedSeries]+' ('+str(int(self.downloadSize/1024)) + " KB)"
+      currentDownloadProgressBar.setValue(self.downloadSize/seriesSize*100)
+      #currentDownloadProgressBar.setMaximum(0)
+      currentProgressLabel.text = self.selectedSeriesNicknamesDic[
+          selectedSeries]+' ('+ str(int(self.downloadSize/1024)
+              ) + ' of ' + str(int(seriesSize/1024)) + " KB)"
     return self.downloadSize
 
   def unzip(self,sourceFilename, destinationDir):
@@ -896,6 +898,17 @@ class TCIABrowserWidget:
           if word in (os.curdir, os.pardir, ''): continue
           path = os.path.join(path, word)
         zf.extract(member, path)
+
+  def getSeriesSize(self, seriesInstanceUID):
+    response = self.tcia_client.get_series_size(seriesInstanceUID)
+    responseString = response.read()[:]
+    jsonResponse = json.loads(responseString)
+    # TCIABrowser returns the total size of the series while we are
+    # recieving series in compressed zip format. The compression ration
+    # is an approximation.
+    compressionRatio = 1.5
+    size = float(jsonResponse[0]['TotalSizeInBytes'])/compressionRatio
+    return size
 
   def populateCollectionsTreeView(self,responseString):
     collections = json.loads(responseString)
