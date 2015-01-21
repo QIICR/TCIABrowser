@@ -12,6 +12,7 @@ class TCIAClient:
     GET_BODY_PART_VALUES = "getBodyPartValues"
     GET_PATIENT_STUDY = "getPatientStudy"
     GET_SERIES = "getSeries"
+    GET_SERIES_SIZE = "getSeriesSize"
     GET_PATIENT = "getPatient"
     
     # use Slicer API key by default
@@ -60,6 +61,13 @@ class TCIAClient:
     def get_series(self,collection = None , patientId = None , studyInstanceUID = None, modality = None , outputFormat = "json" ):
         serviceUrl = self.baseUrl + "/" + self.GET_SERIES
         queryParameters = {"Collection" : collection , "PatientID" : patientId ,"StudyInstanceUID": studyInstanceUID, "Modality" : modality , "format" : outputFormat }
+        resp = self.execute(serviceUrl , queryParameters)
+        return resp
+    def get_series_size(self, seriesInstanceUid ):
+        serviceUrl = self.baseUrl + "/" + self.GET_SERIES_SIZE
+        print serviceUrl
+        queryParameters = { "SeriesInstanceUID" : seriesInstanceUid }
+        print queryParameters
         resp = self.execute(serviceUrl , queryParameters)
         return resp
     def get_patient(self,collection = None , outputFormat = "json" ):
