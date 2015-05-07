@@ -89,10 +89,10 @@ class TCIABrowserWidget:
     self.cachePath = self.storagePath + "/TCIA-Cache/"
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
-    self.useCacheFlag = True  
-    
+    self.useCacheFlag = True
+
     # setup the TCIA client
-  
+
   def enter(self):
     if self.showBrowserButton != None and self.showBrowserButton.enabled == True:
       self.showBrowser()
@@ -174,8 +174,8 @@ class TCIABrowserWidget:
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
-    width = mainWindow.width* 3/4 
-    height = mainWindow.height* 3/4 
+    width = mainWindow.width*0.75
+    height = mainWindow.height*0.75
     self.popupGeometry.setWidth(width)
     self.popupGeometry.setHeight(height)
     self.popupPositioned = False
@@ -220,11 +220,6 @@ class TCIABrowserWidget:
     collectionsFormLayout.addWidget(self.useCacheCeckBox)
     self.useCacheCeckBox.setCheckState(True)
     self.useCacheCeckBox.setTristate(False)
-    '''
-    self.infoPushButton = qt.QPushButton("?")
-    collectionsFormLayout.addRow(self.infoPushButton,self.collectionSelector)
-    self.infoPushButton.setMaximumWidth(25)
-    '''
 
     #
     # Patient Table Widget 
@@ -352,7 +347,7 @@ class TCIABrowserWidget:
     downloadButtonsWidget = qt.QWidget()
     downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
     browserWidgetLayout.addWidget(downloadButtonsWidget)
-    
+
     # Index Button
     #
     self.indexButton = qt.QPushButton()
@@ -425,7 +420,7 @@ class TCIABrowserWidget:
     downloadVBoxLayout.addWidget(downloadStatusExpdableArea)
     self.downloadFormLayout = qt.QFormLayout(downloadStatusExpdableArea)
     self.layout.addStretch(1)
-    
+
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
     self.addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
@@ -475,7 +470,6 @@ class TCIABrowserWidget:
     self.clinicalPopup.getData(self.selectedCollection,self.selectedPatient)
 
   def showBrowser(self):
-
     if not self.browserWidget.isVisible():
       self.popupPositioned = False
       self.browserWidget.show()
@@ -721,7 +715,6 @@ class TCIABrowserWidget:
   def onLoadButton(self):
     self.loadToScene = True
     self.addSelectedToDownloadQueue()
-    #self.addFilesToDatabase()
 
   def addFilesToDatabase(self,seriesUID):
     self.progressMessage = "Adding Files to DICOM Database "
@@ -806,7 +799,7 @@ class TCIABrowserWidget:
       # Import the data into dicomAppWidget and open the dicom browser
       os.remove(fileName)
       self.addFilesToDatabase(selectedSeries)
-      if self.loadToScene == True:
+      if self.loadToScene:
         self.progressMessage = "Examine Files to Load"
         self.showProgress(self.progressMessage)
         plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
@@ -830,7 +823,6 @@ class TCIABrowserWidget:
   def stringBufferRead(self, dstFile, response, bufferSize=819):
     self.downloadSize = 0
     while 1:
-
       #
       # If DOWNLOAD FINISHED
       #
@@ -859,7 +851,6 @@ class TCIABrowserWidget:
     # Define the buffer read loop
     self.downloadSize = 0
     while 1:
- 
       # If DOWNLOAD FINISHED
       buffer = response.read(bufferSize)
       slicer.app.processEvents()
@@ -869,7 +860,6 @@ class TCIABrowserWidget:
         currentDownloadProgressBar.setValue(100)
         currentDownloadProgressBar.setVisible(False)
         currentProgressLabel.setVisible(False)
-
         self.downloadQueueTempathDict.pop(selectedSeries, None)
         break
 
@@ -1085,7 +1075,7 @@ class TCIABrowserWidget:
     #self.collections = []
     table.clear()
     table.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
-    
+
   def clearStudiesTableWidget(self):
     self.studiesTableRowCount = 0
     table = self.studiesTableWidget
@@ -1099,7 +1089,7 @@ class TCIABrowserWidget:
     self.seriesCounts = []
     table.clear()
     table.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
-   
+
   def clearSeriesTableWidget(self):
     self.seriesTableRowCount = 0
     table = self.seriesTableWidget
@@ -1116,10 +1106,9 @@ class TCIABrowserWidget:
     self.manufacturerModelNames = []
     self.softwareVersionsCollection = []
     self.imageCounts = []
-    #self.collections = []
     table.clear()
     table.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
-    
+
   def onReload(self,moduleName="TCIABrowser"):
     """Generic reload method for any scripted module.
     ModuleWizard will subsitute correct default moduleName.
