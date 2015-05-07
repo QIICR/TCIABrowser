@@ -917,10 +917,14 @@ class TCIABrowserWidget:
     self.collectionSelector.disconnect('currentIndexChanged(QString)')
     self.collectionSelector.clear()
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
+
+    collectionNames = []
     for collection in collections:
-      collectionText = str(collections[n]['Collection'])
-      self.collectionSelector.addItem(collectionText)
-      n += 1
+      collectionNames.append(collection['Collection'])
+    collectionNames.sort()
+
+    for name in collectionNames:
+      self.collectionSelector.addItem(name)
 
   def populatePatientsTableWidget(self,responseString):
     self.clearPatientsTableWidget()
