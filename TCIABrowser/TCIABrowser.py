@@ -504,8 +504,7 @@ class TCIABrowserWidget:
     self.connectButton.enabled = False
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
-    self.tcia_client = TCIABrowserLib.TCIAClient(self.currentAPIKey, baseUrl = 
-        "https://services.cancerimagingarchive.net/services/TCIA/TCIA/query")  # Set the API-Key
+    self.tcia_client = TCIABrowserLib.TCIAClient()
     self.showProgress("Getting Available Collections")
     try:
       response = self.tcia_client.get_collection_values()
@@ -813,8 +812,10 @@ class TCIABrowserWidget:
     self.downloadFormLayout.addRow(progressLabel,downloadProgressBar)
 
   def removeDownloadProgressBar(self, selectedSeries):
-    self.downloadFormLayout.removeWidget(self.downloadProgressBars[selectedSeries])
-    self.downloadFormLayout.removeWidget(self.downloadProgressLabels[selectedSeries])
+    self.downloadProgressBars[selectedSeries].deleteLater()
+    del self.downloadProgressBars[selectedSeries]
+    self.downloadProgressLabels[selectedSeries].deleteLater()
+    del self.downloadProgressLabels[selectedSeries]
 
   def stringBufferRead(self, dstFile, response, bufferSize=819):
     self.downloadSize = 0
