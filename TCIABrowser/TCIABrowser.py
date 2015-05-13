@@ -62,6 +62,7 @@ class TCIABrowserWidget:
     self.browserWidget = qt.QWidget()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
+    self.initialConnection = False
     self.seriesTableRowCount = 0
     self.studiesTableRowCount = 0
     self.downloadProgressBars = {}
@@ -94,6 +95,8 @@ class TCIABrowserWidget:
   def enter(self):
     if self.showBrowserButton != None and self.showBrowserButton.enabled == True:
       self.showBrowser()
+    if not self.initialConnection:
+      self.getCollectionValues()
 
   def setup(self):
     # Instantiate and connect widgets ...
@@ -427,7 +430,7 @@ class TCIABrowserWidget:
     self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
     self.seriesTableWidget.connect('itemSelectionChanged()',self.seriesSelected)
-    self.connectButton.connect('clicked(bool)', self.onConnectButton)
+    self.connectButton.connect('clicked(bool)', self.getCollectionValues)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
@@ -449,7 +452,7 @@ class TCIABrowserWidget:
     settings = qt.QSettings()
     settings.beginGroup("TCIABrowser/API-Keys")
 
-    self.connectButton.enabled = True
+    #self.connectButton.enabled = True
     if self.apiSelectionComboBox.currentText == 'Slicer API':
       self.currentAPIKey = self.slicerApiKey
     else:
@@ -500,8 +503,8 @@ class TCIABrowserWidget:
   def onStoragePathButton(self):
     self.storagePath = self.storagePathButton.directory
 
-  def onConnectButton(self):
-    self.connectButton.enabled = False
+  def getCollectionValues(self):
+    self.initialConnection = True
     logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
     self.tcia_client = TCIABrowserLib.TCIAClient()
