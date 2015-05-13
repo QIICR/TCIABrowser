@@ -64,15 +64,13 @@ class TCIABrowserWidget:
 
     self.seriesTableRowCount = 0
     self.studiesTableRowCount = 0
-    self.downloadProgressBarCounts = 0 
-    self.downloadProgressBarDict = {}
+    self.downloadProgressBars = {}
+    self.downloadProgressLabels = {}
     self.selectedSeriesNicknamesDic = {} 
     self.downloadQueueTempathDict = {}
 
     self.imagesToDownloadCount = 0
 
-    self.progressLabels = []
-    self.downloadProgressBars = []
     self.downloadProgressBarWidgets = []
 
     self.progress = qt.QProgressDialog(self.browserWidget)
@@ -114,7 +112,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    #self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -752,14 +750,12 @@ class TCIABrowserWidget:
         self.downloadQueueTempathDict  [selectedSeries] = tempPath
 
         # make progress bar
-        self.makeDownloadProgressBar(selectedSeries)
         # run downloader
 
     self.seriesTableWidget.clearSelection()
     self.downloadSelectedSeries()
 
   def downloadSelectedSeries(self):
-
     while self.downloadQueueTempathDict:
       selectedSeries, tempPath = self.downloadQueueTempathDict.popitem()
       if not os.path.exists(tempPath):
@@ -774,14 +770,31 @@ class TCIABrowserWidget:
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
+          self.makeDownloadProgressBar(selectedSeries)
           destinationFile = open(fileName, "wb")
           self.__bufferRead(destinationFile, response, selectedSeries, seriesSize)
 
           destinationFile.close()
           # print "\nDownloaded file %s.zip from the TCIA server" %fileName
           self.closeProgress()
+          self.progressMessage = "Extracting Images"
+          # Unzip the data
+          self.showProgress(self.progressMessage)
+          self.unzip(fileName,self.extractedFilesDirectory)
+          self.closeProgress()
+          # Import the data into dicomAppWidget and open the dicom browser
+          os.remove(fileName)
+          self.addFilesToDatabase(selectedSeries)
+          if self.loadToScene:
+            self.progressMessage = "Examine Files to Load"
+            self.showProgress(self.progressMessage)
+            plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
+            loadables = plugin.examine([self.fileList])
+            self.closeProgress()
+            volume = plugin.load(loadables[0])
 
         else:
+          self.closeProgress()
           print "Error : " + str(response.getcode) # print error code
           print "\n" + str(response.info())
 
@@ -791,35 +804,18 @@ class TCIABrowserWidget:
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                           'TCIA Browser', message, qt.QMessageBox.Ok)
 
-      self.progressMessage = "Extracting Images"
-      # Unzip the data
-      self.showProgress(self.progressMessage)
-      self.unzip(fileName,self.extractedFilesDirectory)
-      self.closeProgress()
-      # Import the data into dicomAppWidget and open the dicom browser
-      os.remove(fileName)
-      self.addFilesToDatabase(selectedSeries)
-      if self.loadToScene:
-        self.progressMessage = "Examine Files to Load"
-        self.showProgress(self.progressMessage)
-        plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
-        loadables = plugin.examine([self.fileList])
-        self.closeProgress()
-        volume = plugin.load(loadables[0])
-
   def makeDownloadProgressBar(self, selectedSeries):
-    self.downloadProgressBar = qt.QProgressBar()
-    self.downloadProgressBarDict [selectedSeries] = self.downloadProgressBarCounts
+    downloadProgressBar = qt.QProgressBar()
+    self.downloadProgressBars [selectedSeries] = downloadProgressBar
     titleLabel = qt.QLabel(selectedSeries)
-    self.downloadProgressBars.append(self.downloadProgressBar)
-    self.progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries]+' (0 KB)')
-    self.progressLabels.append(self.progressLabel)
-    #self.downloadHBoxLayout.addWidget(self.progressLabel)
-    #self.downloadHBoxLayout.addStretch(1)
-    self.downloadFormLayout.addRow(self.progressLabel,self.downloadProgressBar)
+    progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries]+' (0 KB)')
+    self.downloadProgressLabels[selectedSeries] = progressLabel
+    self.downloadFormLayout.addRow(progressLabel,downloadProgressBar)
 
-    self.downloadProgressBarCounts += 1
-    
+  def removeDownloadProgressBar(self, selectedSeries):
+    self.downloadFormLayout.removeWidget(self.downloadProgressBars[selectedSeries])
+    self.downloadFormLayout.removeWidget(self.downloadProgressLabels[selectedSeries])
+
   def stringBufferRead(self, dstFile, response, bufferSize=819):
     self.downloadSize = 0
     while 1:
@@ -845,8 +841,8 @@ class TCIABrowserWidget:
   # This part was adopted from XNATSlicer module
   def __bufferRead(self, dstFile, response, selectedSeries, seriesSize, bufferSize=8192):
 
-    currentDownloadProgressBar = self.downloadProgressBars[self.downloadProgressBarDict[selectedSeries]]
-    currentProgressLabel = self.progressLabels[self.downloadProgressBarDict[selectedSeries]]
+    currentDownloadProgressBar = self.downloadProgressBars[selectedSeries]
+    currentProgressLabel = self.downloadProgressLabels[selectedSeries]
 
     # Define the buffer read loop
     self.downloadSize = 0
@@ -856,10 +852,11 @@ class TCIABrowserWidget:
       slicer.app.processEvents()
       if not buffer: 
         # Pop from the queue
-        currentDownloadProgressBar.setMaximum(100)
-        currentDownloadProgressBar.setValue(100)
-        currentDownloadProgressBar.setVisible(False)
-        currentProgressLabel.setVisible(False)
+        #currentDownloadProgressBar.setMaximum(100)
+        #currentDownloadProgressBar.setValue(100)
+        #currentDownloadProgressBar.setVisible(False)
+        #currentProgressLabel.setVisible(False)
+        self.removeDownloadProgressBar(selectedSeries)
         self.downloadQueueTempathDict.pop(selectedSeries, None)
         break
 
