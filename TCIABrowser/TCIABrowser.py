@@ -341,13 +341,12 @@ class TCIABrowserWidget:
     seriesSelectOptionsLayout.addWidget(self.seriesSelectNoneButton)
     seriesSelectOptionsLayout.addStretch(1)
     self.imagesCountLabel = qt.QLabel()
-    self.imagesCountLabel.text = 'Selected Images Count: ' + str(
-        self.imagesToDownloadCount) + ' '
+    self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">'+  str(self.imagesToDownloadCount) +'</span>' + ' '
     seriesSelectOptionsLayout.addWidget(self.imagesCountLabel)
 
     downloadButtonsWidget = qt.QWidget()
-    downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
-    browserWidgetLayout.addWidget(downloadButtonsWidget)
+    #downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
+    #browserWidgetLayout.addWidget(downloadButtonsWidget)
 
     # Index Button
     #
@@ -356,14 +355,14 @@ class TCIABrowserWidget:
     self.indexButton.toolTip = "Download and Index: The browser will download"\
         " the selected sereies and index them in 3D Slicer DICOM Database."
     self.indexButton.setIcon(self.downloadAndIndexIcon)
-    iconSize = qt.QSize(50,50)
+    iconSize = qt.QSize(70,40)
     self.indexButton.setIconSize(iconSize)
-    self.indexButton.setMinimumHeight(50)
+    #self.indexButton.setMinimumHeight(50)
     self.indexButton.enabled = False 
-    downloadWidgetLayout.addStretch(4)
-    downloadWidgetLayout.addWidget(self.indexButton)
+    #downloadWidgetLayout.addStretch(4)
+    seriesSelectOptionsLayout.addWidget(self.indexButton)
 
-    downloadWidgetLayout.addStretch(1)
+    #downloadWidgetLayout.addStretch(1)
     #
     # Load Button
     #
@@ -371,12 +370,12 @@ class TCIABrowserWidget:
     self.loadButton.setMinimumWidth(50)
     self.loadButton.setIcon(self.downloadAndLoadIcon)
     self.loadButton.setIconSize(iconSize)
-    self.loadButton.setMinimumHeight(50)
+    #self.loadButton.setMinimumHeight(50)
     self.loadButton.toolTip = "Download and Load: The browser will download"\
         " the selected sereies and Load them in 3D Slicer scene."
     self.loadButton.enabled = False 
-    downloadWidgetLayout.addWidget(self.loadButton)
-    downloadWidgetLayout.addStretch(4)
+    seriesSelectOptionsLayout.addWidget(self.loadButton)
+    #downloadWidgetLayout.addStretch(4)
 
     #
     # context menu
@@ -702,7 +701,7 @@ class TCIABrowserWidget:
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected() == True:
         self.imagesToDownloadCount += int(self.imageCounts[n].text())
-    self.imagesCountLabel.text = 'Selected Images Count: ' + str(self.imagesToDownloadCount) + ' '
+    self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">'+  str(self.imagesToDownloadCount) +'</span>' + ' '
 
     self.loadButton.enabled = True
     self.indexButton.enabled = True
