@@ -68,7 +68,8 @@ class TCIABrowserWidget:
     self.downloadProgressBars = {}
     self.downloadProgressLabels = {}
     self.selectedSeriesNicknamesDic = {} 
-    self.downloadQueueTempathDict = {}
+    self.downloadQueue = {}
+    self.seriesRowNumber = {}
 
     self.imagesToDownloadCount = 0
 
@@ -93,7 +94,7 @@ class TCIABrowserWidget:
     # setup the TCIA client
 
   def enter(self):
-    if self.showBrowserButton != None and self.showBrowserButton.enabled == True:
+    if self.showBrowserButton != None and self.showBrowserButton.enabled:
       self.showBrowser()
     if not self.initialConnection:
       self.getCollectionValues()
@@ -101,13 +102,15 @@ class TCIABrowserWidget:
   def setup(self):
     # Instantiate and connect widgets ...
     self.reportIcon = qt.QIcon(self.modulePath +'/Resources/Icons/report.png')
-    self.downloadAndIndexIcon = qt.QIcon(self.modulePath +
+    downloadAndIndexIcon = qt.QIcon(self.modulePath +
         '/Resources/Icons/downloadAndIndex.png')
-    self.downloadAndLoadIcon = qt.QIcon(self.modulePath +
+    downloadAndLoadIcon = qt.QIcon(self.modulePath +
         '/Resources/Icons/downloadAndLoad.png')
-    self.browserIcon = qt.QIcon(self.modulePath +
+    browserIcon = qt.QIcon(self.modulePath +
         '/Resources/Icons/TCIABrowser.png')
-    self.browserWidget.setWindowIcon(self.browserIcon)
+    cancelIcon = qt.QIcon(self.modulePath +
+        '/Resources/Icons/cancel.png')
+    self.browserWidget.setWindowIcon(browserIcon)
 
     #
     # Reload and Test area
@@ -195,10 +198,10 @@ class TCIABrowserWidget:
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
     #
 
-    collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
-    collectionsCollapsibleGroupBox.setTitle('Collections')
-    browserWidgetLayout.addWidget(collectionsCollapsibleGroupBox)  # 
-    collectionsFormLayout = qt.QHBoxLayout(collectionsCollapsibleGroupBox)
+    self.collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.collectionsCollapsibleGroupBox.setTitle('Collections')
+    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)  # 
+    collectionsFormLayout = qt.QHBoxLayout(self.collectionsCollapsibleGroupBox)
 
     #
     # Collection Selector ComboBox
@@ -213,14 +216,19 @@ class TCIABrowserWidget:
     #
     # Use Cache CheckBox
     #
-    collectionsFormLayout.addStretch(4)
-    self.useCacheCeckBox= qt.QCheckBox("Use Cache")
-    self.useCacheCeckBox.toolTip = "If checked the browser will use previous "\
-    "cached queries (saved on disk) else it will request new queries from the"\
-    " server and updates cache."
+    self.useCacheCeckBox= qt.QCheckBox("Cache server responses")
+    self.useCacheCeckBox.toolTip = '''For faster browsing if this box is checked\
+    the browser will cache server responses and on further calls\
+    would populate tables based on saved data on disk.'''
+
     collectionsFormLayout.addWidget(self.useCacheCeckBox)
     self.useCacheCeckBox.setCheckState(True)
     self.useCacheCeckBox.setTristate(False)
+    collectionsFormLayout.addStretch(4)
+    logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" +">"
+    self.logoLabel = qt.QLabel(logoLabelText)
+    collectionsFormLayout.addWidget(self.logoLabel)
+    
 
     #
     # Patient Table Widget 
@@ -306,10 +314,10 @@ class TCIABrowserWidget:
     seriesVBoxLayout2 = qt.QVBoxLayout(seriesExpdableArea)
     self.seriesTableWidget = qt.QTableWidget()
     #self.seriesModel = qt.QStandardItemModel()
-    self.seriesTableWidget.setColumnCount(12)
+    self.seriesTableWidget.setColumnCount(13)
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
-    self.seriesTableHeaderLabels = ['Series Instance UID','Modality',
+    self.seriesTableHeaderLabels = ['Series Instance UID','Download Status','Modality',
         'Protocol Name','Series Date','Series Description','Body Part Examined',
         'Series Number','Annotation Flag','Manufacturer',
         'Manufacturer Model Name','Software Versions','Image Count']
@@ -339,14 +347,11 @@ class TCIABrowserWidget:
     self.seriesSelectNoneButton.enabled = False
     self.seriesSelectNoneButton.setMaximumWidth(50)
     seriesSelectOptionsLayout.addWidget(self.seriesSelectNoneButton)
+
     seriesSelectOptionsLayout.addStretch(1)
     self.imagesCountLabel = qt.QLabel()
     self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">'+  str(self.imagesToDownloadCount) +'</span>' + ' '
     seriesSelectOptionsLayout.addWidget(self.imagesCountLabel)
-
-    downloadButtonsWidget = qt.QWidget()
-    #downloadWidgetLayout = qt.QHBoxLayout(downloadButtonsWidget)
-    #browserWidgetLayout.addWidget(downloadButtonsWidget)
 
     # Index Button
     #
@@ -354,7 +359,7 @@ class TCIABrowserWidget:
     self.indexButton.setMinimumWidth(50)
     self.indexButton.toolTip = "Download and Index: The browser will download"\
         " the selected sereies and index them in 3D Slicer DICOM Database."
-    self.indexButton.setIcon(self.downloadAndIndexIcon)
+    self.indexButton.setIcon(downloadAndIndexIcon)
     iconSize = qt.QSize(70,40)
     self.indexButton.setIconSize(iconSize)
     #self.indexButton.setMinimumHeight(50)
@@ -368,7 +373,7 @@ class TCIABrowserWidget:
     #
     self.loadButton = qt.QPushButton("")
     self.loadButton.setMinimumWidth(50)
-    self.loadButton.setIcon(self.downloadAndLoadIcon)
+    self.loadButton.setIcon(downloadAndLoadIcon)
     self.loadButton.setIconSize(iconSize)
     #self.loadButton.setMinimumHeight(50)
     self.loadButton.toolTip = "Download and Load: The browser will download"\
@@ -376,6 +381,12 @@ class TCIABrowserWidget:
     self.loadButton.enabled = False 
     seriesSelectOptionsLayout.addWidget(self.loadButton)
     #downloadWidgetLayout.addStretch(4)
+
+    self.cancelDownloadButton = qt.QPushButton('')
+    seriesSelectOptionsLayout.addWidget(self.cancelDownloadButton)
+    self.cancelDownloadButton.setIconSize(iconSize)
+    self.cancelDownloadButton.setIcon(cancelIcon)
+    self.cancelDownloadButton.enabled = False
 
     #
     # context menu
@@ -433,6 +444,7 @@ class TCIABrowserWidget:
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
+    self.cancelDownloadButton.connect('clicked(bool)', self.onCancelDownloadButton)
     self.storagePathButton.connect('directoryChanged(const QString &)',self.onStoragePathButton)
     self.clinicalDataRetrieveAction.connect('triggered()', self.onContextMenuTriggered)
     self.clinicalDataRetrieveAction.connect('triggered()', self.clinicalPopup.open)
@@ -585,7 +597,7 @@ class TCIABrowserWidget:
     self.studiesTableRowCount = 0
     self.numberOfSelectedPatinets = 0
     for n in range(len(self.patientsIDs)):
-      if self.patientsIDs[n].isSelected() == True:
+      if self.patientsIDs[n].isSelected():
         self.numberOfSelectedPatinets += 1
         self.patientSelected(n)
 
@@ -640,7 +652,7 @@ class TCIABrowserWidget:
     self.seriesTableRowCount = 0
     self.numberOfSelectedStudies = 0
     for n in range(len(self.studyInstanceUIDs)):
-      if self.studyInstanceUIDs[n].isSelected() == True:
+      if self.studyInstanceUIDs[n].isSelected():
         self.numberOfSelectedStudies += 1
         self.studySelected(n)
 
@@ -691,20 +703,21 @@ class TCIABrowserWidget:
                           'TCIA Browser', message, qt.QMessageBox.Ok)
 
     self.onSeriesSelectAllButton()
-    self.loadButton.enabled = True
-    self.indexButton.enabled = True
+    #self.loadButton.enabled = True
+    #self.indexButton.enabled = True
 
-  #def seriesSelected(self,row,column):
   def seriesSelected(self):
     self.imagesToDownloadCount = 0
+    self.loadButton.enabled = False
+    self.indexButton.enabled = False
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
-      if self.seriesInstanceUIDs[n].isSelected() == True:
+      if self.seriesInstanceUIDs[n].isSelected():
         self.imagesToDownloadCount += int(self.imageCounts[n].text())
+        self.loadButton.enabled = True
+        self.indexButton.enabled = True
     self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">'+  str(self.imagesToDownloadCount) +'</span>' + ' '
 
-    self.loadButton.enabled = True
-    self.indexButton.enabled = True
 
   def onIndexButton(self):
     self.loadToScene = False
@@ -714,6 +727,14 @@ class TCIABrowserWidget:
   def onLoadButton(self):
     self.loadToScene = True
     self.addSelectedToDownloadQueue()
+
+  def onCancelDownloadButton(self):
+    print 'aborting download'
+    self.cancelDownload = True
+    for series in self.downloadQueue.keys():
+      self.removeDownloadProgressBar(series)
+    downloadQueue = {}
+    seriesRowNumber = {}
 
   def addFilesToDatabase(self,seriesUID):
     self.progressMessage = "Adding Files to DICOM Database "
@@ -733,9 +754,12 @@ class TCIABrowserWidget:
     self.closeProgress()
 
   def addSelectedToDownloadQueue(self):
+    self.cancelDownload = False
+    downloadQueue = {}
+    self.seriesRowNumber = {}
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
-      if self.seriesInstanceUIDs[n].isSelected() == True:
+      if self.seriesInstanceUIDs[n].isSelected():
         selectedCollection = self.selectedCollection
         selectedPatient = self.selectedPatient
         selectedStudy = self.selectedStudy
@@ -748,17 +772,24 @@ class TCIABrowserWidget:
         tempPath = self.storagePath  + "/" + str(selectedCollection
             ) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
         # create download queue
-        self.downloadQueueTempathDict  [selectedSeries] = tempPath
+        self.makeDownloadProgressBar(selectedSeries,n)
+        self.downloadQueue[selectedSeries] = tempPath
+        self.seriesRowNumber[selectedSeries] = n
 
         # make progress bar
         # run downloader
 
     self.seriesTableWidget.clearSelection()
+    self.patientsTableWidget.enabled = False
+    self.studiesTableWidget.enabled = False
+    self.collectionSelector.enabled = False
     self.downloadSelectedSeries()
 
   def downloadSelectedSeries(self):
-    while self.downloadQueueTempathDict:
-      selectedSeries, tempPath = self.downloadQueueTempathDict.popitem()
+    while self.downloadQueue and not self.cancelDownload:
+      print "abort status: ",self.cancelDownload
+      self.cancelDownloadButton.enabled = True
+      selectedSeries, tempPath = self.downloadQueue.popitem()
       if not os.path.exists(tempPath):
         os.makedirs(tempPath)
       fileName = tempPath + str(selectedSeries) + ".zip"
@@ -771,28 +802,32 @@ class TCIABrowserWidget:
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
-          self.makeDownloadProgressBar(selectedSeries)
           destinationFile = open(fileName, "wb")
-          self.__bufferRead(destinationFile, response, selectedSeries, seriesSize)
+          status = self.__bufferRead(destinationFile, response, selectedSeries, seriesSize)
 
           destinationFile.close()
           # print "\nDownloaded file %s.zip from the TCIA server" %fileName
           self.closeProgress()
-          self.progressMessage = "Extracting Images"
-          # Unzip the data
-          self.showProgress(self.progressMessage)
-          self.unzip(fileName,self.extractedFilesDirectory)
-          self.closeProgress()
-          # Import the data into dicomAppWidget and open the dicom browser
-          os.remove(fileName)
-          self.addFilesToDatabase(selectedSeries)
-          if self.loadToScene:
-            self.progressMessage = "Examine Files to Load"
-            self.showProgress(self.progressMessage)
-            plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
-            loadables = plugin.examine([self.fileList])
+          if status:
+            self.progressMessage = "Extracting Images"
+            # Unzip the data
+            self.showProgress(self.progressMessage)   
+            self.unzip(fileName,self.extractedFilesDirectory)
             self.closeProgress()
-            volume = plugin.load(loadables[0])
+            # Import the data into dicomAppWidget and open the dicom browser
+            self.addFilesToDatabase(selectedSeries)
+            if self.loadToScene:
+              self.progressMessage = "Examine Files to Load"
+              self.showProgress(self.progressMessage)
+              plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
+              loadables = plugin.examine([self.fileList])
+              self.closeProgress()
+              volume = plugin.load(loadables[0])
+          else:
+            self.removeDownloadProgressBar(selectedSeries)
+            self.downloadQueue.pop(selectedSeries, None)
+
+          os.remove(fileName)
 
         else:
           self.closeProgress()
@@ -804,16 +839,26 @@ class TCIABrowserWidget:
         message = "Error in getting response from TCIA server.\nHTTP Error:\n"+ str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                           'TCIA Browser', message, qt.QMessageBox.Ok)
+    print 'download finished'
+    self.cancelDownloadButton.enabled = False
+    self.collectionSelector.enabled = True
+    self.patientsTableWidget.enabled = True
+    self.studiesTableWidget.enabled = True
 
-  def makeDownloadProgressBar(self, selectedSeries):
+  def makeDownloadProgressBar(self, selectedSeries,n):
     downloadProgressBar = qt.QProgressBar()
     self.downloadProgressBars [selectedSeries] = downloadProgressBar
     titleLabel = qt.QLabel(selectedSeries)
     progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries]+' (0 KB)')
     self.downloadProgressLabels[selectedSeries] = progressLabel
-    self.downloadFormLayout.addRow(progressLabel,downloadProgressBar)
+    table = self.seriesTableWidget
+    table.setCellWidget(n,1,downloadProgressBar)
+    #self.downloadFormLayout.addRow(progressLabel,downloadProgressBar)
 
   def removeDownloadProgressBar(self, selectedSeries):
+    n = self.seriesRowNumber[selectedSeries]
+    table = self.seriesTableWidget
+    table.setCellWidget(n,1,None)
     self.downloadProgressBars[selectedSeries].deleteLater()
     del self.downloadProgressBars[selectedSeries]
     self.downloadProgressLabels[selectedSeries].deleteLater()
@@ -855,13 +900,15 @@ class TCIABrowserWidget:
       slicer.app.processEvents()
       if not buffer: 
         # Pop from the queue
-        #currentDownloadProgressBar.setMaximum(100)
-        #currentDownloadProgressBar.setValue(100)
+        currentDownloadProgressBar.setMaximum(100)
+        currentDownloadProgressBar.setValue(100)
         #currentDownloadProgressBar.setVisible(False)
         #currentProgressLabel.setVisible(False)
         self.removeDownloadProgressBar(selectedSeries)
-        self.downloadQueueTempathDict.pop(selectedSeries, None)
+        self.downloadQueue.pop(selectedSeries, None)
         break
+      if self.cancelDownload:
+        return False
 
       # Otherwise, Write buffer chunk to file
       slicer.app.processEvents()
@@ -875,7 +922,8 @@ class TCIABrowserWidget:
       currentProgressLabel.text = self.selectedSeriesNicknamesDic[
           selectedSeries]+' ('+ str(int(self.downloadSize/1024)
               ) + ' of ' + str(int(seriesSize/1024)) + " KB)"
-    return self.downloadSize
+    #return self.downloadSize
+    return True
 
   def unzip(self,sourceFilename, destinationDir):
     with zipfile.ZipFile(sourceFilename) as zf:
@@ -1018,47 +1066,47 @@ class TCIABrowserWidget:
         if key == 'Modality':
           modality = qt.QTableWidgetItem(str(series['Modality']))
           self.modalities.append(modality)
-          table.setItem(n,1,modality)
+          table.setItem(n,2,modality)
         if key == 'ProtocolName':
           protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
           self.protocolNames.append(protocolName)
-          table.setItem(n,2,protocolName)
+          table.setItem(n,3,protocolName)
         if key == 'SeriesDate':
           seriesDate = qt.QTableWidgetItem(str(series['SeriesDate']))
           self.seriesDates.append(seriesDate)
-          table.setItem(n,3,seriesDate)
+          table.setItem(n,4,seriesDate)
         if key == 'SeriesDescription':
           seriesDescription = qt.QTableWidgetItem(str(series['SeriesDescription']))
           self.seriesDescriptions.append(seriesDescription)
-          table.setItem(n,4,seriesDescription)
+          table.setItem(n,5,seriesDescription)
         if key == 'BodyPartExamined':
           bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
           self.bodyPartsExamined.append(bodyPartExamined)
-          table.setItem(n,5,bodyPartExamined)
+          table.setItem(n,6,bodyPartExamined)
         if key == 'SeriesNumber':
           seriesNumber = qt.QTableWidgetItem(str(series['SeriesNumber']))
           self.seriesNumbers.append(seriesNumber)
-          table.setItem(n,6,seriesNumber)
+          table.setItem(n,7,seriesNumber)
         if key == 'AnnotationsFlag':
           annotationsFlag = qt.QTableWidgetItem(str(series['AnnotationsFlag']))
           self.annotationsFlags.append(annotationsFlag)
-          table.setItem(n,7,annotationsFlag)
+          table.setItem(n,8,annotationsFlag)
         if key == 'Manufacturer':
           manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
           self.manufacturers.append(manufacturer)
-          table.setItem(n,8,manufacturer)
+          table.setItem(n,9,manufacturer)
         if key == 'ManufacturerModelName':
           manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
           self.manufacturerModelNames.append(manufacturerModelName )
-          table.setItem(n,9,manufacturerModelName)
+          table.setItem(n,10,manufacturerModelName)
         if key == 'SoftwareVersions':
           softwareVersions = qt.QTableWidgetItem(str(series['SoftwareVersions']))
           self.softwareVersionsCollection.append(softwareVersions )
-          table.setItem(n,10,softwareVersions)
+          table.setItem(n,11,softwareVersions)
         if key == 'ImageCount':
           imageCount = qt.QTableWidgetItem(str(series['ImageCount']))
           self.imageCounts.append(imageCount )
-          table.setItem(n,11,imageCount )
+          table.setItem(n,12,imageCount )
       n += 1
     self.seriesTableWidget.resizeColumnsToContents()
     self.seriesTableRowCount = n
