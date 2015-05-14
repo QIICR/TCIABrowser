@@ -3,6 +3,7 @@ import urllib2, urllib,sys, os
 import time
 import string, json, zipfile, os.path
 import csv
+import pickle
 import xml.etree.ElementTree as ET
 import webbrowser
 import unittest
@@ -87,6 +88,18 @@ class TCIABrowserWidget:
     databaseDirectory = dicomAppWidget.databaseDirectory
     self.storagePath = databaseDirectory + "/TCIA-Temp/"
     self.cachePath = self.storagePath + "/TCIA-Cache/"
+
+    self.downloadedSeriesArchiveFile = self.storagePath + 'archive.p'
+    if os.path.isfile(self.downloadedSeriesArchiveFile):
+      f = open(self.downloadedSeriesArchiveFile,'r')
+      self.previouslyDownloadedSeries = pickle.load(f)
+      f.close()
+    else:
+      with open(self.downloadedSeriesArchiveFile, 'w') as f:
+        self.previouslyDownloadedSeries = []
+        pickle.dump(self.previouslyDownloadedSeries, f)
+      f.close()
+
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
     self.useCacheFlag = True
@@ -110,6 +123,10 @@ class TCIABrowserWidget:
         '/Resources/Icons/TCIABrowser.png')
     cancelIcon = qt.QIcon(self.modulePath +
         '/Resources/Icons/cancel.png')
+    self.downloadIcon = qt.QIcon(self.modulePath +
+        '/Resources/Icons/download.png')
+    self.storedlIcon = qt.QIcon(self.modulePath +
+        '/Resources/Icons/stored.png')
     self.browserWidget.setWindowIcon(browserIcon)
 
     #
@@ -317,7 +334,7 @@ class TCIABrowserWidget:
     self.seriesTableWidget.setColumnCount(13)
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
-    self.seriesTableHeaderLabels = ['Series Instance UID','Download Status','Modality',
+    self.seriesTableHeaderLabels = ['Series Instance UID','Status','Modality',
         'Protocol Name','Series Date','Series Description','Body Part Examined',
         'Series Number','Annotation Flag','Manufacturer',
         'Manufacturer Model Name','Software Versions','Image Count']
@@ -385,6 +402,7 @@ class TCIABrowserWidget:
     self.cancelDownloadButton = qt.QPushButton('')
     seriesSelectOptionsLayout.addWidget(self.cancelDownloadButton)
     self.cancelDownloadButton.setIconSize(iconSize)
+    self.cancelDownloadButton.toolTip = "Cancel all downloads."
     self.cancelDownloadButton.setIcon(cancelIcon)
     self.cancelDownloadButton.enabled = False
 
@@ -755,8 +773,10 @@ class TCIABrowserWidget:
 
   def addSelectedToDownloadQueue(self):
     self.cancelDownload = False
+    allSelectedSeriesUIDs = []
     downloadQueue = {}
     self.seriesRowNumber = {}
+    
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected():
@@ -764,26 +784,38 @@ class TCIABrowserWidget:
         selectedPatient = self.selectedPatient
         selectedStudy = self.selectedStudy
         selectedSeries =  self.seriesInstanceUIDs[n].text()
+        allSelectedSeriesUIDs.append(selectedSeries)
         # selectedSeries = self.selectedSeriesUIdForDownload
         self.selectedSeriesNicknamesDic[selectedSeries] = str(selectedPatient
             )+'-' +str(self.selectedStudyRow+1)+'-'+str(n+1)
 
-        # get image request
-        tempPath = self.storagePath  + "/" + str(selectedCollection
-            ) + "/" + str(selectedPatient) + "/" + str(selectedStudy)+ "/"
         # create download queue
-        self.makeDownloadProgressBar(selectedSeries,n)
-        self.downloadQueue[selectedSeries] = tempPath
-        self.seriesRowNumber[selectedSeries] = n
-
-        # make progress bar
-        # run downloader
+        if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
+          tempPath =  self.storagePath + str(len(self.previouslyDownloadedSeries))+ "/"
+          self.makeDownloadProgressBar(selectedSeries,n)
+          self.downloadQueue[selectedSeries] = tempPath
+          self.seriesRowNumber[selectedSeries] = n
+        else:
+          print selectedSeries + " already downloaded"
 
     self.seriesTableWidget.clearSelection()
     self.patientsTableWidget.enabled = False
     self.studiesTableWidget.enabled = False
     self.collectionSelector.enabled = False
     self.downloadSelectedSeries()
+
+    if self.loadToScene:
+      for seriesUID in allSelectedSeriesUIDs:
+        if any(seriesUID == s for s in self.previouslyDownloadedSeries):
+          self.progressMessage = "Examine Files to Load"
+          self.showProgress(self.progressMessage)
+          plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
+          seriesUID = seriesUID.replace("'","")
+          dicomDatabase = slicer.dicomDatabase
+          fileList = slicer.dicomDatabase.filesForSeries(seriesUID)
+          loadables = plugin.examine([fileList])
+          self.closeProgress()
+          volume = plugin.load(loadables[0])
 
   def downloadSelectedSeries(self):
     while self.downloadQueue and not self.cancelDownload:
@@ -792,8 +824,12 @@ class TCIABrowserWidget:
       selectedSeries, tempPath = self.downloadQueue.popitem()
       if not os.path.exists(tempPath):
         os.makedirs(tempPath)
-      fileName = tempPath + str(selectedSeries) + ".zip"
-      self.extractedFilesDirectory = tempPath + str(selectedSeries)
+      # save series uid in a text file for further reference
+      with open(tempPath + 'seriesUID.txt', 'w') as f:
+        f.write(selectedSeries)
+      f.close()
+      fileName = tempPath +  'images.zip'
+      self.extractedFilesDirectory = tempPath +  'images'
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       #self.showProgress(self.progressMessage)
       seriesSize = self.getSeriesSize(selectedSeries)
@@ -816,13 +852,15 @@ class TCIABrowserWidget:
             self.closeProgress()
             # Import the data into dicomAppWidget and open the dicom browser
             self.addFilesToDatabase(selectedSeries)
-            if self.loadToScene:
-              self.progressMessage = "Examine Files to Load"
-              self.showProgress(self.progressMessage)
-              plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
-              loadables = plugin.examine([self.fileList])
-              self.closeProgress()
-              volume = plugin.load(loadables[0])
+            #
+            self.previouslyDownloadedSeries.append(selectedSeries)
+            with open(self.downloadedSeriesArchiveFile, 'w') as f:
+              pickle.dump(self.previouslyDownloadedSeries, f)
+            f.close()
+            n = self.seriesRowNumber[selectedSeries]
+            table = self.seriesTableWidget
+            item = table.item(n,1)
+            item.setIcon(self.storedlIcon)
           else:
             self.removeDownloadProgressBar(selectedSeries)
             self.downloadQueue.pop(selectedSeries, None)
@@ -1060,9 +1098,19 @@ class TCIABrowserWidget:
       keys = series.keys()
       for key in keys:
         if key == 'SeriesInstanceUID':
-          seriesInstanceUID = qt.QTableWidgetItem(str(series['SeriesInstanceUID']))
-          self.seriesInstanceUIDs.append(seriesInstanceUID)
-          table.setItem(n,0,seriesInstanceUID)
+          seriesInstanceUID = str(series['SeriesInstanceUID'])
+          seriesInstanceUIDItem = qt.QTableWidgetItem(seriesInstanceUID)
+          self.seriesInstanceUIDs.append(seriesInstanceUIDItem)
+          table.setItem(n,0,seriesInstanceUIDItem)
+          if any(seriesInstanceUID == s for s in self.previouslyDownloadedSeries):
+            icon = self.storedlIcon
+          else:
+            icon = self.downloadIcon
+          downloadStatusItem = qt.QTableWidgetItem(str(''))
+          downloadStatusItem.setTextAlignment(qt.Qt.AlignCenter)
+          downloadStatusItem.setIcon(icon)
+          self.downloadStatusCollection.append(downloadStatusItem)
+          table.setItem(n,1,downloadStatusItem)
         if key == 'Modality':
           modality = qt.QTableWidgetItem(str(series['Modality']))
           self.modalities.append(modality)
@@ -1143,6 +1191,7 @@ class TCIABrowserWidget:
     table = self.seriesTableWidget
     self.seriesCollapsibleGroupBox.setTitle('Series')
     self.seriesInstanceUIDs= []
+    self.downloadStatusCollection = []
     self.modalities = []
     self.protocolNames = []
     self.seriesDates = []
