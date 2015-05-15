@@ -21,7 +21,7 @@ class TCIABrowser:
     parent.dependencies = []
     parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]
     parent.helpText = """
-    Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. See documentation at <a href=\"http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/TCIABrowser\">
+    Connect to TCIA web archive and get a list of all available collections. From collection selector choose a collection and the patients table will be populated. Click on a patient and the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series table and download the images from the server by pressing the "Download and Load" button. See <a href=\"http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/TCIABrowser\">the documentation</a> for more information.
     """
     parent.acknowledgementText = """
     <img src=':Logos/QIICR.png'><br><br>
@@ -114,19 +114,13 @@ class TCIABrowserWidget:
 
   def setup(self):
     # Instantiate and connect widgets ...
-    self.reportIcon = qt.QIcon(self.modulePath +'/Resources/Icons/report.png')
-    downloadAndIndexIcon = qt.QIcon(self.modulePath +
-        '/Resources/Icons/downloadAndIndex.png')
-    downloadAndLoadIcon = qt.QIcon(self.modulePath +
-        '/Resources/Icons/downloadAndLoad.png')
-    browserIcon = qt.QIcon(self.modulePath +
-        '/Resources/Icons/TCIABrowser.png')
-    cancelIcon = qt.QIcon(self.modulePath +
-        '/Resources/Icons/cancel.png')
-    self.downloadIcon = qt.QIcon(self.modulePath +
-        '/Resources/Icons/download.png')
-    self.storedlIcon = qt.QIcon(self.modulePath +
-        '/Resources/Icons/stored.png')
+    self.reportIcon = qt.QIcon(self.modulePath + '/Resources/Icons/report.png')
+    downloadAndIndexIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndIndex.png')
+    downloadAndLoadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndLoad.png')
+    browserIcon = qt.QIcon(self.modulePath + '/Resources/Icons/TCIABrowser.png')
+    cancelIcon = qt.QIcon(self.modulePath + '/Resources/Icons/cancel.png')
+    self.downloadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/download.png')
+    self.storedlIcon = qt.QIcon(self.modulePath + '/Resources/Icons/stored.png')
     self.browserWidget.setWindowIcon(browserIcon)
 
     #
@@ -163,35 +157,6 @@ class TCIABrowserWidget:
     self.layout.addWidget(browserCollapsibleButton)
     browserLayout = qt.QVBoxLayout(browserCollapsibleButton)
 
-    #
-    # Connection Area
-    #
-    connectWidget = qt.QWidget()
-    connectGridLayout = qt.QHBoxLayout(connectWidget)
-    browserLayout.addWidget(connectWidget)
-    # Add remove button
-    self.addRemoveApisButton = qt.QPushButton("+")
-    self.addRemoveApisButton.toolTip = "Add or Remove APIs"
-    self.addRemoveApisButton.enabled = True
-    self.addRemoveApisButton.setMaximumWidth(20)
-    connectGridLayout.addWidget(self.addRemoveApisButton)
-    # API selection combo box
-    self.apiSelectionComboBox = qt.QComboBox()
-    self.apiSelectionComboBox.addItem('Slicer API')
-    connectGridLayout.addWidget(self.apiSelectionComboBox)
-    settings = qt.QSettings()
-    settings.beginGroup("TCIABrowser/API-Keys")
-    self.userApiNames = settings.childKeys()
-
-    for api in self.userApiNames:
-      self.apiSelectionComboBox.addItem(api)
-    settings.endGroup()
-
-    self.connectButton = qt.QPushButton("Connect")
-    self.connectButton.toolTip = "Connect to TCIA Server."
-    self.connectButton.enabled = True
-    connectGridLayout.addWidget(self.connectButton)
- 
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
@@ -210,6 +175,7 @@ class TCIABrowserWidget:
     # self.showBrowserButton.toolTip = "."
     self.showBrowserButton.enabled = False 
     browserLayout.addWidget(self.showBrowserButton)
+
 
     # Browser Widget Layout within the collapsible button
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
@@ -445,24 +411,57 @@ class TCIABrowserWidget:
     settingsCollapsibleButton = ctk.ctkCollapsibleButton()
     settingsCollapsibleButton.text = "Settings"
     self.layout.addWidget(settingsCollapsibleButton)
-    settingsFormLayout = qt.QFormLayout(settingsCollapsibleButton)
+    settingsGridLayout = qt.QGridLayout(settingsCollapsibleButton)
+    settingsCollapsibleButton.collapsed = True
 
     # Storage Path button
     #
     #storageWidget = qt.QWidget()
     #storageFormLayout = qt.QFormLayout(storageWidget)
     #settingsVBoxLayout.addWidget(storageWidget)
+
+    storagePathLabel = qt.QLabel("Storage Folder: ")
     self.storagePathButton = ctk.ctkDirectoryButton()
     self.storagePathButton.directory = self.storagePath
-
-    settingsFormLayout.addRow("Storage Directory: ", self.storagePathButton)
-
+    settingsGridLayout.addWidget(storagePathLabel,0,0,1,1)
+    settingsGridLayout.addWidget(self.storagePathButton,0,1,1,4)
     self.apiSettingsPopup = TCIABrowserLib.APISettingsPopup()
     self.clinicalPopup = TCIABrowserLib.clinicalDataPopup(self.cachePath,self.reportIcon)
 
+    #
+    # Connection Area
+    #
+    # Add remove button
+    customAPILabel = qt.QLabel("Custom API Key: ")
+
+    addRemoveApisButton = qt.QPushButton("+")
+    addRemoveApisButton.toolTip = "Add or Remove APIs"
+    addRemoveApisButton.enabled = True
+    addRemoveApisButton.setMaximumWidth(20)
+
+    # API selection combo box
+    self.apiSelectionComboBox = qt.QComboBox()
+    self.apiSelectionComboBox.addItem('Slicer API')
+    settings = qt.QSettings()
+    settings.beginGroup("TCIABrowser/API-Keys")
+    self.userApiNames = settings.childKeys()
+
+    for api in self.userApiNames:
+      self.apiSelectionComboBox.addItem(api)
+    settings.endGroup()
+
+    self.connectButton = qt.QPushButton("Connect")
+    self.connectButton.toolTip = "Connect to TCIA Server."
+    self.connectButton.enabled = True
+
+    settingsGridLayout.addWidget(customAPILabel,1,0,1,1)
+    settingsGridLayout.addWidget(addRemoveApisButton,1,1,1,1)
+    settingsGridLayout.addWidget(self.apiSelectionComboBox,1,2,1,2)
+    settingsGridLayout.addWidget(self.connectButton,1,4,2,1)
+
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
-    self.addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
+    addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
     self.apiSelectionComboBox.connect('currentIndexChanged(QString)',self.apiKeySelected)
     self.collectionSelector.connect('currentIndexChanged(QString)',self.collectionSelected)
     self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
@@ -539,7 +538,6 @@ class TCIABrowserWidget:
 
   def getCollectionValues(self):
     self.initialConnection = True
-    logic = TCIABrowserLogic()
     # Instantiate TCIAClient object
     self.tcia_client = TCIABrowserLib.TCIAClient()
     self.showStatus("Getting Available Collections")
