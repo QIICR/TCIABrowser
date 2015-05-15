@@ -86,9 +86,11 @@ class TCIABrowserWidget:
 
     dicomAppWidget = ctk.ctkDICOMAppWidget()
     databaseDirectory = dicomAppWidget.databaseDirectory
-    self.storagePath = databaseDirectory + "/TCIA-Temp/"
-    self.cachePath = self.storagePath + "/TCIA-Cache/"
+    self.storagePath = databaseDirectory + "/TCIALocal/"
+    if not os.path.exists(self.storagePath):
+      os.makedirs(self.storagePath)
 
+    self.cachePath = self.storagePath + "/ServerResponseCache/"
     self.downloadedSeriesArchiveFile = self.storagePath + 'archive.p'
     if os.path.isfile(self.downloadedSeriesArchiveFile):
       f = open(self.downloadedSeriesArchiveFile,'r')
@@ -129,7 +131,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    #self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -793,9 +795,9 @@ class TCIABrowserWidget:
 
         # create download queue
         if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
-          tempPath =  self.storagePath + str(len(self.previouslyDownloadedSeries))+ "/"
+          downloadFolderPath =  self.storagePath + str(len(self.previouslyDownloadedSeries))+ "/"
           self.makeDownloadProgressBar(selectedSeries,n)
-          self.downloadQueue[selectedSeries] = tempPath
+          self.downloadQueue[selectedSeries] = downloadFolderPath
           self.seriesRowNumber[selectedSeries] = n
 
     self.seriesTableWidget.clearSelection()
@@ -820,15 +822,15 @@ class TCIABrowserWidget:
   def downloadSelectedSeries(self):
     while self.downloadQueue and not self.cancelDownload:
       self.cancelDownloadButton.enabled = True
-      selectedSeries, tempPath = self.downloadQueue.popitem()
-      if not os.path.exists(tempPath):
-        os.makedirs(tempPath)
+      selectedSeries, downloadFolderPath = self.downloadQueue.popitem()
+      if not os.path.exists(downloadFolderPath):
+        os.makedirs(downloadFolderPath)
       # save series uid in a text file for further reference
-      with open(tempPath + 'seriesUID.txt', 'w') as f:
+      with open(downloadFolderPath + 'seriesUID.txt', 'w') as f:
         f.write(selectedSeries)
       f.close()
-      fileName = tempPath +  'images.zip'
-      self.extractedFilesDirectory = tempPath +  'images'
+      fileName = downloadFolderPath +  'images.zip'
+      self.extractedFilesDirectory = downloadFolderPath +  'images'
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       self.showStatus(self.progressMessage)
       seriesSize = self.getSeriesSize(selectedSeries)
