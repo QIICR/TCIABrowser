@@ -7,6 +7,8 @@ import pickle
 import xml.etree.ElementTree as ET
 import webbrowser
 import unittest
+from random import randint
+import dicom
 from __main__ import vtk, qt, ctk, slicer
 import TCIABrowserLib
 
@@ -81,7 +83,6 @@ class TCIABrowserWidget:
     # setup API key
     self.slicerApiKey = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
     self.currentAPIKey = self.slicerApiKey
-    self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     item = qt.QStandardItem()
 
     dicomAppWidget = ctk.ctkDICOMAppWidget()
@@ -116,6 +117,7 @@ class TCIABrowserWidget:
 
   def setup(self):
     # Instantiate and connect widgets ...
+    self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
     self.reportIcon = qt.QIcon(self.modulePath + '/Resources/Icons/report.png')
     downloadAndIndexIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndIndex.png')
     downloadAndLoadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndLoad.png')
@@ -541,10 +543,10 @@ class TCIABrowserWidget:
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
-    self.tcia_client = TCIABrowserLib.TCIAClient()
+    self.TCIAClient = TCIABrowserLib.TCIAClient()
     self.showStatus("Getting Available Collections")
     try:
-      response = self.tcia_client.get_collection_values()
+      response = self.TCIAClient.get_collection_values()
       responseString = response.read()[:]
       self.populateCollectionsTreeView(responseString)
       self.clearStatus()
@@ -596,7 +598,7 @@ class TCIABrowserWidget:
 
     else:
       try:
-        response = self.tcia_client.get_patient(collection = self.selectedCollection)
+        response = self.TCIAClient.get_patient(collection = self.selectedCollection)
 
         with open(cacheFile, 'w') as outputFile:
           self.stringBufferRead(outputFile, response)
@@ -648,7 +650,7 @@ class TCIABrowserWidget:
 
     else:
       try:    
-        response = self.tcia_client.get_patient_study(patientId = self.selectedPatient)
+        response = self.TCIAClient.get_patient_study(patientId = self.selectedPatient)
         responseString = response.read()[:]
         with open(cacheFile, 'w') as outputFile:
           outputFile.write(responseString)
@@ -704,7 +706,7 @@ class TCIABrowserWidget:
       self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
       self.showStatus(self.progressMessage)
       try:
-        response = self.tcia_client.get_series(studyInstanceUID = self.selectedStudy)
+        response = self.TCIAClient.get_series(studyInstanceUID = self.selectedStudy)
         responseString = response.read()[:]
         with open(cacheFile, 'w') as outputFile:
           outputFile.write(responseString)
@@ -835,7 +837,7 @@ class TCIABrowserWidget:
       self.showStatus(self.progressMessage)
       seriesSize = self.getSeriesSize(selectedSeries)
       try:
-        response = self.tcia_client.get_image(seriesInstanceUid = selectedSeries)
+        response = self.TCIAClient.get_image(seriesInstanceUid = selectedSeries)
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
@@ -976,7 +978,7 @@ class TCIABrowserWidget:
         zf.extract(member, path)
 
   def getSeriesSize(self, seriesInstanceUID):
-    response = self.tcia_client.get_series_size(seriesInstanceUID)
+    response = self.TCIAClient.get_series_size(seriesInstanceUID)
     responseString = response.read()[:]
     jsonResponse = json.loads(responseString)
     # TCIABrowser returns the total size of the series while we are
@@ -1259,16 +1261,10 @@ class TCIABrowserWidget:
     setattr(globals()['slicer'].modules, widgetName, globals()[widgetName.lower()])
 
   def onReloadAndTest(self,moduleName="TCIABrowser"):
-    try:
-      self.onReload()
-      evalString = 'globals()["%s"].%sTest()' % (moduleName, moduleName)
-      tester = eval(evalString)
-      tester.runTest()
-    except Exception, e:
-      import traceback
-      traceback.print_exc()
-      qt.QMessageBox.warning(slicer.util.mainWindow(), 
-          "Reload and Test", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
+    self.onReload()
+    evalString = 'globals()["%s"].%sTest()' % (moduleName, moduleName)
+    tester = eval(evalString)
+    tester.runTest()
 #
 # TCIABrowserLogic
 #
@@ -1394,13 +1390,32 @@ class TCIABrowserTest(unittest.TestCase):
     self.moduleWidget = module.widgetRepresentation()
 
   def runTest(self):
+    import traceback
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    self.test_download_series()
+    try:
+      self.testAPIV3()
+    except Exception, e:
+      traceback.print_exc()
+      qt.QMessageBox.warning(slicer.util.mainWindow(), 
+          "API V3 Test Failed", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
+    self.setUp()
+    try:
+      self.testAPIV1()
+    except Exception, e:
+      traceback.print_exc()
+      qt.QMessageBox.warning(slicer.util.mainWindow(), 
+          "API V1 Test Failed", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
+    self.setUp()
+    try:
+      self.testBrowserDownloadAndLoad()
+    except Exception, e:
+      traceback.print_exc()
+      qt.QMessageBox.warning(slicer.util.mainWindow(), 
+          "Browser Test Failed", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
 
-  def test_download_series(self):
-
+  def testBrowserDownloadAndLoad(self):
     self.delayDisplay("Starting the test")
 
     import socket
@@ -1417,45 +1432,171 @@ class TCIABrowserTest(unittest.TestCase):
       browserWindow = activeWindow
     if browserWindow != None:
       collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
-      currentCollection = collectionsCombobox.currentText
-      if currentCollection != '':
-        print 'connected to the server successfully'
-        print 'current collection :', currentCollection
+      print 'Number of collections: ',collectionsCombobox.count
+      if collectionsCombobox.count> 0:
+        collectionsCombobox.setCurrentIndex(randint(0,collectionsCombobox.count-1))
+        currentCollection = collectionsCombobox.currentText
+        if currentCollection != '':
+          print 'connected to the server successfully'
+          print 'current collection :', currentCollection
 
-      tableWidgets = browserWindow.findChildren('QTableWidget')
+        tableWidgets = browserWindow.findChildren('QTableWidget')
 
-      patientsTable = tableWidgets[0]
-      selectedPatient = patientsTable.item(0,0).text()
-      if selectedPatient != '':
-        print 'current patient:', selectedPatient
-        patientsTable.selectRow(0)
+        patientsTable = tableWidgets[0]
+        if patientsTable.rowCount> 0:
+          selectedRow = randint(0,patientsTable.rowCount-1)
+          selectedPatient = patientsTable.item(selectedRow,0).text()
+          if selectedPatient != '':
+            print 'current patient:', selectedPatient
+            patientsTable.selectRow(selectedRow)
 
-      studiesTable = tableWidgets[1]
-      selectedStudy = studiesTable.item(0,0).text()
-      if selectedStudy != '':
-        print 'current study:', selectedStudy
-        studiesTable.selectRow(0)
+          studiesTable = tableWidgets[1]
+          if studiesTable.rowCount> 0:
+            selectedRow = randint(0,studiesTable.rowCount-1)
+            selectedStudy = studiesTable.item(selectedRow,0).text()
+            if selectedStudy != '':
+              print 'current study:', selectedStudy
+              studiesTable.selectRow(selectedRow)
 
-      seriesTable = tableWidgets[2]
-      selectedSeries = seriesTable.item(0,0).text()
-      if selectedSeries != '':
-        print 'current series:', selectedSeries
-        seriesTable.selectRow(0)
+            seriesTable = tableWidgets[2]
+            if seriesTable.rowCount> 0:
+              selectedRow = randint(0,seriesTable.rowCount-1)
+              selectedSeries = seriesTable.item(selectedRow,0).text()
+              if selectedSeries != '':
+                print 'current series:', selectedSeries
+                seriesTable.selectRow(selectedRow)
 
-      pushButtons = browserWindow.findChildren('QPushButton')
-      for pushButton in pushButtons:
-        toolTip = pushButton.toolTip
-        if toolTip[16:20] == 'Load':
-          print toolTip[16:20]
-          loadButton = pushButton
+              pushButtons = browserWindow.findChildren('QPushButton')
+              for pushButton in pushButtons:
+                toolTip = pushButton.toolTip
+                if toolTip[16:20] == 'Load':
+                  print toolTip[16:20]
+                  loadButton = pushButton
 
-      if loadButton != None:
-        print 'load button clicked'
-        loadButton.click()
-      else:
-        print 'could not find Load button'
+              if loadButton != None:
+                print 'load button clicked'
+                loadButton.click()
+              else:
+                print 'could not find Load button'
 
       scene = slicer.mrmlScene
       self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
-      self.delayDisplay('Test Passed!')
+      self.delayDisplay('Browser Test Passed!')
+
+  def testAPIV3(self):
+    print 'Started testing API v3 ...'
+    TCIAClient = TCIABrowserLib.TCIAClient()
+    try:
+      self.assertTrue(self.downloadRandomSeries(TCIAClient))
+      self.delayDisplay('API V3 Test Passed')
+    except Exception, error:
+      print error
+      self.delayDisplay('API V3 Test Failed')
+
+  def testAPIV1(self):
+    print 'started testing API V1 ...'
+    TCIAClient = TCIABrowserLib.TCIAClient(baseUrl='https://services.cancerimagingarchive.net/services/TCIA/TCIA/query')
+    try:
+      self.assertTrue(self.downloadRandomSeries(TCIAClient))
+      self.delayDisplay('API V1 Test Passed')
+    except Exception, error:
+      print error
+      self.delayDisplay('API V1 Test Failed')
+
+  def downloadRandomSeries(self, TCIAClient):
+    # Get collections
+    try:
+      responseString = TCIAClient.get_collection_values().read()[:]
+      collections = json.loads(responseString)
+      collectionsCount = len(collections)
+      print ('Number of available collection(s): %d.'%collectionsCount)
+      collection = collections[randint(0,collectionsCount-1)]['Collection']
+      print('%s was chosen.'%collection)
+    except Exception, error:
+      raise Exception('Failed to get the collections!')
+      return False
+    # Get patients
+    slicer.app.processEvents()
+    try:
+      responseString = TCIAClient.get_patient(collection = collection).read()[:]
+      patients = json.loads(responseString)
+      patientsCount = len(patients)
+      print ('Number of available patient(s): %d'%patientsCount)
+      patient = patients[randint(0,patientsCount-1)]['PatientID']
+      print('%s was chosen.'%patient)
+    except Exception, error:
+      raise Exception('Failed to get patient!')
+      return False
+    # Get studies
+    slicer.app.processEvents()
+    try:
+      responseString = TCIAClient.get_patient_study(patientId = patient).read()[:]
+      studies = json.loads(responseString)
+      studiesCount = len(studies)
+      print ('Number of available study(ies): %d'%studiesCount)
+      study = studies[randint(0,studiesCount-1)]['StudyInstanceUID']
+      print('%s was chosen.'%study)
+    except Exception, error:
+      raise Exception('Failed to get patient study!')
+      return False
+    # Get series
+    slicer.app.processEvents()
+    try:
+      responseString = TCIAClient.get_series(studyInstanceUID = study).read()[:]
+      seriesCollection = json.loads(responseString)
+      seriesCollectionCount = len(seriesCollection)
+      print ('Number of available series: %d'%seriesCollectionCount)
+      series = seriesCollection[randint(0,seriesCollectionCount-1)]['SeriesInstanceUID']
+      print('%s was chosen.'%series)
+    except Exception, error:
+      raise Exception('Failed to get series!')
+      return False
+    try:
+      responseString = TCIAClient.get_series_size(series).read()[:]
+      jsonResponse = json.loads(responseString)
+      size = float(jsonResponse[0]['TotalSizeInBytes'])/(1024**2)
+      print 'total size in bytes: %.2f MB'%size
+    except Exception, error:
+      raise Exception('Failed to get series size!')
+      return False
+    fileName = './images.zip'
+    try:
+      response = TCIAClient.get_image(seriesInstanceUid = series)
+      slicer.app.processEvents()
+      # Save server response as images.zip in current directory
+      if response.getcode() == 200:
+        destinationFile = open(fileName, "wb")
+        bufferSize = 1024*512
+        print 'Downloading ',
+        while 1:
+          buffer = response.read(bufferSize)
+          slicer.app.processEvents()
+          if not buffer: 
+            break
+          destinationFile.write(buffer)
+          print 'X',
+        destinationFile.close()
+        print '... [DONE]'
+      with zipfile.ZipFile(fileName) as zf:
+        zipTest = zf.testzip()
+      zf.close()
+      destinationDir = './images/'
+      if zipTest == None:
+        with zipfile.ZipFile(fileName) as zf:
+          zf.extractall(destinationDir)
+      else:
+        raise Exception('The zip file was corrupted!')
+        return False
+      dicomDir = './images/files/'
+      firstFileName = os.listdir(dicomDir)[0]
+      ds = dicom.read_file(dicomDir + firstFileName)
+      print 'downloaded Patient ID:', ds.PatientID
+      print 'downloaded Study Instance UID:', ds.StudyInstanceUID
+      print 'downloaded Series Instance UID:', ds.SeriesInstanceUID
+    except Exception, error:
+      print error
+      raise Exception('Failed to get image!')
+      return False
+    # Test Passed
+    return True
 
