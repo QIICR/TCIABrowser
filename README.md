@@ -2,7 +2,7 @@ TCIABrowser
 ===========
 
 ## Introduction
-TCIABrowser is a [3D Slicer](www.slicer.org) module for browsing and downloading medical imaging collections from [The Cancer Imaging Archive (TCIA)](http://www.cancerimagingarchive.net/). See [documentation](http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/TCIABrowser) for more information.
+TCIABrowser is a [3D Slicer](http://slicer.org/) module for browsing and downloading medical imaging collections from [The Cancer Imaging Archive (TCIA)](http://www.cancerimagingarchive.net/). See [documentation](http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/TCIABrowser) for more information.
 
 ![alt tag](https://raw.githubusercontent.com/QIICR/TCIABrowser/master/TCIABrowser/Resources/Screenshot/screenshot1.png)
 
