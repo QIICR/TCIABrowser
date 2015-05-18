@@ -736,7 +736,6 @@ class TCIABrowserWidget:
     self.loadButton.enabled = False
     self.indexButton.enabled = False
     for n in range(len(self.seriesInstanceUIDs)):
-      #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected():
         self.imagesToDownloadCount += int(self.imageCounts[n].text())
         self.loadButton.enabled = True
@@ -782,7 +781,7 @@ class TCIABrowserWidget:
     allSelectedSeriesUIDs = []
     downloadQueue = {}
     self.seriesRowNumber = {}
-    
+
     for n in range(len(self.seriesInstanceUIDs)):
       #print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected():
