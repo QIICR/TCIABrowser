@@ -1383,10 +1383,6 @@ class TCIABrowserTest(unittest.TestCase):
     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
     """
     slicer.mrmlScene.Clear(0)
-    mainWindow = slicer.util.mainWindow()
-    mainWindow.moduleSelector().selectModule('TCIABrowser')
-    module = slicer.modules.tciabrowser
-    self.moduleWidget = module.widgetRepresentation()
 
   def runTest(self):
     import traceback
@@ -1416,71 +1412,77 @@ class TCIABrowserTest(unittest.TestCase):
 
   def testBrowserDownloadAndLoad(self):
     self.delayDisplay("Starting the test")
+    mainWindow = slicer.util.mainWindow()
+    if mainWindow:
+      mainWindow.moduleSelector().selectModule('TCIABrowser')
+      module = slicer.modules.tciabrowser
+      if module:
+        moduleWidget = module.widgetRepresentation()
+        children = moduleWidget.findChildren('QPushButton')
+        for child in children:
+          if child.text == 'Connect':
+            connectButton = child
+        connectButton.click()
+        activeWindow = slicer.app.activeWindow()
+        if activeWindow.windowTitle == 'TCIA Browser':
+          browserWindow = activeWindow
+        if browserWindow != None:
+          collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
+          print 'Number of collections: ',collectionsCombobox.count
+          if collectionsCombobox.count> 0:
+            collectionsCombobox.setCurrentIndex(randint(0,collectionsCombobox.count-1))
+            currentCollection = collectionsCombobox.currentText
+            if currentCollection != '':
+              print 'connected to the server successfully'
+              print 'current collection :', currentCollection
 
-    import socket
-    # Checking whether ssl is available in python
-    ssl = socket.ssl
-    self.assertIsNotNone(ssl)
-    children = self.moduleWidget.findChildren('QPushButton')
-    for child in children:
-      if child.text == 'Connect':
-        connectButton = child
-    connectButton.click()
-    activeWindow = slicer.app.activeWindow()
-    if activeWindow.windowTitle == 'TCIA Browser':
-      browserWindow = activeWindow
-    if browserWindow != None:
-      collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
-      print 'Number of collections: ',collectionsCombobox.count
-      if collectionsCombobox.count> 0:
-        collectionsCombobox.setCurrentIndex(randint(0,collectionsCombobox.count-1))
-        currentCollection = collectionsCombobox.currentText
-        if currentCollection != '':
-          print 'connected to the server successfully'
-          print 'current collection :', currentCollection
+            tableWidgets = browserWindow.findChildren('QTableWidget')
 
-        tableWidgets = browserWindow.findChildren('QTableWidget')
+            patientsTable = tableWidgets[0]
+            if patientsTable.rowCount> 0:
+              selectedRow = randint(0,patientsTable.rowCount-1)
+              selectedPatient = patientsTable.item(selectedRow,0).text()
+              if selectedPatient != '':
+                print 'current patient:', selectedPatient
+                patientsTable.selectRow(selectedRow)
 
-        patientsTable = tableWidgets[0]
-        if patientsTable.rowCount> 0:
-          selectedRow = randint(0,patientsTable.rowCount-1)
-          selectedPatient = patientsTable.item(selectedRow,0).text()
-          if selectedPatient != '':
-            print 'current patient:', selectedPatient
-            patientsTable.selectRow(selectedRow)
+              studiesTable = tableWidgets[1]
+              if studiesTable.rowCount> 0:
+                selectedRow = randint(0,studiesTable.rowCount-1)
+                selectedStudy = studiesTable.item(selectedRow,0).text()
+                if selectedStudy != '':
+                  print 'current study:', selectedStudy
+                  studiesTable.selectRow(selectedRow)
 
-          studiesTable = tableWidgets[1]
-          if studiesTable.rowCount> 0:
-            selectedRow = randint(0,studiesTable.rowCount-1)
-            selectedStudy = studiesTable.item(selectedRow,0).text()
-            if selectedStudy != '':
-              print 'current study:', selectedStudy
-              studiesTable.selectRow(selectedRow)
+                seriesTable = tableWidgets[2]
+                if seriesTable.rowCount> 0:
+                  selectedRow = randint(0,seriesTable.rowCount-1)
+                  selectedSeries = seriesTable.item(selectedRow,0).text()
+                  if selectedSeries != '':
+                    print 'current series:', selectedSeries
+                    seriesTable.selectRow(selectedRow)
 
-            seriesTable = tableWidgets[2]
-            if seriesTable.rowCount> 0:
-              selectedRow = randint(0,seriesTable.rowCount-1)
-              selectedSeries = seriesTable.item(selectedRow,0).text()
-              if selectedSeries != '':
-                print 'current series:', selectedSeries
-                seriesTable.selectRow(selectedRow)
+                  pushButtons = browserWindow.findChildren('QPushButton')
+                  for pushButton in pushButtons:
+                    toolTip = pushButton.toolTip
+                    if toolTip[16:20] == 'Load':
+                      print toolTip[16:20]
+                      loadButton = pushButton
 
-              pushButtons = browserWindow.findChildren('QPushButton')
-              for pushButton in pushButtons:
-                toolTip = pushButton.toolTip
-                if toolTip[16:20] == 'Load':
-                  print toolTip[16:20]
-                  loadButton = pushButton
+                  if loadButton != None:
+                    print 'load button clicked'
+                    loadButton.click()
+                  else:
+                    print 'could not find Load button'
+        scene = slicer.mrmlScene
+        self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
+        self.delayDisplay('Browser Test Passed!')
+      else:
+        print "Test Failed. Couldn't get slicer.modules.tciabrowser."
+    else:
+        print "Test Failed. There was no main window."
 
-              if loadButton != None:
-                print 'load button clicked'
-                loadButton.click()
-              else:
-                print 'could not find Load button'
 
-      scene = slicer.mrmlScene
-      self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
-      self.delayDisplay('Browser Test Passed!')
 
   def testAPIV3(self):
     print 'Started testing API v3 ...'
@@ -1509,23 +1511,23 @@ class TCIABrowserTest(unittest.TestCase):
       collections = json.loads(responseString)
       collectionsCount = len(collections)
       print ('Number of available collection(s): %d.'%collectionsCount)
-      collection = collections[randint(0,collectionsCount-1)]['Collection']
-      print('%s was chosen.'%collection)
     except Exception, error:
       raise Exception('Failed to get the collections!')
       return False
     # Get patients
     slicer.app.processEvents()
+    collection = 'TCGA-GBM'
+    print('%s was chosen.'%collection)
     try:
       responseString = TCIAClient.get_patient(collection = collection).read()[:]
       patients = json.loads(responseString)
       patientsCount = len(patients)
       print ('Number of available patient(s): %d'%patientsCount)
-      patient = patients[randint(0,patientsCount-1)]['PatientID']
-      print('%s was chosen.'%patient)
     except Exception, error:
       raise Exception('Failed to get patient!')
       return False
+    patient = 'TCGA-06-0119'
+    print('%s was chosen.'%patient)
     # Get studies
     slicer.app.processEvents()
     try:
@@ -1533,11 +1535,11 @@ class TCIABrowserTest(unittest.TestCase):
       studies = json.loads(responseString)
       studiesCount = len(studies)
       print ('Number of available study(ies): %d'%studiesCount)
-      study = studies[randint(0,studiesCount-1)]['StudyInstanceUID']
-      print('%s was chosen.'%study)
     except Exception, error:
       raise Exception('Failed to get patient study!')
       return False
+    study = studies[0]['StudyInstanceUID']
+    print('%s was chosen.'%study)
     # Get series
     slicer.app.processEvents()
     try:
@@ -1545,11 +1547,11 @@ class TCIABrowserTest(unittest.TestCase):
       seriesCollection = json.loads(responseString)
       seriesCollectionCount = len(seriesCollection)
       print ('Number of available series: %d'%seriesCollectionCount)
-      series = seriesCollection[randint(0,seriesCollectionCount-1)]['SeriesInstanceUID']
-      print('%s was chosen.'%series)
     except Exception, error:
       raise Exception('Failed to get series!')
       return False
+    series = seriesCollection[0]['SeriesInstanceUID']
+    print('%s was chosen.'%series)
     try:
       responseString = TCIAClient.get_series_size(series).read()[:]
       jsonResponse = json.loads(responseString)
