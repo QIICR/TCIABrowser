@@ -16,6 +16,10 @@ set(MODULE_PYTHON_RESOURCES
   Resources/Icons/downloadAndLoad.png
   Resources/Icons/report.png
   Resources/Icons/TCIABrowser.png
+  Resources/Icons/stored.png
+  Resources/Icons/download.png
+  Resources/Icons/cancel.png
+  Resources/Logos/logo-vertical.png
   )
 
 #-----------------------------------------------------------------------------
