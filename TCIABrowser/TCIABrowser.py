@@ -588,7 +588,7 @@ class TCIABrowserWidget:
       self.clinicalDataRetrieveAction.enabled = True
 
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = open(cacheFile,'r')
+      f = open(cacheFile,'r',encoding='utf8')
       responseString = f.read()[:]
       f.close()
       self.populatePatientsTableWidget(responseString)
@@ -603,7 +603,7 @@ class TCIABrowserWidget:
         with open(cacheFile, 'w') as outputFile:
           self.stringBufferRead(outputFile, response)
         outputFile.close()
-        f = open(cacheFile,'r')
+        f = open(cacheFile,'r',encoding='utf8')
         responseString = f.read()[:]
         self.populatePatientsTableWidget(responseString)
         groupBoxTitle = 'Patients (Accessed: '+ time.ctime(os.path.getmtime(cacheFile))+')'
@@ -636,7 +636,7 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
     self.showStatus(self.progressMessage)
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = open(cacheFile,'r')
+      f = open(cacheFile,'r',encoding='utf8')
       responseString = f.read()[:]
       f.close()
       self.populateStudiesTableWidget(responseString)
@@ -655,7 +655,7 @@ class TCIABrowserWidget:
         with open(cacheFile, 'w') as outputFile:
           outputFile.write(responseString)
           outputFile.close()
-        f = open(cacheFile,'r')
+        f = open(cacheFile,'r',encoding='utf8')
         responseString = f.read()[:]
         self.populateStudiesTableWidget(responseString)
         if self.numberOfSelectedPatinets == 1:
@@ -690,7 +690,7 @@ class TCIABrowserWidget:
     self.showStatus(self.progressMessage)
     cacheFile = self.cachePath+self.selectedStudy+'.json'
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = open(cacheFile,'r')
+      f = open(cacheFile,'r',encoding='utf8')
       responseString = f.read()[:]
       f.close()
       self.populateSeriesTableWidget(responseString)
