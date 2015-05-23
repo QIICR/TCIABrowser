@@ -7,6 +7,7 @@ import pickle
 import xml.etree.ElementTree as ET
 import webbrowser
 import unittest
+import codecs
 from random import randint
 import dicom
 from __main__ import vtk, qt, ctk, slicer
