@@ -134,7 +134,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -165,13 +165,13 @@ class TCIABrowserWidget:
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
-    width = mainWindow.width*0.75
-    height = mainWindow.height*0.75
-    self.popupGeometry.setWidth(width)
-    self.popupGeometry.setHeight(height)
-    self.popupPositioned = False
-
-    self.browserWidget.setGeometry(self.popupGeometry)
+    if mainWindow:
+      width = mainWindow.width*0.75
+      height = mainWindow.height*0.75
+      self.popupGeometry.setWidth(width)
+      self.popupGeometry.setHeight(height)
+      self.popupPositioned = False
+      self.browserWidget.setGeometry(self.popupGeometry)
 
     #
     # Show Browser Button
@@ -1390,40 +1390,17 @@ class TCIABrowserTest(unittest.TestCase):
     """Run as few or as many tests as needed here.
     """
     self.setUp()
-    try:
-      self.testAPIV3()
-    except Exception, e:
-      traceback.print_exc()
-      qt.QMessageBox.warning(slicer.util.mainWindow(), 
-          "API V3 Test Failed", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
-    self.setUp()
-    try:
-      self.testAPIV1()
-    except Exception, e:
-      traceback.print_exc()
-      qt.QMessageBox.warning(slicer.util.mainWindow(), 
-          "API V1 Test Failed", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
-    self.setUp()
-    try:
-      self.testBrowserDownloadAndLoad()
-    except Exception, e:
-      traceback.print_exc()
-      qt.QMessageBox.warning(slicer.util.mainWindow(), 
-          "Browser Test Failed", 'Exception!\n\n' + str(e) + "\n\nSee Python Console for Stack Trace")
+    self.testBrowserDownloadAndLoad()
 
   def testBrowserDownloadAndLoad(self):
-    self.delayDisplay("Starting the test")
+    self.delayDisplay("Starting browser test")
     mainWindow = slicer.util.mainWindow()
     if mainWindow:
       mainWindow.moduleSelector().selectModule('TCIABrowser')
-      module = slicer.modules.tciabrowser
-      if module:
+      if 'TCIABrowser' in slicer.util.moduleNames():
+        module = slicer.modules.tciabrowser
         moduleWidget = module.widgetRepresentation()
         children = moduleWidget.findChildren('QPushButton')
-        for child in children:
-          if child.text == 'Connect':
-            connectButton = child
-        connectButton.click()
         activeWindow = slicer.app.activeWindow()
         if activeWindow.windowTitle == 'TCIA Browser':
           browserWindow = activeWindow
@@ -1475,130 +1452,11 @@ class TCIABrowserTest(unittest.TestCase):
                     loadButton.click()
                   else:
                     print 'could not find Load button'
-        scene = slicer.mrmlScene
-        self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
-        self.delayDisplay('Browser Test Passed!')
       else:
         print "Test Failed. Couldn't get slicer.modules.tciabrowser."
     else:
         print "Test Failed. There was no main window."
-
-
-
-  def testAPIV3(self):
-    print 'Started testing API v3 ...'
-    TCIAClient = TCIABrowserLib.TCIAClient()
-    try:
-      self.assertTrue(self.downloadRandomSeries(TCIAClient))
-      self.delayDisplay('API V3 Test Passed')
-    except Exception, error:
-      print error
-      self.delayDisplay('API V3 Test Failed')
-
-  def testAPIV1(self):
-    print 'started testing API V1 ...'
-    TCIAClient = TCIABrowserLib.TCIAClient(baseUrl='https://services.cancerimagingarchive.net/services/TCIA/TCIA/query')
-    try:
-      self.assertTrue(self.downloadRandomSeries(TCIAClient))
-      self.delayDisplay('API V1 Test Passed')
-    except Exception, error:
-      print error
-      self.delayDisplay('API V1 Test Failed')
-
-  def downloadRandomSeries(self, TCIAClient):
-    # Get collections
-    try:
-      responseString = TCIAClient.get_collection_values().read()[:]
-      collections = json.loads(responseString)
-      collectionsCount = len(collections)
-      print ('Number of available collection(s): %d.'%collectionsCount)
-    except Exception, error:
-      raise Exception('Failed to get the collections!')
-      return False
-    # Get patients
-    slicer.app.processEvents()
-    collection = 'TCGA-GBM'
-    print('%s was chosen.'%collection)
-    try:
-      responseString = TCIAClient.get_patient(collection = collection).read()[:]
-      patients = json.loads(responseString)
-      patientsCount = len(patients)
-      print ('Number of available patient(s): %d'%patientsCount)
-    except Exception, error:
-      raise Exception('Failed to get patient!')
-      return False
-    patient = 'TCGA-06-0119'
-    print('%s was chosen.'%patient)
-    # Get studies
-    slicer.app.processEvents()
-    try:
-      responseString = TCIAClient.get_patient_study(patientId = patient).read()[:]
-      studies = json.loads(responseString)
-      studiesCount = len(studies)
-      print ('Number of available study(ies): %d'%studiesCount)
-    except Exception, error:
-      raise Exception('Failed to get patient study!')
-      return False
-    study = studies[0]['StudyInstanceUID']
-    print('%s was chosen.'%study)
-    # Get series
-    slicer.app.processEvents()
-    try:
-      responseString = TCIAClient.get_series(studyInstanceUID = study).read()[:]
-      seriesCollection = json.loads(responseString)
-      seriesCollectionCount = len(seriesCollection)
-      print ('Number of available series: %d'%seriesCollectionCount)
-    except Exception, error:
-      raise Exception('Failed to get series!')
-      return False
-    series = seriesCollection[0]['SeriesInstanceUID']
-    print('%s was chosen.'%series)
-    try:
-      responseString = TCIAClient.get_series_size(series).read()[:]
-      jsonResponse = json.loads(responseString)
-      size = float(jsonResponse[0]['TotalSizeInBytes'])/(1024**2)
-      print 'total size in bytes: %.2f MB'%size
-    except Exception, error:
-      raise Exception('Failed to get series size!')
-      return False
-    fileName = './images.zip'
-    try:
-      response = TCIAClient.get_image(seriesInstanceUid = series)
-      slicer.app.processEvents()
-      # Save server response as images.zip in current directory
-      if response.getcode() == 200:
-        destinationFile = open(fileName, "wb")
-        bufferSize = 1024*512
-        print 'Downloading ',
-        while 1:
-          buffer = response.read(bufferSize)
-          slicer.app.processEvents()
-          if not buffer: 
-            break
-          destinationFile.write(buffer)
-          print 'X',
-        destinationFile.close()
-        print '... [DONE]'
-      with zipfile.ZipFile(fileName) as zf:
-        zipTest = zf.testzip()
-      zf.close()
-      destinationDir = './images/'
-      if zipTest == None:
-        with zipfile.ZipFile(fileName) as zf:
-          zf.extractall(destinationDir)
-      else:
-        raise Exception('The zip file was corrupted!')
-        return False
-      dicomDir = './images/files/'
-      firstFileName = os.listdir(dicomDir)[0]
-      ds = dicom.read_file(dicomDir + firstFileName)
-      print 'downloaded Patient ID:', ds.PatientID
-      print 'downloaded Study Instance UID:', ds.StudyInstanceUID
-      print 'downloaded Series Instance UID:', ds.SeriesInstanceUID
-    except Exception, error:
-      print error
-      raise Exception('Failed to get image!')
-      return False
-    # Test Passed
-    return True
+    scene = slicer.mrmlScene
+    self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
+    self.delayDisplay('Browser Test Passed!')
 
