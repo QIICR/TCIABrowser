@@ -1446,7 +1446,7 @@ class TCIABrowserTest(unittest.TestCase):
             else:
               print 'could not find Load button'
     else:
-        print "Test Failed. There was no collections."
+        print "Test Failed. No collection found."
     scene = slicer.mrmlScene
     self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
     self.delayDisplay('Browser Test Passed!')
