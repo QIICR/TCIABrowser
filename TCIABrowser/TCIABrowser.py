@@ -50,17 +50,6 @@ class TCIABrowser:
 
 class TCIABrowserWidget:
   def __init__(self, parent = None):
-    if not parent:
-      self.parent = slicer.qMRMLWidget()
-      self.parent.setLayout(qt.QVBoxLayout())
-      self.parent.setMRMLScene(slicer.mrmlScene)
-    else:
-      self.parent = parent
-    self.layout = self.parent.layout()
-    if not parent:
-      self.setup()
-      self.parent.show()
-
     self.loadToScene = False
 
     self.browserWidget = qt.QWidget()
@@ -80,7 +69,7 @@ class TCIABrowserWidget:
     self.downloadProgressBarWidgets = []
 
     self.progress = qt.QProgressDialog(self.browserWidget)
-    self.progress.setWindowTitle("TCIA Browser")
+    #self.progress.setWindowTitle("TCIA Browser")
     # setup API key
     self.slicerApiKey = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
     self.currentAPIKey = self.slicerApiKey
@@ -108,7 +97,16 @@ class TCIABrowserWidget:
       os.makedirs(self.cachePath)
     self.useCacheFlag = True
 
-    # setup the TCIA client
+    if not parent:
+      self.parent = slicer.qMRMLWidget()
+      self.parent.setLayout(qt.QVBoxLayout())
+      self.parent.setMRMLScene(slicer.mrmlScene)
+    else:
+      self.parent = parent
+    self.layout = self.parent.layout()
+    if not parent:
+      self.setup()
+      self.parent.show()
 
   def enter(self):
     if self.showBrowserButton != None and self.showBrowserButton.enabled:
@@ -118,7 +116,10 @@ class TCIABrowserWidget:
 
   def setup(self):
     # Instantiate and connect widgets ...
-    self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
+    if 'TCIABrowser' in slicer.util.moduleNames():
+      self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
+    else:
+      self.modulePath = '.'
     self.reportIcon = qt.QIcon(self.modulePath + '/Resources/Icons/report.png')
     downloadAndIndexIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndIndex.png')
     downloadAndLoadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndLoad.png')
@@ -134,7 +135,7 @@ class TCIABrowserWidget:
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
@@ -1393,70 +1394,59 @@ class TCIABrowserTest(unittest.TestCase):
     self.testBrowserDownloadAndLoad()
 
   def testBrowserDownloadAndLoad(self):
-    self.delayDisplay("Starting browser test")
-    mainWindow = slicer.util.mainWindow()
-    if mainWindow:
-      mainWindow.moduleSelector().selectModule('TCIABrowser')
-      if 'TCIABrowser' in slicer.util.moduleNames():
-        module = slicer.modules.tciabrowser
-        moduleWidget = module.widgetRepresentation()
-        children = moduleWidget.findChildren('QPushButton')
-        activeWindow = slicer.app.activeWindow()
-        if activeWindow.windowTitle == 'TCIA Browser':
-          browserWindow = activeWindow
-        if browserWindow != None:
-          collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
-          print 'Number of collections: ',collectionsCombobox.count
-          if collectionsCombobox.count> 0:
-            collectionsCombobox.setCurrentIndex(randint(0,collectionsCombobox.count-1))
-            currentCollection = collectionsCombobox.currentText
-            if currentCollection != '':
-              print 'connected to the server successfully'
-              print 'current collection :', currentCollection
+    self.delayDisplay("Starting the test")
+    widget = TCIABrowserWidget(None)
+    widget.getCollectionValues()
+    browserWindow = widget.browserWidget
+    collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
+    print 'Number of collections: ',collectionsCombobox.count
+    if collectionsCombobox.count> 0:
+      collectionsCombobox.setCurrentIndex(randint(0,collectionsCombobox.count-1))
+      currentCollection = collectionsCombobox.currentText
+      if currentCollection != '':
+        print 'connected to the server successfully'
+        print 'current collection :', currentCollection
 
-            tableWidgets = browserWindow.findChildren('QTableWidget')
+      tableWidgets = browserWindow.findChildren('QTableWidget')
 
-            patientsTable = tableWidgets[0]
-            if patientsTable.rowCount> 0:
-              selectedRow = randint(0,patientsTable.rowCount-1)
-              selectedPatient = patientsTable.item(selectedRow,0).text()
-              if selectedPatient != '':
-                print 'current patient:', selectedPatient
-                patientsTable.selectRow(selectedRow)
+      patientsTable = tableWidgets[0]
+      if patientsTable.rowCount> 0:
+        selectedRow = randint(0,patientsTable.rowCount-1)
+        selectedPatient = patientsTable.item(selectedRow,0).text()
+        if selectedPatient != '':
+          print 'selected patient:', selectedPatient
+          patientsTable.selectRow(selectedRow)
 
-              studiesTable = tableWidgets[1]
-              if studiesTable.rowCount> 0:
-                selectedRow = randint(0,studiesTable.rowCount-1)
-                selectedStudy = studiesTable.item(selectedRow,0).text()
-                if selectedStudy != '':
-                  print 'current study:', selectedStudy
-                  studiesTable.selectRow(selectedRow)
+        studiesTable = tableWidgets[1]
+        if studiesTable.rowCount> 0:
+          selectedRow = randint(0,studiesTable.rowCount-1)
+          selectedStudy = studiesTable.item(selectedRow,0).text()
+          if selectedStudy != '':
+            print 'selected study:', selectedStudy
+            studiesTable.selectRow(selectedRow)
 
-                seriesTable = tableWidgets[2]
-                if seriesTable.rowCount> 0:
-                  selectedRow = randint(0,seriesTable.rowCount-1)
-                  selectedSeries = seriesTable.item(selectedRow,0).text()
-                  if selectedSeries != '':
-                    print 'current series:', selectedSeries
-                    seriesTable.selectRow(selectedRow)
+          seriesTable = tableWidgets[2]
+          if seriesTable.rowCount> 0:
+            selectedRow = randint(0,seriesTable.rowCount-1)
+            selectedSeries = seriesTable.item(selectedRow,0).text()
+            if selectedSeries != '':
+              print 'selected series to download:', selectedSeries
+              seriesTable.selectRow(selectedRow)
 
-                  pushButtons = browserWindow.findChildren('QPushButton')
-                  for pushButton in pushButtons:
-                    toolTip = pushButton.toolTip
-                    if toolTip[16:20] == 'Load':
-                      print toolTip[16:20]
-                      loadButton = pushButton
+            pushButtons = browserWindow.findChildren('QPushButton')
+            for pushButton in pushButtons:
+              toolTip = pushButton.toolTip
+              if toolTip[16:20] == 'Load':
+                print toolTip[16:20]
+                loadButton = pushButton
 
-                  if loadButton != None:
-                    print 'load button clicked'
-                    loadButton.click()
-                  else:
-                    print 'could not find Load button'
-      else:
-        print "Test Failed. Couldn't get slicer.modules.tciabrowser."
+            if loadButton != None:
+              print 'load button clicked'
+              loadButton.click()
+            else:
+              print 'could not find Load button'
     else:
-        print "Test Failed. There was no main window."
+        print "Test Failed. There was no collections."
     scene = slicer.mrmlScene
     self.assertEqual(scene.GetNumberOfNodesByClass('vtkMRMLScalarVolumeNode'), 1)
     self.delayDisplay('Browser Test Passed!')
-
