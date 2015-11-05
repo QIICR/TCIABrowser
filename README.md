@@ -7,11 +7,11 @@ TCIABrowser is a [3D Slicer](http://slicer.org/) module for browsing and downloa
 ![alt tag](https://raw.githubusercontent.com/QIICR/TCIABrowser/master/TCIABrowser/Resources/Screenshot/screenshot1.png)
 
 ## Acknowledgments
-This work is supported by the following National Institutes of Health grant:
+This work is supported in part by the following National Institutes of Health grant:
 
 * Quantitative Image Informatics for Cancer Research [QIICR](http://qiicr.org/) (U24 CA180918, PIs Kikinis and Fedorov)
 
-## Contributers:
+## Contributors:
 * Alireza Mehrtash, Brigham and Women's Hospital
 * Andrey Fedorov, Brigham and Women's Hospital
 
