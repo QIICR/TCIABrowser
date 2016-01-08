@@ -116,7 +116,10 @@ class TCIABrowserWidget:
 
   def setup(self):
     # Instantiate and connect widgets ...
-    self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
+    if 'TCIABrowser' in slicer.util.moduleNames():
+      self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py","")
+    else:
+      self.modulePath = '.'
     self.reportIcon = qt.QIcon(self.modulePath + '/Resources/Icons/report.png')
     downloadAndIndexIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndIndex.png')
     downloadAndLoadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndLoad.png')
@@ -766,13 +769,6 @@ class TCIABrowserWidget:
     indexer = ctk.ctkDICOMIndexer()
     indexer.addDirectory(slicer.dicomDatabase, self.extractedFilesDirectory)
     indexer.waitForImportFinished()
-    seriesUID = seriesUID.replace("'","")
-    self.dicomDatabase = slicer.dicomDatabase
-    self.fileList = slicer.dicomDatabase.filesForSeries(seriesUID)
-    originalDatabaseDirectory = os.path.split(slicer.dicomDatabase.databaseFilename)[0]
-    # change database directory to update dicom browser tables
-    dicomWidget.onDatabaseDirectoryChanged(self.extractedFilesDirectory)
-    dicomWidget.onDatabaseDirectoryChanged(originalDatabaseDirectory)
     self.clearStatus()
 
   def addSelectedToDownloadQueue(self):
@@ -1392,9 +1388,7 @@ class TCIABrowserTest(unittest.TestCase):
 
   def testBrowserDownloadAndLoad(self):
     self.delayDisplay("Starting the test")
-    mainWindow = slicer.util.mainWindow()
-    mainWindow.moduleSelector().selectModule('TCIABrowser')
-    widget = slicer.modules.tciabrowser.widgetRepresentation().self()
+    widget = TCIABrowserWidget(None)
     widget.getCollectionValues()
     browserWindow = widget.browserWidget
     collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
