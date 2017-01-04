@@ -791,7 +791,7 @@ class TCIABrowserWidget:
 
         # create download queue
         if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
-          downloadFolderPath =  self.storagePath + str(len(self.previouslyDownloadedSeries))+ "/"
+          downloadFolderPath =  self.storagePath + str(len(self.previouslyDownloadedSeries))+ "/"+selectedSeries+"/"
           self.makeDownloadProgressBar(selectedSeries,n)
           self.downloadQueue[selectedSeries] = downloadFolderPath
           self.seriesRowNumber[selectedSeries] = n
