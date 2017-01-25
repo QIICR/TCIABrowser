@@ -12,6 +12,7 @@ from random import randint
 import dicom
 from __main__ import vtk, qt, ctk, slicer
 import TCIABrowserLib
+import logging
 
 #
 # TCIABrowser
@@ -29,7 +30,7 @@ class TCIABrowser:
     parent.acknowledgementText = """
     <img src=':Logos/QIICR.png'><br><br>
     Supported by NIH U24 CA180918 (PIs Kikinis and Fedorov)
-    """ 
+    """
     self.parent = parent
 
     # Add this test to the SelfTest module's list for discovery when the module
@@ -60,7 +61,7 @@ class TCIABrowserWidget:
     self.studiesTableRowCount = 0
     self.downloadProgressBars = {}
     self.downloadProgressLabels = {}
-    self.selectedSeriesNicknamesDic = {} 
+    self.selectedSeriesNicknamesDic = {}
     self.downloadQueue = {}
     self.seriesRowNumber = {}
 
@@ -179,7 +180,7 @@ class TCIABrowserWidget:
     #
     self.showBrowserButton = qt.QPushButton("Show Browser")
     # self.showBrowserButton.toolTip = "."
-    self.showBrowserButton.enabled = False 
+    self.showBrowserButton.enabled = False
     browserLayout.addWidget(self.showBrowserButton)
 
 
@@ -189,7 +190,7 @@ class TCIABrowserWidget:
 
     self.collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.collectionsCollapsibleGroupBox.setTitle('Collections')
-    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)  # 
+    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)  #
     collectionsFormLayout = qt.QHBoxLayout(self.collectionsCollapsibleGroupBox)
 
     #
@@ -217,10 +218,10 @@ class TCIABrowserWidget:
     logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" +">"
     self.logoLabel = qt.QLabel(logoLabelText)
     collectionsFormLayout.addWidget(self.logoLabel)
-    
+
 
     #
-    # Patient Table Widget 
+    # Patient Table Widget
     #
     self.patientsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.patientsCollapsibleGroupBox.setTitle('Patients')
@@ -243,7 +244,7 @@ class TCIABrowserWidget:
     patientsVBoxLayout2.addWidget(self.patientsTableWidget)
     self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
     abstractItemView =qt.QAbstractItemView()
-    self.patientsTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    self.patientsTableWidget.setSelectionBehavior(abstractItemView.SelectRows)
     verticalheader = self.patientsTableWidget.verticalHeader()
     verticalheader.setDefaultSectionSize(20)
     patientsVBoxLayout1.setSpacing(0)
@@ -257,7 +258,7 @@ class TCIABrowserWidget:
     #
     self.studiesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.studiesCollapsibleGroupBox.setTitle('Studies')
-    browserWidgetLayout.addWidget(self.studiesCollapsibleGroupBox) 
+    browserWidgetLayout.addWidget(self.studiesCollapsibleGroupBox)
     studiesVBoxLayout1 = qt.QVBoxLayout(self.studiesCollapsibleGroupBox)
     studiesExpdableArea = ctk.ctkExpandableWidget()
     studiesVBoxLayout1.addWidget(studiesExpdableArea)
@@ -274,7 +275,7 @@ class TCIABrowserWidget:
     self.studiesTableWidget.resizeColumnsToContents()
     studiesVBoxLayout2.addWidget(self.studiesTableWidget)
     self.studiesTreeSelectionModel = self.studiesTableWidget.selectionModel()
-    self.studiesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
+    self.studiesTableWidget.setSelectionBehavior(abstractItemView.SelectRows)
     studiesVerticalheader = self.studiesTableWidget.verticalHeader()
     studiesVerticalheader.setDefaultSectionSize(20)
     self.studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
@@ -301,7 +302,7 @@ class TCIABrowserWidget:
     studiesVBoxLayout2.setContentsMargins(7,3,7,7)
 
     #
-    # Series Table Widget 
+    # Series Table Widget
     #
     self.seriesCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.seriesCollapsibleGroupBox.setTitle('Series')
@@ -323,8 +324,8 @@ class TCIABrowserWidget:
     self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
     self.seriesTreeSelectionModel = self.studiesTableWidget.selectionModel()
-    self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows) 
-    self.seriesTableWidget.setSelectionMode(3) 
+    self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows)
+    self.seriesTableWidget.setSelectionMode(3)
     self.seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
     self.seriesTableWidgetHeader.setStretchLastSection(True)
     #seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
@@ -367,7 +368,7 @@ class TCIABrowserWidget:
     iconSize = qt.QSize(70,40)
     self.indexButton.setIconSize(iconSize)
     #self.indexButton.setMinimumHeight(50)
-    self.indexButton.enabled = False 
+    self.indexButton.enabled = False
     #downloadWidgetLayout.addStretch(4)
     seriesSelectOptionsLayout.addWidget(self.indexButton)
 
@@ -382,7 +383,7 @@ class TCIABrowserWidget:
     #self.loadButton.setMinimumHeight(50)
     self.loadButton.toolTip = "Download and Load: The browser will download"\
         " the selected sereies and Load them in 3D Slicer scene."
-    self.loadButton.enabled = False 
+    self.loadButton.enabled = False
     seriesSelectOptionsLayout.addWidget(self.loadButton)
     #downloadWidgetLayout.addStretch(4)
 
@@ -409,7 +410,7 @@ class TCIABrowserWidget:
     self.patientsTableWidget.addAction(self.clinicalDataRetrieveAction)
     #self.contextMenu = qt.QMenu(self.patientsTableWidget)
     #self.contextMenu.addAction(self.clinicalDataRetrieveAction)
-    self.clinicalDataRetrieveAction.enabled = False 
+    self.clinicalDataRetrieveAction.enabled = False
 
     #
     # Settings Area
@@ -520,7 +521,7 @@ class TCIABrowserWidget:
       self.browserWidget.show()
       if self.popupGeometry.isValid():
         self.browserWidget.setGeometry(self.popupGeometry)
-    self.browserWidget.raise_() 
+    self.browserWidget.raise_()
 
     if not self.popupPositioned:
       mainWindow = slicer.util.mainWindow()
@@ -585,7 +586,7 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showStatus(self.progressMessage)
     if self.selectedCollection[0:4] != 'TCGA':
-      self.clinicalDataRetrieveAction.enabled = False 
+      self.clinicalDataRetrieveAction.enabled = False
     else:
       self.clinicalDataRetrieveAction.enabled = True
 
@@ -651,7 +652,7 @@ class TCIABrowserWidget:
       self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
 
     else:
-      try:    
+      try:
         response = self.TCIAClient.get_patient_study(patientId = self.selectedPatient)
         responseString = response.read()[:]
         with open(cacheFile, 'w') as outputFile:
@@ -791,7 +792,7 @@ class TCIABrowserWidget:
 
         # create download queue
         if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
-          downloadFolderPath =  self.storagePath + str(len(self.previouslyDownloadedSeries))+ "/"+selectedSeries+"/"
+          downloadFolderPath =  os.path.join(self.storagePath, str(len(self.previouslyDownloadedSeries)),selectedSeries)+os.sep
           self.makeDownloadProgressBar(selectedSeries,n)
           self.downloadQueue[selectedSeries] = downloadFolderPath
           self.seriesRowNumber[selectedSeries] = n
@@ -820,16 +821,19 @@ class TCIABrowserWidget:
       self.cancelDownloadButton.enabled = True
       selectedSeries, downloadFolderPath = self.downloadQueue.popitem()
       if not os.path.exists(downloadFolderPath):
+        logging.debug("Creating directory to keep the downloads: "+downloadFolderPath)
         os.makedirs(downloadFolderPath)
       # save series uid in a text file for further reference
       with open(downloadFolderPath + 'seriesUID.txt', 'w') as f:
         f.write(selectedSeries)
-      f.close()
+        f.close()
       fileName = downloadFolderPath +  'images.zip'
+      logging.debug("Downloading images to "+fileName)
       self.extractedFilesDirectory = downloadFolderPath +  'images'
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       self.showStatus(self.progressMessage)
       seriesSize = self.getSeriesSize(selectedSeries)
+      logging.debug(self.progressMessage)
       try:
         response = self.TCIAClient.get_image(seriesInstanceUid = selectedSeries)
         slicer.app.processEvents()
@@ -839,13 +843,17 @@ class TCIABrowserWidget:
           status = self.__bufferRead(destinationFile, response, selectedSeries, seriesSize)
 
           destinationFile.close()
-          # print "\nDownloaded file %s.zip from the TCIA server" %fileName
+          logging.debug("Downloaded file %s from the TCIA server" % fileName)
           self.clearStatus()
           if status:
             self.progressMessage = "Extracting Images"
+            logging.debug("Extracting images")
             # Unzip the data
-            self.showStatus(self.progressMessage)   
-            self.unzip(fileName,self.extractedFilesDirectory)
+            self.showStatus(self.progressMessage)
+            totalItems = self.unzip(fileName,self.extractedFilesDirectory)
+            if totalItems == 0:
+              qt.QMessageBox.critical(slicer.util.mainWindow(),
+                                'TCIA Browser', "Failed to retrieve images for series %s. Please report this message to the developers!" % selectedSeries, qt.QMessageBox.Ok)
             self.clearStatus()
             # Import the data into dicomAppWidget and open the dicom browser
             self.addFilesToDatabase(selectedSeries)
@@ -859,6 +867,7 @@ class TCIABrowserWidget:
             item = table.item(n,1)
             item.setIcon(self.storedlIcon)
           else:
+            logging.error("Failed to download images!")
             self.removeDownloadProgressBar(selectedSeries)
             self.downloadQueue.pop(selectedSeries, None)
 
@@ -866,8 +875,7 @@ class TCIABrowserWidget:
 
         else:
           self.clearStatus()
-          print "Error : " + str(response.getcode) # print error code
-          print "\n" + str(response.info())
+          logging.error("Error getting image: " + str(response.getcode)) # print error code
 
       except Exception, error:
         self.clearStatus()
@@ -906,7 +914,7 @@ class TCIABrowserWidget:
       #
       buffer = response.read(bufferSize)[:]
       slicer.app.processEvents()
-      if not buffer: 
+      if not buffer:
         # Pop from the queue
         break
       #
@@ -932,7 +940,7 @@ class TCIABrowserWidget:
       # If DOWNLOAD FINISHED
       buffer = response.read(bufferSize)
       slicer.app.processEvents()
-      if not buffer: 
+      if not buffer:
         # Pop from the queue
         currentDownloadProgressBar.setMaximum(100)
         currentDownloadProgressBar.setValue(100)
@@ -960,16 +968,26 @@ class TCIABrowserWidget:
     return True
 
   def unzip(self,sourceFilename, destinationDir):
+    totalItems = 0
     with zipfile.ZipFile(sourceFilename) as zf:
       for member in zf.infolist():
+        logging.debug("Found item %s in archive" % member.filename)
         words = member.filename.split('/')
-        path = destinationDir 
+        path = destinationDir
         for word in words[:-1]:
           drive, word = os.path.splitdrive(word)
           head, word = os.path.split(word)
           if word in (os.curdir, os.pardir, ''): continue
           path = os.path.join(path, word)
+        logging.debug("Extracting %s" % member)
         zf.extract(member, path)
+        try:
+          dcm = dicom.read_file(path)
+          totalItems = totalItems+1
+        except:
+          pass
+    logging.debug("Total %i DICOM items extracted from image archive." % totalItems)
+    return totalItems
 
   def getSeriesSize(self, seriesInstanceUID):
     response = self.TCIAClient.get_series_size(seriesInstanceUID)
@@ -1264,8 +1282,8 @@ class TCIABrowserWidget:
 #
 
 class TCIABrowserLogic:
-  """This class should implement all the actual 
-  computation done by your module.  The interface 
+  """This class should implement all the actual
+  computation done by your module.  The interface
   should be such that other python code can import
   this class and make use of the functionality without
   requiring an instance of the Widget
@@ -1274,7 +1292,7 @@ class TCIABrowserLogic:
     pass
 
   def hasImageData(self,volumeNode):
-    """This is a dummy logic method that 
+    """This is a dummy logic method that
     returns true if the passed in volume
     node has valid image data
     """
