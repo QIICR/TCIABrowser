@@ -411,14 +411,20 @@ class TCIABrowserWidget:
         statusHBoxLayout.addWidget(self.statusLabel)
         statusHBoxLayout.addStretch(1)
         #
-        # context menu
+        # clinical data context menu
         #
         self.patientsTableWidget.setContextMenuPolicy(2)
-        self.clinicalDataRetrieveAction = qt.QAction("Get Clincal Data", self.patientsTableWidget)
+        self.clinicalDataRetrieveAction = qt.QAction("Get Clinical Data", self.patientsTableWidget)
         self.patientsTableWidget.addAction(self.clinicalDataRetrieveAction)
-        # self.contextMenu = qt.QMenu(self.patientsTableWidget)
-        # self.contextMenu.addAction(self.clinicalDataRetrieveAction)
         self.clinicalDataRetrieveAction.enabled = False
+
+        #
+        # delete data context menu
+        #
+        self.seriesTableWidget.setContextMenuPolicy(2)
+        self.removeSeriesAction = qt.QAction("Remove from disk", self.seriesTableWidget)
+        self.seriesTableWidget.addAction(self.removeSeriesAction)
+        # self.removeSeriesAction.enabled = False
 
         #
         # Settings Area
@@ -489,6 +495,7 @@ class TCIABrowserWidget:
         self.cancelDownloadButton.connect('clicked(bool)', self.onCancelDownloadButton)
         self.storagePathButton.connect('directoryChanged(const QString &)', self.onStoragePathButton)
         self.clinicalDataRetrieveAction.connect('triggered()', self.onContextMenuTriggered)
+        self.removeSeriesAction.connect('triggered()', self.onRemoveSeriesContextMenuTriggered)
         self.clinicalDataRetrieveAction.connect('triggered()', self.clinicalPopup.open)
         self.seriesSelectAllButton.connect('clicked(bool)', self.onSeriesSelectAllButton)
         self.seriesSelectNoneButton.connect('clicked(bool)', self.onSeriesSelectNoneButton)
@@ -522,6 +529,24 @@ class TCIABrowserWidget:
 
     def onContextMenuTriggered(self):
         self.clinicalPopup.getData(self.selectedCollection, self.selectedPatient)
+
+    def onRemoveSeriesContextMenuTriggered(self):
+        removeList = []
+        for uid in self.seriesInstanceUIDs:
+            if uid.isSelected():
+                removeList.append(uid.text())
+        with open(self.downloadedSeriesArchiveFile, 'r') as f:
+            self.previouslyDownloadedSeries = pickle.load(f)
+        f.close()
+        updatedDownloadSeries = []
+        for item in self.previouslyDownloadedSeries:
+            if item not in removeList:
+                updatedDownloadSeries.append(item)
+        with open(self.downloadedSeriesArchiveFile, 'w') as f:
+            pickle.dump(updatedDownloadSeries,f)
+        f.close()
+        self.previouslyDownloadedSeries = updatedDownloadSeries
+        self.studiesTableSelectionChanged()
 
     def showBrowser(self):
         if not self.browserWidget.isVisible():
@@ -1130,6 +1155,7 @@ class TCIABrowserWidget:
                     self.seriesInstanceUIDs.append(seriesInstanceUIDItem)
                     table.setItem(n, 0, seriesInstanceUIDItem)
                     if any(seriesInstanceUID == s for s in self.previouslyDownloadedSeries):
+                        self.removeSeriesAction.enabled = True
                         icon = self.storedlIcon
                     else:
                         icon = self.downloadIcon
@@ -1284,6 +1310,7 @@ class TCIABrowserWidget:
             'globals()["%s"].%s(parent)' % (moduleName, widgetName))
         globals()[widgetName.lower()].setup()
         setattr(globals()['slicer'].modules, widgetName, globals()[widgetName.lower()])
+        self.showBrowserButton.enabled = True
 
     def onReloadAndTest(self, moduleName="TCIABrowser"):
         self.onReload()
