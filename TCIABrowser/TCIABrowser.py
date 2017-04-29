@@ -1017,10 +1017,10 @@ class TCIABrowserWidget:
                     head, word = os.path.split(word)
                     if word in (os.curdir, os.pardir, ''): continue
                     path = os.path.join(path, word)
-                logging.debug("Extracting %s" % member)
+                logging.debug("Extracting %s" % words[-1])
                 zf.extract(member, path)
                 try:
-                    dcm = dicom.read_file(path)
+                    dcm = dicom.read_file(os.path.join(path,words[-1]))
                     totalItems = totalItems + 1
                 except:
                     pass
