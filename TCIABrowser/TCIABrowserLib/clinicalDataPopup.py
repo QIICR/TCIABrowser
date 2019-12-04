@@ -1,4 +1,4 @@
-import urllib2, urllib,sys, os
+import urllib,sys, os
 import time
 import csv
 import  qt, ctk, slicer
@@ -12,8 +12,8 @@ class clinicalDataPopup:
     self.window.setWindowIcon(icon)
     self.layout= qt.QVBoxLayout(self.window)
     self.setup()
-    self.progress = qt.QProgressDialog(self.window)
-    self.progress.setWindowTitle("Clinical Data")
+    #self.progress = qt.QProgressDialog(self.window)
+    #self.progress.setWindowTitle("Clinical Data")
 
   def setup(self):
     self.tableAreaWidget = qt.QWidget()
@@ -82,11 +82,11 @@ class clinicalDataPopup:
         table.setItem(index, 0, tableItem)
         self.tableItems.append(tableItem)
     else:
-      message = "The Selected Patient is not in the list provided by cBioportal Server" 
+      message = "The Selected Patient is not in the list provided by cBioportal Server"
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
-      print 'patient not in the query'
-    
+      print('patient not in the query')
+
   def open(self):
     if not self.window.isVisible():
       self.window.show()
@@ -120,28 +120,28 @@ class clinicalDataPopup:
     elif self.collection == 'TCGA-HNSC':
       queryString = 'hnsc_tcga_all'
     self.progressMessage = "Please wait while retreiving information from cBioportal for Cancer Genomics server."
-    self.showProgress(self.progressMessage)
-    try:    
-      
+    #self.showProgress(self.progressMessage)
+    try:
+
       url = 'http://www.cbioportal.org/public-portal/webservice.do?cmd=getClinicalData&case_set_id='
-      requestUrl = url + queryString 
-      request = urllib2.Request(url=requestUrl)
-      response = urllib2.urlopen(request)
+      requestUrl = url + queryString
+      request = urllib.request(url=requestUrl)
+      response = urllib.request.urlopen(request)
       responseString = response.read()[:]
-      if responseString[:7] == 'CASE_ID': 
-        with open(self.cacheFile, 'w') as outputFile:
+      if responseString[:7] == 'CASE_ID':
+        with open(self.cacheFile, 'wb') as outputFile:
           outputFile.write(responseString)
           outputFile.close()
         self.readResponseCSVFile(self.cacheFile)
         self.closeProgress()
       else:
         self.closeProgress()
-        message = "Error in getting response from cBioportal Server" 
+        message = "Error in getting response from cBioportal Server"
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
-    except Exception, error:
+    except Exception as error:
       self.closeProgress()
-      message = "Error in getting response from cBioportal Server" 
+      message = "Error in getting response from cBioportal Server"
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                         'TCIA Browser', message, qt.QMessageBox.Ok)
 
@@ -159,4 +159,3 @@ class clinicalDataPopup:
   def closeProgress(self):
     self.progress.close()
     self.progress.reset()
-

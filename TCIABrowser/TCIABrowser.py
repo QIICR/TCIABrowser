@@ -14,20 +14,21 @@ import xml.etree.ElementTree as ET
 import zipfile
 from random import randint
 
-import TCIABrowserLib
-import dicom
+import pydicom
 import os
 import sys
 import urllib
-import urllib2
 from __main__ import vtk, qt, ctk, slicer
 
+from TCIABrowserLib import APISettingsPopup, clinicalDataPopup, TCIAClient
+
+from slicer.ScriptedLoadableModule import *
 
 #
 # TCIABrowser
 #
 
-class TCIABrowser:
+class TCIABrowser(ScriptedLoadableModule):
   def __init__(self, parent):
     parent.title = "TCIA Browser"
     parent.categories = ["Informatics"]
@@ -61,7 +62,7 @@ class TCIABrowser:
 # qTCIABrowserWidget
 #
 
-class TCIABrowserWidget:
+class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def __init__(self, parent=None):
     self.loadToScene = False
 
@@ -81,7 +82,6 @@ class TCIABrowserWidget:
 
     self.downloadProgressBarWidgets = []
 
-    self.progress = qt.QProgressDialog(self.browserWidget)
     # self.progress.setWindowTitle("TCIA Browser")
     # setup API key
     self.slicerApiKey = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
@@ -97,11 +97,12 @@ class TCIABrowserWidget:
     self.cachePath = self.storagePath + "/ServerResponseCache/"
     self.downloadedSeriesArchiveFile = self.storagePath + 'archive.p'
     if os.path.isfile(self.downloadedSeriesArchiveFile):
-      f = open(self.downloadedSeriesArchiveFile, 'r')
+      print("Reading "+self.downloadedSeriesArchiveFile)
+      f = open(self.downloadedSeriesArchiveFile, 'rb')
       self.previouslyDownloadedSeries = pickle.load(f)
       f.close()
     else:
-      with open(self.downloadedSeriesArchiveFile, 'w') as f:
+      with open(self.downloadedSeriesArchiveFile, 'wb') as f:
         self.previouslyDownloadedSeries = []
         pickle.dump(self.previouslyDownloadedSeries, f)
       f.close()
@@ -446,8 +447,8 @@ class TCIABrowserWidget:
     self.storagePathButton.directory = self.storagePath
     settingsGridLayout.addWidget(storagePathLabel, 0, 0, 1, 1)
     settingsGridLayout.addWidget(self.storagePathButton, 0, 1, 1, 4)
-    self.apiSettingsPopup = TCIABrowserLib.APISettingsPopup()
-    self.clinicalPopup = TCIABrowserLib.clinicalDataPopup(self.cachePath, self.reportIcon)
+    self.apiSettingsPopup = APISettingsPopup.APISettingsPopup()
+    self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
 
     #
     # Connection Area
@@ -535,14 +536,14 @@ class TCIABrowserWidget:
     for uid in self.seriesInstanceUIDs:
       if uid.isSelected():
         removeList.append(uid.text())
-    with open(self.downloadedSeriesArchiveFile, 'r') as f:
+    with open(self.downloadedSeriesArchiveFile, 'rb') as f:
       self.previouslyDownloadedSeries = pickle.load(f)
     f.close()
     updatedDownloadSeries = []
     for item in self.previouslyDownloadedSeries:
       if item not in removeList:
         updatedDownloadSeries.append(item)
-    with open(self.downloadedSeriesArchiveFile, 'w') as f:
+    with open(self.downloadedSeriesArchiveFile, 'wb') as f:
       pickle.dump(updatedDownloadSeries,f)
     f.close()
     self.previouslyDownloadedSeries = updatedDownloadSeries
@@ -579,7 +580,7 @@ class TCIABrowserWidget:
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
-    self.TCIAClient = TCIABrowserLib.TCIAClient()
+    self.TCIAClient = TCIAClient.TCIAClient()
     self.showStatus("Getting Available Collections")
     try:
       response = self.TCIAClient.get_collection_values()
@@ -587,10 +588,10 @@ class TCIABrowserWidget:
       self.populateCollectionsTreeView(responseString)
       self.clearStatus()
 
-    except Exception, error:
+    except Exception as error:
       self.connectButton.enabled = True
       self.clearStatus()
-      message = "Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+      message = "getCollectionValues: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                   'TCIA Browser', message, qt.QMessageBox.Ok)
     self.showBrowserButton.enabled = True
@@ -623,11 +624,17 @@ class TCIABrowserWidget:
     else:
       self.clinicalDataRetrieveAction.enabled = True
 
+    patientsList = None
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = codecs.open(cacheFile, 'r', encoding='utf8')
-      responseString = f.read()[:]
+      f = codecs.open(cacheFile, 'rb', encoding='utf8')
+      patientsList = f.read()[:]
       f.close()
-      self.populatePatientsTableWidget(responseString)
+
+      if not len(patientsList):
+        patientsList = None
+
+    if patientsList:
+      self.populatePatientsTableWidget(patientsList)
       self.clearStatus()
       groupBoxTitle = 'Patients (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
       self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
@@ -636,19 +643,19 @@ class TCIABrowserWidget:
       try:
         response = self.TCIAClient.get_patient(collection=self.selectedCollection)
 
-        with open(cacheFile, 'w') as outputFile:
-          self.stringBufferRead(outputFile, response)
+        with open(cacheFile, 'wb') as outputFile:
+          self.stringBufferReadWrite(outputFile, response)
         outputFile.close()
-        f = codecs.open(cacheFile, 'r', encoding='utf8')
+        f = codecs.open(cacheFile, 'rb', encoding='utf8')
         responseString = f.read()[:]
         self.populatePatientsTableWidget(responseString)
         groupBoxTitle = 'Patients (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
         self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.clearStatus()
 
-      except Exception, error:
+      except Exception as error:
         self.clearStatus()
-        message = "Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+        message = "collectionSelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                     'TCIA Browser', message, qt.QMessageBox.Ok)
 
@@ -656,10 +663,10 @@ class TCIABrowserWidget:
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.studiesTableRowCount = 0
-    self.numberOfSelectedPatinets = 0
+    self.numberOfSelectedPatients = 0
     for n in range(len(self.patientsIDs)):
       if self.patientsIDs[n].isSelected():
-        self.numberOfSelectedPatinets += 1
+        self.numberOfSelectedPatients += 1
         self.patientSelected(n)
 
   def patientSelected(self, row):
@@ -672,12 +679,12 @@ class TCIABrowserWidget:
     self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
     self.showStatus(self.progressMessage)
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = codecs.open(cacheFile, 'r', encoding='utf8')
+      f = codecs.open(cacheFile, 'rb', encoding='utf8')
       responseString = f.read()[:]
       f.close()
       self.populateStudiesTableWidget(responseString)
       self.clearStatus()
-      if self.numberOfSelectedPatinets == 1:
+      if self.numberOfSelectedPatients == 1:
         groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
       else:
         groupBoxTitle = 'Studies '
@@ -688,13 +695,13 @@ class TCIABrowserWidget:
       try:
         response = self.TCIAClient.get_patient_study(patientId=self.selectedPatient)
         responseString = response.read()[:]
-        with open(cacheFile, 'w') as outputFile:
+        with open(cacheFile, 'wb') as outputFile:
           outputFile.write(responseString)
           outputFile.close()
-        f = codecs.open(cacheFile, 'r', encoding='utf8')
+        f = codecs.open(cacheFile, 'rb', encoding='utf8')
         responseString = f.read()[:]
         self.populateStudiesTableWidget(responseString)
-        if self.numberOfSelectedPatinets == 1:
+        if self.numberOfSelectedPatients == 1:
           groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
         else:
           groupBoxTitle = 'Studies '
@@ -702,9 +709,9 @@ class TCIABrowserWidget:
         self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.clearStatus()
 
-      except Exception, error:
+      except Exception as error:
         self.clearStatus()
-        message = "Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+        message = "patientSelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                     'TCIA Browser', message, qt.QMessageBox.Ok)
 
@@ -726,7 +733,7 @@ class TCIABrowserWidget:
     self.showStatus(self.progressMessage)
     cacheFile = self.cachePath + self.selectedStudy + '.json'
     if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = codecs.open(cacheFile, 'r', encoding='utf8')
+      f = codecs.open(cacheFile, 'rb', encoding='utf8')
       responseString = f.read()[:]
       f.close()
       self.populateSeriesTableWidget(responseString)
@@ -744,7 +751,7 @@ class TCIABrowserWidget:
       try:
         response = self.TCIAClient.get_series(studyInstanceUID=self.selectedStudy)
         responseString = response.read()[:]
-        with open(cacheFile, 'w') as outputFile:
+        with open(cacheFile, 'wb') as outputFile:
           outputFile.write(responseString)
           outputFile.close()
         self.populateSeriesTableWidget(responseString)
@@ -757,9 +764,9 @@ class TCIABrowserWidget:
         self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
         self.clearStatus()
 
-      except Exception, error:
+      except Exception as error:
         self.clearStatus()
-        message = "Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+        message = "studySelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                     'TCIA Browser', message, qt.QMessageBox.Ok)
 
@@ -875,7 +882,7 @@ class TCIABrowserWidget:
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
           destinationFile = open(fileName, "wb")
-          status = self.__bufferRead(destinationFile, response, selectedSeries, seriesSize)
+          status = self.__bufferReadWrite(destinationFile, response, selectedSeries, seriesSize)
 
           destinationFile.close()
           logging.debug("Downloaded file %s from the TCIA server" % fileName)
@@ -896,7 +903,7 @@ class TCIABrowserWidget:
             self.addFilesToDatabase(selectedSeries)
             #
             self.previouslyDownloadedSeries.append(selectedSeries)
-            with open(self.downloadedSeriesArchiveFile, 'w') as f:
+            with open(self.downloadedSeriesArchiveFile, 'wb') as f:
               pickle.dump(self.previouslyDownloadedSeries, f)
             f.close()
             n = self.seriesRowNumber[selectedSeries]
@@ -912,11 +919,11 @@ class TCIABrowserWidget:
 
         else:
           self.clearStatus()
-          logging.error("Error getting image: " + str(response.getcode))  # print error code
+          logging.error("downloadSelectedSeries: Error getting image: " + str(response.getcode))  # print error code
 
-      except Exception, error:
+      except Exception as error:
         self.clearStatus()
-        message = "Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+        message = "downloadSelectedSeries: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                     'TCIA Browser', message, qt.QMessageBox.Ok)
     self.cancelDownloadButton.enabled = False
@@ -943,7 +950,7 @@ class TCIABrowserWidget:
     self.downloadProgressLabels[selectedSeries].deleteLater()
     del self.downloadProgressLabels[selectedSeries]
 
-  def stringBufferRead(self, dstFile, response, bufferSize=819):
+  def stringBufferReadWrite(self, dstFile, response, bufferSize=819):
     self.downloadSize = 0
     while 1:
       #
@@ -965,7 +972,7 @@ class TCIABrowserWidget:
       self.downloadSize += len(buffer)
 
   # This part was adopted from XNATSlicer module
-  def __bufferRead(self, dstFile, response, selectedSeries, seriesSize, bufferSize=8192):
+  def __bufferReadWrite(self, dstFile, response, selectedSeries, seriesSize, bufferSize=8192):
 
     currentDownloadProgressBar = self.downloadProgressBars[selectedSeries]
     currentProgressLabel = self.downloadProgressLabels[selectedSeries]
@@ -1019,7 +1026,7 @@ class TCIABrowserWidget:
         logging.debug("Extracting %s" % words[-1])
         zf.extract(member, path)
         try:
-          dcm = dicom.read_file(os.path.join(path,words[-1]))
+          dcm = pydicom.read_file(os.path.join(path,words[-1]))
           totalItems = totalItems + 1
         except:
           pass
@@ -1264,7 +1271,6 @@ class TCIABrowserWidget:
     """
     import imp, sys, os, slicer
     import time
-    import urllib2, urllib, sys, os
     import xml.etree.ElementTree as ET
     import webbrowser
     import string, json
@@ -1280,7 +1286,7 @@ class TCIABrowserWidget:
     p = os.path.dirname(filePath)
     if not sys.path.__contains__(p):
       sys.path.insert(0, p)
-    fp = open(filePath, "r")
+    fp = open(filePath, "rb")
     globals()[moduleName] = imp.load_module(
       moduleName, fp, filePath, ('.py', 'r', imp.PY_SOURCE))
     fp.close()
@@ -1322,7 +1328,7 @@ class TCIABrowserWidget:
 # TCIABrowserLogic
 #
 
-class TCIABrowserLogic:
+class TCIABrowserLogic(ScriptedLoadableModuleLogic):
   """This class should implement all the actual
   computation done by your module.  The interface
   should be such that other python code can import

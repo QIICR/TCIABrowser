@@ -1,4 +1,6 @@
-import json, string, urllib2, urllib
+import json, string
+import urllib.request, urllib.parse, urllib.error
+import urllib.parse
 #import TCIABrowserLib
 
 #
@@ -14,40 +16,40 @@ class TCIAClient:
     GET_SERIES = "getSeries"
     GET_SERIES_SIZE = "getSeriesSize"
     GET_PATIENT = "getPatient"
-    
+
     # use Slicer API key by default
     def __init__(self, apiKey='f88ff53d-882b-4c0d-b60c-0fb560e82cf1', baseUrl='https://services.cancerimagingarchive.net/services/v3/TCIA/query'):
         self.apiKey = apiKey
         self.baseUrl = baseUrl
 
     def execute(self, url, queryParameters={}):
-        queryParameters = dict((k, v) for k, v in queryParameters.iteritems() if v)
+        queryParameters = dict((k, v) for k, v in queryParameters.items() if v)
         headers = {"api_key" : self.apiKey }
-        queryString = "?%s" % urllib.urlencode(queryParameters)
+        queryString = "?%s" % urllib.parse.urlencode(queryParameters)
         requestUrl = url + queryString
-        request = urllib2.Request(url=requestUrl , headers=headers)
-        resp = urllib2.urlopen(request)
-        
+        request = urllib.request.Request(url=requestUrl , headers=headers)
+        resp = urllib.request.urlopen(request)
+
         return resp
-    
+
     def get_modality_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
         serviceUrl = self.baseUrl + "/" + self.GET_MODALITY_VALUES
         queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
-    
+
     def get_manufacturer_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "json" ):
         serviceUrl = self.baseUrl + "/" + self.GET_MANUFACTURER_VALUES
         queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
-        
+
     def get_collection_values(self,outputFormat = "json" ):
         serviceUrl = self.baseUrl + "/" + self.GET_COLLECTION_VALUES
         queryParameters = { "format" : outputFormat }
         resp = self.execute(serviceUrl , queryParameters)
         return resp
-        
+
     def get_body_part_values(self,collection = None , bodyPartExamined = None , modality = None , outputFormat = "csv" ):
         serviceUrl = self.baseUrl + "/" + self.GET_BODY_PART_VALUES
         queryParameters = {"Collection" : collection , "BodyPartExamined" : bodyPartExamined , "Modality" : modality , "format" : outputFormat }
@@ -78,4 +80,3 @@ class TCIAClient:
         queryParameters = { "SeriesInstanceUID" : seriesInstanceUid }
         resp = self.execute( serviceUrl , queryParameters)
         return resp
-
