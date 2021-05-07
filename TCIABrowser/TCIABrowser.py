@@ -88,8 +88,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.currentAPIKey = self.slicerApiKey
     item = qt.QStandardItem()
 
-    dicomAppWidget = ctk.ctkDICOMAppWidget()
-    databaseDirectory = dicomAppWidget.databaseDirectory
+    # Put the files downloaded from TCIA in the DICOM database folder by default.
+    # This makes downloaded files relocatable along with the DICOM database in
+    # recent Slicer versions.
+    databaseDirectory = slicer.dicomDatabase.databaseDirectory
     self.storagePath = databaseDirectory + "/TCIALocal/"
     if not os.path.exists(self.storagePath):
       os.makedirs(self.storagePath)
@@ -808,7 +810,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     dicomWidget = slicer.modules.dicom.widgetRepresentation().self()
 
     indexer = ctk.ctkDICOMIndexer()
-    indexer.addDirectory(slicer.dicomDatabase, self.extractedFilesDirectory)
+    # DICOM indexer uses the current DICOM database folder as the basis for relative paths,
+    # therefore we must convert the folder path to absolute to ensure this code works
+    # even when a relative path is used as self.extractedFilesDirectory.
+    indexer.addDirectory(slicer.dicomDatabase, os.path.abspath(self.extractedFilesDirectory))
     indexer.waitForImportFinished()
     self.clearStatus()
 
