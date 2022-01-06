@@ -89,7 +89,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     item = qt.QStandardItem()
 
     dicomAppWidget = ctk.ctkDICOMAppWidget()
-    databaseDirectory = dicomAppWidget.databaseDirectory
+    databaseDirectory = os.path.join(slicer.app.temporaryPath, "TCIABrowser")
     self.storagePath = databaseDirectory + "/TCIALocal/"
     if not os.path.exists(self.storagePath):
       os.makedirs(self.storagePath)
