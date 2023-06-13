@@ -111,7 +111,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
-    self.useCacheFlag = True
+    self.useCacheFlag = False
 
     if not parent:
       self.parent = slicer.qMRMLWidget()
@@ -225,7 +225,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     would populate tables based on saved data on disk.'''
 
     collectionsFormLayout.addWidget(self.useCacheCeckBox)
-    self.useCacheCeckBox.setCheckState(True)
+    self.useCacheCeckBox.setCheckState(False)
     self.useCacheCeckBox.setTristate(False)
     collectionsFormLayout.addStretch(4)
     logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" + ">"
@@ -277,8 +277,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableWidget.setCornerButtonEnabled(True)
     self.studiesModel = qt.QStandardItemModel()
     self.studiesTableHeaderLabels = ['Study Instance UID', 'Study Date', 'Study Description','Patient Age', 
-                                     'Event Type', 'Days From Event']
-    self.studiesTableWidget.setColumnCount(6)
+                                     'Event Type', 'Days From Event', 'Series Count']
+    self.studiesTableWidget.setColumnCount(7)
     self.studiesTableWidget.sortingEnabled = True
     self.studiesTableWidget.hideColumn(0)
     self.studiesTableWidget.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
@@ -565,8 +565,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.browserWidget.move(qt.QPoint(x, y))
       self.popupPositioned = True
 
-  def showStatus(self, message, waitMessage='Waiting for TCIA server .... '):
-    self.statusLabel.text = waitMessage + message
+  def showStatus(self, message):
+    self.statusLabel.text = message
     self.statusLabel.setStyleSheet("QLabel { background-color : #F0F0F0 ; color : #383838; }")
     slicer.app.processEvents()
 
@@ -1126,12 +1126,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           table.setItem(n, 3, patientAge)
         if key == 'LongitudinalTemporalEventType':
           longitudinalTemporalEventType = qt.QTableWidgetItem(str(study['LongitudinalTemporalEventType']))
-          self.longitudinalTemporalOffsetFromEvents.append(longitudinalTemporalEventType)
+          self.longitudinalTemporalEventTypes.append(longitudinalTemporalEventType)
           table.setItem(n, 4, longitudinalTemporalEventType)
         if key == 'LongitudinalTemporalOffsetFromEvent':
           longitudinalTemporalOffsetFromEvent = qt.QTableWidgetItem(str(study['LongitudinalTemporalOffsetFromEvent']))
           self.longitudinalTemporalOffsetFromEvents.append(longitudinalTemporalOffsetFromEvent)
           table.setItem(n, 5, longitudinalTemporalOffsetFromEvent)
+        if key == 'SeriesCount':
+          seriesCount = qt.QTableWidgetItem(str(study['SeriesCount']))
+          self.seriesCounts.append(seriesCount)
+          table.setItem(n, 6, seriesCount)
       n += 1
     self.studiesTableWidget.resizeColumnsToContents()
     self.studiesTableWidgetHeader.setStretchLastSection(True)
@@ -1231,6 +1235,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.patientAges = []
     self.longitudinalTemporalEventTypes = []
     self.longitudinalTemporalOffsetFromEvents = []
+    self.seriesCounts = []
     table.clear()
     table.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
 
