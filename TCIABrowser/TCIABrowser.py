@@ -852,7 +852,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       for seriesUID in allSelectedSeriesUIDs:
         if any(seriesUID == s for s in self.previouslyDownloadedSeries):
           self.progressMessage = "Examine Files to Load"
-          self.showStatus(self.progressMessage, '')
+          self.showStatus(self.progressMessage)
           plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
           seriesUID = seriesUID.replace("'", "")
           dicomDatabase = slicer.dicomDatabase
