@@ -1074,8 +1074,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     for patient in patients:
       keys = patient.keys()
       for key in keys:
-        if key == 'PatientID':
-          patientIDString = str(patient['PatientID'])
+        if key == 'PatientId':
+          patientIDString = str(patient['PatientId'])
           patientID = qt.QTableWidgetItem(patientIDString)
           self.patientsIDs.append(patientID)
           table.setItem(n, 0, patientID)
