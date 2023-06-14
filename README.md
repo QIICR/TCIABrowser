@@ -14,6 +14,7 @@ This work is supported in part by the following National Institutes of Health gr
 ## Contributors:
 * Alireza Mehrtash, Brigham and Women's Hospital
 * Andrey Fedorov, Brigham and Women's Hospital
+* Adam Li, Georgetown University
 
 ## License
 * [Slicer License](http://www.slicer.org/pages/LicenseText)

@@ -33,7 +33,7 @@ class TCIABrowser(ScriptedLoadableModule):
     parent.title = "TCIA Browser"
     parent.categories = ["Informatics"]
     parent.dependencies = []
-    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]
+    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH), Adam Li (GU)"]
     parent.helpText = """ Connect to TCIA web archive and get a list of all available collections.
     From collection selector choose a collection and the patients table will be populated. Click on a patient and
     the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series
@@ -111,7 +111,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
-    self.useCacheFlag = True
+    self.useCacheFlag = False
 
     if not parent:
       self.parent = slicer.qMRMLWidget()
@@ -225,7 +225,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     would populate tables based on saved data on disk.'''
 
     collectionsFormLayout.addWidget(self.useCacheCeckBox)
-    self.useCacheCeckBox.setCheckState(True)
+    self.useCacheCeckBox.setCheckState(False)
     self.useCacheCeckBox.setTristate(False)
     collectionsFormLayout.addStretch(4)
     logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" + ">"
@@ -245,9 +245,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # patientsVerticalLayout = qt.QVBoxLayout(patientsExpdableArea)
     self.patientsTableWidget = qt.QTableWidget()
     self.patientsModel = qt.QStandardItemModel()
-    self.patientsTableHeaderLabels = ['Patient ID', 'Patient Name', 'Patient BirthDate',
-                      'Patient Sex', 'Ethnic Group', 'Clinical Data']
-    self.patientsTableWidget.setColumnCount(6)
+    self.patientsTableHeaderLabels = ['Patient ID', 'Patient Sex', 'Phantom', 'Species Description']
+    self.patientsTableWidget.setColumnCount(4)
     self.patientsTableWidget.sortingEnabled = True
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
     self.patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
@@ -277,8 +276,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableWidget = qt.QTableWidget()
     self.studiesTableWidget.setCornerButtonEnabled(True)
     self.studiesModel = qt.QStandardItemModel()
-    self.studiesTableHeaderLabels = ['Study Instance UID', 'Study Date', 'Study Description',
-                     'Admitting Diagnosis Description', 'Study ID', 'Patient Age', 'Series Count']
+    self.studiesTableHeaderLabels = ['Study Instance UID', 'Study Date', 'Study Description','Patient Age', 
+                                     'Event Type', 'Days From Event', 'Series Count']
     self.studiesTableWidget.setColumnCount(7)
     self.studiesTableWidget.sortingEnabled = True
     self.studiesTableWidget.hideColumn(0)
@@ -324,13 +323,12 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     seriesVBoxLayout2 = qt.QVBoxLayout(seriesExpdableArea)
     self.seriesTableWidget = qt.QTableWidget()
     # self.seriesModel = qt.QStandardItemModel()
-    self.seriesTableWidget.setColumnCount(13)
+    self.seriesTableWidget.setColumnCount(12)
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
-    self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Modality',
-                    'Protocol Name', 'Series Date', 'Series Description', 'Body Part Examined',
-                    'Series Number', 'Annotation Flag', 'Manufacturer',
-                    'Manufacturer Model Name', 'Software Versions', 'Image Count']
+    self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Series Description', 'Series Number', 
+                                    'Modality', 'Body Part Examined', 'Protocol Name', 'Manufacturer', 
+                                    'Manufacturer Model Name', 'Image Count', 'File Size', 'License URI']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
@@ -567,8 +565,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.browserWidget.move(qt.QPoint(x, y))
       self.popupPositioned = True
 
-  def showStatus(self, message, waitMessage='Waiting for TCIA server .... '):
-    self.statusLabel.text = waitMessage + message
+  def showStatus(self, message):
+    self.statusLabel.text = message
     self.statusLabel.setStyleSheet("QLabel { background-color : #F0F0F0 ; color : #383838; }")
     slicer.app.processEvents()
 
@@ -854,7 +852,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       for seriesUID in allSelectedSeriesUIDs:
         if any(seriesUID == s for s in self.previouslyDownloadedSeries):
           self.progressMessage = "Examine Files to Load"
-          self.showStatus(self.progressMessage, '')
+          self.showStatus(self.progressMessage)
           plugin = slicer.modules.dicomPlugins['DICOMScalarVolumePlugin']()
           seriesUID = seriesUID.replace("'", "")
           dicomDatabase = slicer.dicomDatabase
@@ -1074,29 +1072,25 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     for patient in patients:
       keys = patient.keys()
       for key in keys:
-        if key == 'PatientID':
-          patientIDString = str(patient['PatientID'])
+        if key == 'PatientId':
+          patientIDString = str(patient['PatientId'])
           patientID = qt.QTableWidgetItem(patientIDString)
           self.patientsIDs.append(patientID)
           table.setItem(n, 0, patientID)
           if patientIDString[0:4] == 'TCGA':
             patientID.setIcon(self.reportIcon)
-        if key == 'PatientName':
-          patientName = qt.QTableWidgetItem(str(patient['PatientName']))
-          self.patientNames.append(patientName)
-          table.setItem(n, 1, patientName)
-        if key == 'PatientBirthDate':
-          patientBirthDate = qt.QTableWidgetItem(str(patient['PatientBirthDate']))
-          self.patientBirthDates.append(patientBirthDate)
-          table.setItem(n, 2, patientBirthDate)
         if key == 'PatientSex':
           patientSex = qt.QTableWidgetItem(str(patient['PatientSex']))
           self.patientSexes.append(patientSex)
-          table.setItem(n, 3, patientSex)
-        if key == 'EthnicGroup':
-          ethnicGroup = qt.QTableWidgetItem(str(patient['EthnicGroup']))
-          self.ethnicGroups.append(ethnicGroup)
-          table.setItem(n, 4, ethnicGroup)
+          table.setItem(n, 1, patientSex)
+        if key == 'Phantom':
+          phantom = qt.QTableWidgetItem(str(patient['Phantom']))
+          self.phantoms.append(phantom)
+          table.setItem(n, 2, phantom)
+        if key == 'SpeciesDescription':
+          speciesDescription = qt.QTableWidgetItem(str(patient['SpeciesDescription']))
+          self.speciesDescriptions.append(speciesDescription)
+          table.setItem(n, 3, speciesDescription)
       n += 1
     self.patientsTableWidget.resizeColumnsToContents()
     self.patientsTableWidgetHeader.setStretchLastSection(True)
@@ -1126,18 +1120,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           studyDescription = qt.QTableWidgetItem(str(study['StudyDescription']))
           self.studyDescriptions.append(studyDescription)
           table.setItem(n, 2, studyDescription)
-        if key == 'AdmittingDiagnosesDescriptions':
-          admittingDiagnosesDescription = qt.QTableWidgetItem(str(study['AdmittingDiagnosesDescriptions']))
-          self.admittingDiagnosesDescriptions.append(admittingDiagnosesDescription)
-          table.setItem(n, 3, admittingDiagnosesDescription)
-        if key == 'StudyID':
-          studyID = qt.QTableWidgetItem(str(study['StudyID']))
-          self.studyIDs.append(studyID)
-          table.setItem(n, 4, studyID)
         if key == 'PatientAge':
           patientAge = qt.QTableWidgetItem(str(study['PatientAge']))
           self.patientAges.append(patientAge)
-          table.setItem(n, 5, patientAge)
+          table.setItem(n, 3, patientAge)
+        if key == 'LongitudinalTemporalEventType':
+          longitudinalTemporalEventType = qt.QTableWidgetItem(str(study['LongitudinalTemporalEventType']))
+          self.longitudinalTemporalEventTypes.append(longitudinalTemporalEventType)
+          table.setItem(n, 4, longitudinalTemporalEventType)
+        if key == 'LongitudinalTemporalOffsetFromEvent':
+          longitudinalTemporalOffsetFromEvent = qt.QTableWidgetItem(str(study['LongitudinalTemporalOffsetFromEvent']))
+          self.longitudinalTemporalOffsetFromEvents.append(longitudinalTemporalOffsetFromEvent)
+          table.setItem(n, 5, longitudinalTemporalOffsetFromEvent)
         if key == 'SeriesCount':
           seriesCount = qt.QTableWidgetItem(str(study['SeriesCount']))
           self.seriesCounts.append(seriesCount)
@@ -1175,50 +1169,46 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           downloadStatusItem.setIcon(icon)
           self.downloadStatusCollection.append(downloadStatusItem)
           table.setItem(n, 1, downloadStatusItem)
-        if key == 'Modality':
-          modality = qt.QTableWidgetItem(str(series['Modality']))
-          self.modalities.append(modality)
-          table.setItem(n, 2, modality)
-        if key == 'ProtocolName':
-          protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
-          self.protocolNames.append(protocolName)
-          table.setItem(n, 3, protocolName)
-        if key == 'SeriesDate':
-          seriesDate = qt.QTableWidgetItem(str(series['SeriesDate']))
-          self.seriesDates.append(seriesDate)
-          table.setItem(n, 4, seriesDate)
         if key == 'SeriesDescription':
           seriesDescription = qt.QTableWidgetItem(str(series['SeriesDescription']))
           self.seriesDescriptions.append(seriesDescription)
-          table.setItem(n, 5, seriesDescription)
-        if key == 'BodyPartExamined':
-          bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
-          self.bodyPartsExamined.append(bodyPartExamined)
-          table.setItem(n, 6, bodyPartExamined)
+          table.setItem(n, 2, seriesDescription)
         if key == 'SeriesNumber':
           seriesNumber = qt.QTableWidgetItem(str(series['SeriesNumber']))
           self.seriesNumbers.append(seriesNumber)
-          table.setItem(n, 7, seriesNumber)
-        if key == 'AnnotationsFlag':
-          annotationsFlag = qt.QTableWidgetItem(str(series['AnnotationsFlag']))
-          self.annotationsFlags.append(annotationsFlag)
-          table.setItem(n, 8, annotationsFlag)
+          table.setItem(n, 3, seriesNumber)
+        if key == 'Modality':
+          modality = qt.QTableWidgetItem(str(series['Modality']))
+          self.modalities.append(modality)
+          table.setItem(n, 4, modality)
+        if key == 'BodyPartExamined':
+          bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
+          self.bodyPartsExamined.append(bodyPartExamined)
+          table.setItem(n, 5, bodyPartExamined)
+        if key == 'ProtocolName':
+          protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
+          self.protocolNames.append(protocolName)
+          table.setItem(n, 6, protocolName)
         if key == 'Manufacturer':
           manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
           self.manufacturers.append(manufacturer)
-          table.setItem(n, 9, manufacturer)
+          table.setItem(n, 7, manufacturer)
         if key == 'ManufacturerModelName':
           manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
           self.manufacturerModelNames.append(manufacturerModelName)
-          table.setItem(n, 10, manufacturerModelName)
-        if key == 'SoftwareVersions':
-          softwareVersions = qt.QTableWidgetItem(str(series['SoftwareVersions']))
-          self.softwareVersionsCollection.append(softwareVersions)
-          table.setItem(n, 11, softwareVersions)
+          table.setItem(n, 8, manufacturerModelName)
         if key == 'ImageCount':
           imageCount = qt.QTableWidgetItem(str(series['ImageCount']))
           self.imageCounts.append(imageCount)
-          table.setItem(n, 12, imageCount)
+          table.setItem(n, 9, imageCount)
+        if key == 'FileSize':
+          fileSize = qt.QTableWidgetItem(str(series['FileSize']))
+          self.fileSizes.append(fileSize)
+          table.setItem(n, 10, fileSize)
+        if key == 'LicenseURI':
+          licenseURI = qt.QTableWidgetItem(str(series['LicenseURI']))
+          self.licenseURIs.append(licenseURI)
+          table.setItem(n, 11, licenseURI)
       n += 1
     self.seriesTableWidget.resizeColumnsToContents()
     self.seriesTableRowCount = n
@@ -1228,10 +1218,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     table = self.patientsTableWidget
     self.patientsCollapsibleGroupBox.setTitle('Patients')
     self.patientsIDs = []
-    self.patientNames = []
-    self.patientBirthDates = []
+    self.phantoms = []
     self.patientSexes = []
-    self.ethnicGroups = []
+    self.speciesDescriptions = []
     # self.collections = []
     table.clear()
     table.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
@@ -1243,9 +1232,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studyInstanceUIDs = []
     self.studyDates = []
     self.studyDescriptions = []
-    self.admittingDiagnosesDescriptions = []
-    self.studyIDs = []
     self.patientAges = []
+    self.longitudinalTemporalEventTypes = []
+    self.longitudinalTemporalOffsetFromEvents = []
     self.seriesCounts = []
     table.clear()
     table.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
@@ -1256,17 +1245,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesCollapsibleGroupBox.setTitle('Series')
     self.seriesInstanceUIDs = []
     self.downloadStatusCollection = []
-    self.modalities = []
-    self.protocolNames = []
-    self.seriesDates = []
     self.seriesDescriptions = []
-    self.bodyPartsExamined = []
     self.seriesNumbers = []
-    self.annotationsFlags = []
+    self.modalities = []
+    self.bodyPartsExamined = []
+    self.protocolNames = []
     self.manufacturers = []
     self.manufacturerModelNames = []
-    self.softwareVersionsCollection = []
     self.imageCounts = []
+    self.fileSizes = []
+    self.licenseURIs = []
     table.clear()
     table.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
 
