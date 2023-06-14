@@ -8,7 +8,7 @@ class APISettingsPopup:
     self.setup()
     self.numberOfRows = 0
     self.apiNameTableItems = []
-    self.apiKeyTableItems = []
+    self.pwTableItems = []
     self.makeSharedApiModalObjects()
     self.addAPIDialogBox = None
     self.deleteDialogBox = None
@@ -18,7 +18,7 @@ class APISettingsPopup:
     self.manageAPIsWidget = qt.QWidget()
     self.APISettingsPopupLayout.addWidget(self.manageAPIsWidget)
     self.manageAPIsLayout = qt.QVBoxLayout(self.manageAPIsWidget)
-    label = qt.QLabel('Manage APIs')
+    label = qt.QLabel('Manage Accounts')
     self.manageAPIsLayout.addWidget(label)
 
     self.apiTable = APITable()
@@ -72,14 +72,14 @@ class APISettingsPopup:
   def onAddApiButton(self):
     self.dialogRole = 'Add'
     self.apiNameLineEdit.clear()
-    self.apiKeyLineEdit.clear()
+    self.pwLineEdit.clear()
     self.showAddAPIModal()
 
   def onEditApiButton(self):
     self.dialogRole = 'Edit'
     self.showAddAPIModal()
     self.apiNameLineEdit.text = self.apiNameTableItems[self.currentAPIRow].text()
-    self.apiKeyLineEdit.text = self.apiKeyTableItems[self.currentAPIRow].text()
+    self.pwLineEdit.text = self.pwTableItems[self.currentAPIRow].text()
 
   def onDeleteApiButton(self):
     if self.deleteDialogBox== None:
@@ -101,8 +101,8 @@ class APISettingsPopup:
     # add modified 
     for api in range(0,self.numberOfRows):
       apiName = table.item(api,0).text()
-      apiKey = table.item(api,1).text()
-      settings.setValue(apiName,apiKey)
+      pw = table.item(api,1).text()
+      settings.setValue(apiName,pw)
     settings.endGroup()
     self.window.hide()
 
@@ -117,14 +117,14 @@ class APISettingsPopup:
   def makeAddAPIDialog (self):
 
     self.apiNameLineEdit.clear()
-    self.apiKeyLineEdit.clear()
+    self.pwLineEdit.clear()
 
     saveButton = qt.QPushButton("OK")
     cancelButton = qt.QPushButton("Cancel")
 
     currLayout = qt.QFormLayout()
-    currLayout.addRow("API Name:", self.apiNameLineEdit)
-    currLayout.addRow("API Key:", self.apiKeyLineEdit)
+    currLayout.addRow("Userame:", self.apiNameLineEdit)
+    currLayout.addRow("Password:", self.pwLineEdit)
 
     buttonLayout = qt.QHBoxLayout()
     buttonLayout.addStretch(1)
@@ -184,17 +184,17 @@ class APISettingsPopup:
   def saveApi(self):
     table = self.apiTable
     apiNameTableItem = qt.QTableWidgetItem(str(self.apiNameLineEdit.text))
-    apiKeyTableItem = qt.QTableWidgetItem(str(self.apiKeyLineEdit.text))
-    self.apiKeyTableItems.append(apiKeyTableItem)
+    pwTableItem = qt.QTableWidgetItem(str(self.pwLineEdit.text))
+    self.pwTableItems.append(pwTableItem)
     self.apiNameTableItems.append(apiNameTableItem)
     if self.dialogRole == 'Add':
       self.numberOfRows += 1
       table.setRowCount(self.numberOfRows)
       table.setItem(self.numberOfRows -1, 0, apiNameTableItem)
-      table.setItem(self.numberOfRows -1, 1, apiKeyTableItem)
+      table.setItem(self.numberOfRows -1, 1, pwTableItem)
     elif self.dialogRole == 'Edit':
       table.setItem(self.currentAPIRow, 0, apiNameTableItem)
-      table.setItem(self.currentAPIRow, 1, apiKeyTableItem)
+      table.setItem(self.currentAPIRow, 1, pwTableItem)
     self.restartLabel.setVisible(True)
 
   def deleteApi(self):
@@ -214,17 +214,17 @@ class APISettingsPopup:
     row = 0
     for api in userApiNames:
       apiNameTableItem = qt.QTableWidgetItem(str(api))
-      apiKeyTableItem = qt.QTableWidgetItem(str(settings.value(api)))
+      pwTableItem = qt.QTableWidgetItem(str(settings.value(api)))
       table.setItem( row, 0, apiNameTableItem) 
       self.apiNameTableItems.append(apiNameTableItem)
-      table.setItem( row, 1, apiKeyTableItem) 
-      self.apiKeyTableItems.append(apiKeyTableItem)
+      table.setItem( row, 1, pwTableItem) 
+      self.pwTableItems.append(pwTableItem)
       row += 1
     settings.endGroup()
 
   def makeSharedApiModalObjects(self):
     self.apiNameLineEdit = qt.QLineEdit()
-    self.apiKeyLineEdit = qt.QLineEdit()
+    self.pwLineEdit = qt.QLineEdit()
 
   def apiSelected(self,row,column):
     self.editAPIButton.enabled = True
@@ -242,7 +242,7 @@ class APITable(qt.QTableWidget):
 
   def makeSharedApiModalObjects(self):
     self.apiNameLineEdit = qt.QLineEdit()
-    self.apiKeyLineEdit = qt.QLineEdit()
+    self.pwLineEdit = qt.QLineEdit()
 
   def apiSelected(self,row,column):
     self.editAPIButton.enabled = True
@@ -259,7 +259,7 @@ class APITable(qt.QTableWidget):
     # Setup columns.
     #--------------------
     self.setColumnCount(2)
-    self.apiSettingsTableHeaderLabels = ['API Name', 'API Key']
+    self.apiSettingsTableHeaderLabels = ['Username', 'Password']
     self.setHorizontalHeaderLabels(self.apiSettingsTableHeaderLabels)
     abstractItemView =qt.QAbstractItemView()
     self.setSelectionBehavior(abstractItemView.SelectRows) 
