@@ -84,8 +84,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     # self.progress.setWindowTitle("TCIA Browser")
     # setup API key
-    self.slicerApiKey = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
-    self.currentAPIKey = self.slicerApiKey
+    # self.slicerPassword = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
+    self.slicerUsername = 'nbia_guest'
+    self.slicerPassword = ''
+    self.currentUsername = self.slicerUsername
+    self.currentPassword = self.slicerPassword
     item = qt.QStandardItem()
 
     # Put the files downloaded from TCIA in the DICOM database folder by default.
@@ -328,7 +331,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesTableWidget.hideColumn(0)
     self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Series Description', 'Series Number', 
                                     'Modality', 'Body Part Examined', 'Protocol Name', 'Manufacturer', 
-                                    'Manufacturer Model Name', 'Image Count', 'File Size', 'License URI']
+                                    'Manufacturer Model Name', 'Image Count', 'File Size (MB)', 'License URI']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
@@ -454,37 +457,37 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # Connection Area
     #
     # Add remove button
-    customAPILabel = qt.QLabel("Custom API Key: ")
+    customAccountLabel = qt.QLabel("Custom API Account: ")
 
-    addRemoveApisButton = qt.QPushButton("+")
-    addRemoveApisButton.toolTip = "Add or Remove APIs"
-    addRemoveApisButton.enabled = True
-    addRemoveApisButton.setMaximumWidth(20)
+    addRemoveAccountsButton = qt.QPushButton("+")
+    addRemoveAccountsButton.toolTip = "Add or Remove Accounts"
+    addRemoveAccountsButton.enabled = True
+    addRemoveAccountsButton.setMaximumWidth(20)
 
     # API selection combo box
-    self.apiSelectionComboBox = qt.QComboBox()
-    self.apiSelectionComboBox.addItem('Slicer API')
+    self.accountSelectionComboBox = qt.QComboBox()
+    self.accountSelectionComboBox.addItem('Slicer API')
     settings = qt.QSettings()
     settings.beginGroup("TCIABrowser/API-Keys")
-    self.userApiNames = settings.childKeys()
+    self.apiUsernames = settings.childKeys()
 
-    for api in self.userApiNames:
-      self.apiSelectionComboBox.addItem(api)
+    for account in self.apiUsernames:
+      self.accountSelectionComboBox.addItem(account)
     settings.endGroup()
 
-    self.connectButton = qt.QPushButton("Connect")
-    self.connectButton.toolTip = "Connect to TCIA Server."
+    self.connectButton = qt.QPushButton("Log In")
+    self.connectButton.toolTip = "Logging in to TCIA Server."
     self.connectButton.enabled = True
 
-    settingsGridLayout.addWidget(customAPILabel, 1, 0, 1, 1)
-    settingsGridLayout.addWidget(addRemoveApisButton, 1, 1, 1, 1)
-    settingsGridLayout.addWidget(self.apiSelectionComboBox, 1, 2, 1, 2)
+    settingsGridLayout.addWidget(customAccountLabel, 1, 0, 1, 1)
+    settingsGridLayout.addWidget(addRemoveAccountsButton, 1, 1, 1, 1)
+    settingsGridLayout.addWidget(self.accountSelectionComboBox, 1, 2, 1, 2)
     settingsGridLayout.addWidget(self.connectButton, 1, 4, 2, 1)
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
-    addRemoveApisButton.connect('clicked(bool)', self.apiSettingsPopup.open)
-    self.apiSelectionComboBox.connect('currentIndexChanged(QString)', self.apiKeySelected)
+    addRemoveAccountsButton.connect('clicked(bool)', self.apiSettingsPopup.open)
+    self.accountSelectionComboBox.connect('currentIndexChanged(QString)', self.AccountSelected)
     self.collectionSelector.connect('currentIndexChanged(QString)', self.collectionSelected)
     self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
@@ -509,16 +512,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def cleanup(self):
     pass
 
-  def apiKeySelected(self):
+  def AccountSelected(self):
     settings = qt.QSettings()
     settings.beginGroup("TCIABrowser/API-Keys")
-
+    
     # self.connectButton.enabled = True
-    if self.apiSelectionComboBox.currentText == 'Slicer API':
-      self.currentAPIKey = self.slicerApiKey
+    if self.accountSelectionComboBox.currentText == 'Slicer API':
+      self.currentUsername = self.slicerUsername
+      self.currentPassword = self.slicerPassword
     else:
-      self.currentAPIKey = settings.value(self.apiSelectionComboBox.currentText)
-
+      self.currentUsername = self.slicerUsername
+      # self.currentUsername = settings.value(self.accountSelectionComboBox.currentText)
+      self.currentPassword = settings.value(self.accountSelectionComboBox.currentText)
   def onShowBrowserButton(self):
     self.showBrowser()
 
@@ -580,12 +585,13 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
-    self.TCIAClient = TCIAClient.TCIAClient()
+    self.TCIAClient = TCIAClient.TCIAClient(self.currentUsername, self.currentPassword)
     self.showStatus("Getting Available Collections")
     try:
       response = self.TCIAClient.get_collection_values()
-      responseString = response.read()[:]
-      self.populateCollectionsTreeView(responseString)
+      # responseString = response.read()[:]
+      # self.populateCollectionsTreeView(responseString)
+      self.populateCollectionsTreeView(response)
       self.clearStatus()
 
     except Exception as error:
@@ -642,12 +648,12 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     else:
       try:
         response = self.TCIAClient.get_patient(collection=self.selectedCollection)
-
         with open(cacheFile, 'wb') as outputFile:
           self.stringBufferReadWrite(outputFile, response)
         outputFile.close()
         f = codecs.open(cacheFile, 'rb', encoding='utf8')
-        responseString = f.read()[:]
+        responseString = json.loads(f.read()[:])
+        # responseString = f.read()[:]
         self.populatePatientsTableWidget(responseString)
         groupBoxTitle = 'Patients (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
         self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
@@ -694,8 +700,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     else:
       try:
         response = self.TCIAClient.get_patient_study(patientId=self.selectedPatient)
-        responseString = response.read()[:]
+        responseString = json.dumps(response).encode("utf-8")
+        # responseString = response.read()[:]
         with open(cacheFile, 'wb') as outputFile:
+          # outputFile.write(responseString)
           outputFile.write(responseString)
           outputFile.close()
         f = codecs.open(cacheFile, 'rb', encoding='utf8')
@@ -750,8 +758,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.showStatus(self.progressMessage)
       try:
         response = self.TCIAClient.get_series(studyInstanceUID=self.selectedStudy)
-        responseString = response.read()[:]
+        responseString = json.dumps(response).encode("utf-8")
+        # responseString = response.read()[:]
         with open(cacheFile, 'wb') as outputFile:
+          # outputFile.write(responseString)
           outputFile.write(responseString)
           outputFile.close()
         self.populateSeriesTableWidget(responseString)
@@ -954,12 +964,14 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     del self.downloadProgressLabels[selectedSeries]
 
   def stringBufferReadWrite(self, dstFile, response, bufferSize=819):
+    response = json.dumps(response).encode("utf-8")
     self.downloadSize = 0
     while 1:
       #
       # If DOWNLOAD FINISHED
       #
-      buffer = response.read(bufferSize)[:]
+      buffer = response[self.downloadSize:self.downloadSize + bufferSize]
+      # buffer = response.read(bufferSize)[:]
       slicer.app.processEvents()
       if not buffer:
         # Pop from the queue
@@ -1038,8 +1050,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
   def getSeriesSize(self, seriesInstanceUID):
     response = self.TCIAClient.get_series_size(seriesInstanceUID)
-    responseString = response.read()[:]
-    jsonResponse = json.loads(responseString)
+    # responseString = response.read()[:]
+    # jsonResponse = json.loads(responseString)
+    jsonResponse = response
     # TCIABrowser returns the total size of the series while we are
     # recieving series in compressed zip format. The compression ration
     # is an approximation.
@@ -1048,7 +1061,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     return size
 
   def populateCollectionsTreeView(self, responseString):
-    collections = json.loads(responseString)
+    collections = responseString
+    # collections = json.loads(responseString)
     # populate collection selector
     n = 0
     self.collectionSelector.disconnect('currentIndexChanged(QString)')
@@ -1066,7 +1080,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def populatePatientsTableWidget(self, responseString):
     self.clearPatientsTableWidget()
     table = self.patientsTableWidget
-    patients = json.loads(responseString)
+    patients = responseString
+    # patients = json.loads(responseString)
     table.setRowCount(len(patients))
     n = 0
     for patient in patients:
@@ -1101,7 +1116,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # self.clearStudiesTableWidget()
     table = self.studiesTableWidget
     studies = json.loads(responseString)
-
     n = self.studiesTableRowCount
     table.setRowCount(n + len(studies))
 
@@ -1202,7 +1216,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           self.imageCounts.append(imageCount)
           table.setItem(n, 9, imageCount)
         if key == 'FileSize':
-          fileSize = qt.QTableWidgetItem(str(series['FileSize']))
+          fileSize = qt.QTableWidgetItem(str(round(series['FileSize']/1048576, 2)))
           self.fileSizes.append(fileSize)
           table.setItem(n, 10, fileSize)
         if key == 'LicenseURI':
