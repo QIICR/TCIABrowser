@@ -33,7 +33,7 @@ class TCIABrowser(ScriptedLoadableModule):
     parent.title = "TCIA Browser"
     parent.categories = ["Informatics"]
     parent.dependencies = []
-    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH)"]
+    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH), Adam Li (GU)"]
     parent.helpText = """ Connect to TCIA web archive and get a list of all available collections.
     From collection selector choose a collection and the patients table will be populated. Click on a patient and
     the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series
