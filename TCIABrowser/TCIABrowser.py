@@ -128,10 +128,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.parent.show()
 
   def enter(self):
-    if self.showBrowserButton != None and self.showBrowserButton.enabled:
-      self.showBrowser()
-    if not self.initialConnection:
-      self.getCollectionValues()
+    # if self.showBrowserButton != None and self.showBrowserButton.enabled:
+    #   self.showBrowser()
+    # if not self.initialConnection:
+    #   self.getCollectionValues()
+    pass
 
   def setup(self):
     # Instantiate and connect widgets ...
@@ -158,21 +159,19 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
-    # (use this during development, but remove it when delivering
-    #  your module to users)
-    self.reloadButton = qt.QPushButton("Reload")
-    self.reloadButton.toolTip = "Reload this module."
-    self.reloadButton.name = "TCIABrowser Reload"
-    reloadFormLayout.addWidget(self.reloadButton)
-    self.reloadButton.connect('clicked()', self.onReload)
+    # (use this during development, but remove it when delivering your module to users)
+    # self.reloadButton = qt.QPushButton("Reload")
+    # self.reloadButton.toolTip = "Reload this module."
+    # self.reloadButton.name = "TCIABrowser Reload"
+    # reloadFormLayout.addWidget(self.reloadButton)
+    # self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
-    # (use this during development, but remove it when delivering
-    #  your module to users)
-    self.reloadAndTestButton = qt.QPushButton("Reload and Test")
-    self.reloadAndTestButton.toolTip = "Reload this module and then run the self tests."
-    reloadFormLayout.addWidget(self.reloadAndTestButton)
-    self.reloadAndTestButton.connect('clicked()', self.onReloadAndTest)
+    # (use this during development, but remove it when delivering your module to users)
+    # self.reloadAndTestButton = qt.QPushButton("Reload and Test")
+    # self.reloadAndTestButton.toolTip = "Reload this module and then run the self tests."
+    # reloadFormLayout.addWidget(self.reloadAndTestButton)
+    # self.reloadAndTestButton.connect('clicked()', self.onReloadAndTest)
 
     #
     # Browser Area
@@ -180,7 +179,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     browserCollapsibleButton = ctk.ctkCollapsibleButton()
     browserCollapsibleButton.text = "TCIA Browser"
     self.layout.addWidget(browserCollapsibleButton)
-    browserLayout = qt.QVBoxLayout(browserCollapsibleButton)
+    browserLayout = qt.QGridLayout(browserCollapsibleButton)
 
     self.popupGeometry = qt.QRect()
     settings = qt.QSettings()
@@ -192,21 +191,48 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.popupGeometry.setHeight(height)
       self.popupPositioned = False
       self.browserWidget.setGeometry(self.popupGeometry)
-
+    
+    #
+    # Login Area
+    #
+    self.promptLabel = qt.QLabel("To browse collections, please log in first.")
+    self.usernameLabel = qt.QLabel("Username: ")
+    self.passwordLabel = qt.QLabel("Password: ")
+    self.usernameEdit = qt.QLineEdit("nbia_guest")
+    self.usernameEdit.setPlaceholderText("For public access, enter \"nbia_guest\".")
+    self.passwordEdit = qt.QLineEdit()
+    self.passwordEdit.setPlaceholderText("No password required for public access.")
+    self.passwordEdit.setEchoMode(qt.QLineEdit.Password)
+    self.loginButton = qt.QPushButton("Log In")
+    self.loginButton.toolTip = "Logging in to TCIA Server."
+    self.loginButton.enabled = True
+    browserLayout.addWidget(self.usernameLabel, 1, 1, 1, 1)
+    browserLayout.addWidget(self.usernameEdit, 1, 2, 1, 1)
+    browserLayout.addWidget(self.passwordLabel, 2, 1, 1, 1)
+    browserLayout.addWidget(self.passwordEdit, 2, 2, 1, 1)
+    browserLayout.addWidget(self.promptLabel, 0, 0, 1, 0)
+    browserLayout.addWidget(self.loginButton, 3, 1, 2, 1)
+    
+    self.logoutButton = qt.QPushButton("Log Out")
+    self.logoutButton.toolTip = "Logging out of TCIA Browser."
+    self.logoutButton.hide()
+    browserLayout.addWidget(self.logoutButton, 1, 0, 2, 1)
+ 
     #
     # Show Browser Button
     #
     self.showBrowserButton = qt.QPushButton("Show Browser")
     # self.showBrowserButton.toolTip = "."
     self.showBrowserButton.enabled = False
-    browserLayout.addWidget(self.showBrowserButton)
+    self.showBrowserButton.hide()
+    browserLayout.addWidget(self.showBrowserButton, 1, 2, 2, 1)
 
     # Browser Widget Layout within the collapsible button
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
 
     self.collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.collectionsCollapsibleGroupBox.setTitle('Collections')
-    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)  #
+    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)
     collectionsFormLayout = qt.QHBoxLayout(self.collectionsCollapsibleGroupBox)
 
     #
@@ -453,46 +479,14 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.apiSettingsPopup = APISettingsPopup.APISettingsPopup()
     self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
 
-    #
-    # Connection Area
-    #
-    # Add remove button
-    customAccountLabel = qt.QLabel("Access Restricted Collections: ")
-
-    addRemoveAccountsButton = qt.QPushButton("+")
-    addRemoveAccountsButton.toolTip = "Add or Remove Accounts"
-    addRemoveAccountsButton.enabled = True
-    addRemoveAccountsButton.setMaximumWidth(20)
-
-    # API selection combo box
-    self.accountSelectionComboBox = qt.QComboBox()
-    self.accountSelectionComboBox.addItem('Slicer API')
-    settings = qt.QSettings()
-    settings.beginGroup("TCIABrowser/API-Keys")
-    self.apiUsernames = settings.childKeys()
-
-    for account in self.apiUsernames:
-      self.accountSelectionComboBox.addItem(account)
-    settings.endGroup()
-
-    self.connectButton = qt.QPushButton("Log In")
-    self.connectButton.toolTip = "Logging in to TCIA Server."
-    self.connectButton.enabled = True
-
-    settingsGridLayout.addWidget(customAccountLabel, 1, 0, 1, 1)
-    settingsGridLayout.addWidget(addRemoveAccountsButton, 1, 1, 1, 1)
-    settingsGridLayout.addWidget(self.accountSelectionComboBox, 1, 2, 1, 2)
-    settingsGridLayout.addWidget(self.connectButton, 1, 4, 2, 1)
-
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
-    addRemoveAccountsButton.connect('clicked(bool)', self.apiSettingsPopup.open)
-    self.accountSelectionComboBox.connect('currentIndexChanged(QString)', self.AccountSelected)
     self.collectionSelector.connect('currentIndexChanged(QString)', self.collectionSelected)
     self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
     self.seriesTableWidget.connect('itemSelectionChanged()', self.seriesSelected)
-    self.connectButton.connect('clicked(bool)', self.getCollectionValues)
+    self.loginButton.connect('clicked(bool)', self.AccountSelected)
+    self.logoutButton.connect('clicked(bool)', self.onLoginButton)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
@@ -513,16 +507,43 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     pass
 
   def AccountSelected(self):
-    settings = qt.QSettings()
-    settings.beginGroup("TCIABrowser/API-Keys")
-    
-    # self.connectButton.enabled = True
-    if self.accountSelectionComboBox.currentText == 'Slicer API':
-      self.currentUsername = self.slicerUsername
-      self.currentPassword = self.slicerPassword
+    if self.usernameEdit.text.strip() == 'nbia_guest' and self.passwordEdit.text.strip() == '':
+      self.currentUsername = self.usernameEdit.text.strip()
+      self.currentPassword = self.passwordEdit.text.strip()
+      self.getCollectionValues()
+    elif self.usernameEdit.text.strip() == '' or self.passwordEdit.text.strip() == '':
+      qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
     else:
-      self.currentUsername = self.accountSelectionComboBox.currentText
-      self.currentPassword = settings.value(self.accountSelectionComboBox.currentText)
+      self.currentUsername = self.usernameEdit.text.strip()
+      self.currentPassword = self.passwordEdit.text.strip()
+      self.getCollectionValues()
+        
+  def onLoginButton(self):
+    if self.loginButton.isVisible():
+        if hasattr(self.TCIAClient, "exp_time"): 
+            message = "You have logged in. Your token will expire at " + str(self.TCIAClient.exp_time)
+        else: message = "You have logged in."
+        self.promptLabel.setText(message)
+        self.usernameLabel.hide()
+        self.usernameEdit.hide()
+        self.passwordLabel.hide()
+        self.passwordEdit.hide()
+        self.loginButton.hide()
+        self.logoutButton.show()
+        self.showBrowserButton.show()
+        self.showBrowserButton.enabled = True
+    else:
+        self.browserWidget.close()
+        self.promptLabel.setText("To browse collections, please log in first")
+        self.usernameLabel.show()
+        self.usernameEdit.show()
+        self.passwordLabel.show()
+        self.passwordEdit.show()
+        self.loginButton.show()
+        self.logoutButton.hide()
+        self.showBrowserButton.hide()
+        self.showBrowserButton.enabled = False
+    
   def onShowBrowserButton(self):
     self.showBrowser()
 
@@ -586,21 +607,23 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # Instantiate TCIAClient object
     self.TCIAClient = TCIAClient.TCIAClient(self.currentUsername, self.currentPassword)
     self.showStatus("Getting Available Collections")
+    if hasattr(self.TCIAClient, "credentialError"):
+        qt.QMessageBox.critical(slicer.util.mainWindow(),'TCIA Browser', self.TCIAClient.credentialError, qt.QMessageBox.Ok)
+        return None
     try:
       response = self.TCIAClient.get_collection_values()
       # responseString = response.read()[:]
       # self.populateCollectionsTreeView(responseString)
       self.populateCollectionsTreeView(response)
       self.clearStatus()
-
     except Exception as error:
-      self.connectButton.enabled = True
+      self.loginButton.enabled = True
       self.clearStatus()
       message = "getCollectionValues: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                   'TCIA Browser', message, qt.QMessageBox.Ok)
-    self.showBrowserButton.enabled = True
     self.showBrowser()
+    self.onLoginButton()
 
   def onStudiesSelectAllButton(self):
     self.studiesTableWidget.selectAll()

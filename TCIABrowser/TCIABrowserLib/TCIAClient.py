@@ -11,14 +11,24 @@ import json, string, urllib.request, urllib.parse, urllib.error
 # Refer https://wiki.cancerimagingarchive.net/display/Public/TCIA+Programmatic+Interface+REST+API+Guides for the API guide
 #
 class TCIAClient:
-    # use Slicer API key by default
-    def __init__(self, user = "nbia_guest", pw = ""):
+    def __init__(self, user = "", pw = ""):
         if user == "nbia_guest":
             self.apiKey = ""
+        elif user == "nlst":
+            try:
+                tcia_utils.nbia.getToken(user, pw, api_url = "nlst")
+                self.apiKey = "nlst"
+                self.exp_time = tcia_utils.nbia.nlst_token_exp_time
+            except:
+                self.credentialError = "Please check your credential and try again.\nFor more information, check the Python console."
         else:
-            self.apiKey == "restricted"
-            tcia_utils.nbia.getToken(user, pw, api_url = self.apiKey)
-        self.baseUrl = "https://services.cancerimagingarchive.net/nbia-api/services/v1"
+            tcia_utils.nbia.getToken(user, pw, api_url = "")
+            try:
+                tcia_utils.nbia.api_call_headers != None
+                self.apiKey = ""
+                self.exp_time = tcia_utils.nbia.token_exp_time
+            except:
+                self.credentialError = "Please check your credential and try again.\nFor more information, check the Python console."
 
     def execute(self, url, queryParameters = {}):
         queryParameters = dict((k, v) for k, v in queryParameters.items() if v)
