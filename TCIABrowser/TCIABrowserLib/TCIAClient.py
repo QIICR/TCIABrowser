@@ -11,16 +11,6 @@ import json, string, urllib.request, urllib.parse, urllib.error
 # Refer https://wiki.cancerimagingarchive.net/display/Public/TCIA+Programmatic+Interface+REST+API+Guides for the API guide
 #
 class TCIAClient:
-    GET_IMAGE = "getImage"
-    # GET_MANUFACTURER_VALUES = "getManufacturerValues"
-    # GET_MODALITY_VALUES = "getModalityValues"
-    GET_COLLECTION_VALUES = "getCollectionValues"
-    # GET_BODY_PART_VALUES = "getBodyPartValues"
-    GET_PATIENT_STUDY = "getPatientStudy"
-    GET_SERIES = "getSeries"
-    GET_SERIES_SIZE = "getSeriesSize"
-    GET_PATIENT = "getPatient"
-
     # use Slicer API key by default
     def __init__(self, user = "nbia_guest", pw = ""):
         if user == "nbia_guest":
@@ -39,30 +29,12 @@ class TCIAClient:
         resp = urllib.request.urlopen(request)
         return resp
 
-    # def get_modality_values(self, collection = None, bodyPartExamined = None, outputFormat = "json"):
-    #     serviceUrl = self.baseUrl + "/" + self.GET_MODALITY_VALUES
-    #     queryParameters = {"Collection": collection, "BodyPartExamined": bodyPartExamined, "format": outputFormat}
-    #     resp = self.execute(serviceUrl, queryParameters)
-    #     return resp
-
-    # def get_manufacturer_values(self, collection = None, modality = None, bodyPartExamined = None, outputFormat = "json"):
-    #     serviceUrl = self.baseUrl + "/" + self.GET_MANUFACTURER_VALUES
-    #     queryParameters = {"Collection": collection, "Modality": modality, "BodyPartExamined": bodyPartExamined, "format": outputFormat}
-    #     resp = self.execute(serviceUrl, queryParameters)
-    #     return resp
-
     def get_collection_values(self, outputFormat = "json"):
         # serviceUrl = self.baseUrl + "/" + self.GET_COLLECTION_VALUES
         # queryParameters = {"format": outputFormat}
         # resp = self.execute(serviceUrl, queryParameters)
         # return resp
         return tcia_utils.nbia.getCollections(api_url = self.apiKey)
-
-    # def get_body_part_values(self, collection = None, modality = None, outputFormat = "csv"):
-    #     serviceUrl = self.baseUrl + "/" + self.GET_BODY_PART_VALUES
-    #     queryParameters = {"Collection": collection, "Modality": modality, "format": outputFormat}
-    #     resp = self.execute(serviceUrl, queryParameters)
-    #     return resp
 
     def get_patient_study(self, collection = None, patientId = None, studyInstanceUid = None, outputFormat = "json"):
         # serviceUrl = self.baseUrl + "/" + self.GET_PATIENT_STUDY
@@ -97,7 +69,7 @@ class TCIAClient:
         return tcia_utils.nbia.getPatient(collection, api_url = self.apiKey)
 
     def get_image(self, seriesInstanceUid):
-        serviceUrl = self.baseUrl + "/" + self.GET_IMAGE
+        serviceUrl = tcia_utils.nbia.setApiUrl("getImage", self.apiKey) + "getImage"
         queryParameters = {"SeriesInstanceUID": seriesInstanceUid}
         resp = self.execute(serviceUrl, queryParameters)
         return resp

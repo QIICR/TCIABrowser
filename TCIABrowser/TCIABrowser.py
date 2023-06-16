@@ -457,7 +457,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # Connection Area
     #
     # Add remove button
-    customAccountLabel = qt.QLabel("Custom API Account: ")
+    customAccountLabel = qt.QLabel("Access Restricted Collections: ")
 
     addRemoveAccountsButton = qt.QPushButton("+")
     addRemoveAccountsButton.toolTip = "Add or Remove Accounts"
@@ -521,8 +521,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.currentUsername = self.slicerUsername
       self.currentPassword = self.slicerPassword
     else:
-      self.currentUsername = self.slicerUsername
-      # self.currentUsername = settings.value(self.accountSelectionComboBox.currentText)
+      self.currentUsername = self.accountSelectionComboBox.currentText
       self.currentPassword = settings.value(self.accountSelectionComboBox.currentText)
   def onShowBrowserButton(self):
     self.showBrowser()
@@ -1061,8 +1060,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     return size
 
   def populateCollectionsTreeView(self, responseString):
-    collections = responseString
     # collections = json.loads(responseString)
+    collections = responseString
     # populate collection selector
     n = 0
     self.collectionSelector.disconnect('currentIndexChanged(QString)')
