@@ -20,14 +20,13 @@ import sys
 import urllib
 from __main__ import vtk, qt, ctk, slicer
 
-from TCIABrowserLib import APISettingsPopup, clinicalDataPopup, TCIAClient
+# from TCIABrowserLib import APISettingsPopup, clinicalDataPopup, TCIAClient
+from TCIABrowserLib import clinicalDataPopup, TCIAClient
 
 from slicer.ScriptedLoadableModule import *
-
 #
 # TCIABrowser
 #
-
 class TCIABrowser(ScriptedLoadableModule):
   def __init__(self, parent):
     parent.title = "TCIA Browser"
@@ -85,10 +84,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # self.progress.setWindowTitle("TCIA Browser")
     # setup API key
     # self.slicerPassword = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
-    self.slicerUsername = 'nbia_guest'
-    self.slicerPassword = ''
-    self.currentUsername = self.slicerUsername
-    self.currentPassword = self.slicerPassword
+    # self.slicerUsername = 'nbia_guest'
+    # self.slicerPassword = ''
+    # self.currentUsername = self.slicerUsername
+    # self.currentPassword = self.slicerPassword
     item = qt.QStandardItem()
 
     # Put the files downloaded from TCIA in the DICOM database folder by default.
@@ -156,7 +155,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
     # self.layout.addWidget(reloadCollapsibleButton)
-    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
@@ -476,7 +475,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.storagePathButton.directory = self.storagePath
     settingsGridLayout.addWidget(storagePathLabel, 0, 0, 1, 1)
     settingsGridLayout.addWidget(self.storagePathButton, 0, 1, 1, 4)
-    self.apiSettingsPopup = APISettingsPopup.APISettingsPopup()
+    # self.apiSettingsPopup = APISettingsPopup.APISettingsPopup()
     self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
 
     # connections
@@ -507,16 +506,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     pass
 
   def AccountSelected(self):
-    if self.usernameEdit.text.strip() == 'nbia_guest' and self.passwordEdit.text.strip() == '':
-      self.currentUsername = self.usernameEdit.text.strip()
-      self.currentPassword = self.passwordEdit.text.strip()
-      self.getCollectionValues()
-    elif self.usernameEdit.text.strip() == '' or self.passwordEdit.text.strip() == '':
-      qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
+    if self.usernameEdit.text.strip() == '' and self.passwordEdit.text.strip() == '':
+        qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
     else:
-      self.currentUsername = self.usernameEdit.text.strip()
-      self.currentPassword = self.passwordEdit.text.strip()
-      self.getCollectionValues()
+        self.getCollectionValues()
         
   def onLoginButton(self):
     if self.loginButton.isVisible():
@@ -605,7 +598,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
-    self.TCIAClient = TCIAClient.TCIAClient(self.currentUsername, self.currentPassword)
+    self.TCIAClient = TCIAClient.TCIAClient(self.usernameEdit.text.strip(), self.passwordEdit.text.strip())
     self.showStatus("Getting Available Collections")
     if hasattr(self.TCIAClient, "credentialError"):
         qt.QMessageBox.critical(slicer.util.mainWindow(),'TCIA Browser', self.TCIAClient.credentialError, qt.QMessageBox.Ok)

@@ -1,10 +1,11 @@
+import slicer, json, string, urllib.request, urllib.parse, urllib.error
+
 try:
     import tcia_utils.nbia
 except:
     slicer.util.pip_install('tcia_utils')
     import tcia_utils.nbia
 
-import json, string, urllib.request, urllib.parse, urllib.error
 #import TCIABrowserLib
 
 #
