@@ -13,7 +13,7 @@ import webbrowser
 import xml.etree.ElementTree as ET
 import zipfile
 from random import randint
-
+import DICOM
 import pydicom
 import os
 import sys
@@ -154,16 +154,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
-    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
+    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    # self.reloadButton = qt.QPushButton("Reload")
-    # self.reloadButton.toolTip = "Reload this module."
-    # self.reloadButton.name = "TCIABrowser Reload"
-    # reloadFormLayout.addWidget(self.reloadButton)
-    # self.reloadButton.connect('clicked()', self.onReload)
+    self.reloadButton = qt.QPushButton("Reload")
+    self.reloadButton.toolTip = "Reload this module."
+    self.reloadButton.name = "TCIABrowser Reload"
+    reloadFormLayout.addWidget(self.reloadButton)
+    self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -205,18 +205,21 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.loginButton = qt.QPushButton("Log In")
     self.loginButton.toolTip = "Logging in to TCIA Server."
     self.loginButton.enabled = True
+    self.nlstSwitch = qt.QCheckBox("NLST Database")
+    self.nlstSwitch.setCheckState(False)
+    self.nlstSwitch.setTristate(False)
     browserLayout.addWidget(self.usernameLabel, 1, 1, 1, 1)
     browserLayout.addWidget(self.usernameEdit, 1, 2, 1, 1)
     browserLayout.addWidget(self.passwordLabel, 2, 1, 1, 1)
     browserLayout.addWidget(self.passwordEdit, 2, 2, 1, 1)
     browserLayout.addWidget(self.promptLabel, 0, 0, 1, 0)
     browserLayout.addWidget(self.loginButton, 3, 1, 2, 1)
+    browserLayout.addWidget(self.nlstSwitch, 3, 2, 1, 1)
     
     self.logoutButton = qt.QPushButton("Log Out")
     self.logoutButton.toolTip = "Logging out of TCIA Browser."
     self.logoutButton.hide()
     browserLayout.addWidget(self.logoutButton, 1, 0, 2, 1)
- 
     #
     # Show Browser Button
     #
@@ -506,8 +509,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     pass
 
   def AccountSelected(self):
-    if self.usernameEdit.text.strip() == '' and self.passwordEdit.text.strip() == '':
-        qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
+    if self.nlstSwitch.isChecked() and (self.usernameEdit.text.strip() != 'nbia_guest' or self.passwordEdit.text.strip() != ''):
+        choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', 
+                               "NLST is selected but username is not \'nbia_guest\' or password is given, any changes in these fields will be nullified, proceed?", 
+                               qt.QMessageBox.Ok | qt.QMessageBox.Cancel)
+        if (choice == qt.QMessageBox.Cancel):
+            return None
+        self.getCollectionValues()
+    elif self.passwordEdit.text.strip() == '':
+        if self.usernameEdit.text.strip() != 'nbia_guest':
+            qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
+        else:
+            self.getCollectionValues()
     else:
         self.getCollectionValues()
         
@@ -522,17 +535,24 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.passwordLabel.hide()
         self.passwordEdit.hide()
         self.loginButton.hide()
+        self.nlstSwitch.hide()
         self.logoutButton.show()
         self.showBrowserButton.show()
         self.showBrowserButton.enabled = True
     else:
+        if self.usernameEdit.text.strip() != "nbia_guest":
+                self.TCIAClient.logOut()
+        del(self.TCIAClient)
         self.browserWidget.close()
         self.promptLabel.setText("To browse collections, please log in first")
+        self.usernameEdit.setText("")
         self.usernameLabel.show()
         self.usernameEdit.show()
+        self.passwordEdit.setText("")
         self.passwordLabel.show()
         self.passwordEdit.show()
         self.loginButton.show()
+        self.nlstSwitch.show()
         self.logoutButton.hide()
         self.showBrowserButton.hide()
         self.showBrowserButton.enabled = False
@@ -598,7 +618,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
-    self.TCIAClient = TCIAClient.TCIAClient(self.usernameEdit.text.strip(), self.passwordEdit.text.strip())
+    self.TCIAClient = TCIAClient.TCIAClient(self.usernameEdit.text.strip(), self.passwordEdit.text.strip(), self.nlstSwitch.isChecked())
     self.showStatus("Getting Available Collections")
     if hasattr(self.TCIAClient, "credentialError"):
         qt.QMessageBox.critical(slicer.util.mainWindow(),'TCIA Browser', self.TCIAClient.credentialError, qt.QMessageBox.Ok)
@@ -841,6 +861,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearStatus()
 
   def addSelectedToDownloadQueue(self):
+    DICOM.DICOMFileDialog.createDefaultDatabase()
     self.cancelDownload = False
     allSelectedSeriesUIDs = []
     downloadQueue = {}
