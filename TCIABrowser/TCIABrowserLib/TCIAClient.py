@@ -44,8 +44,10 @@ class TCIAClient:
 
     def get_image(self, seriesInstanceUid):
         queryParameters = {"SeriesInstanceUID": seriesInstanceUid}
-        url = tcia_utils.nbia.setApiUrl("getImage", self.apiKey) + "getImage?%s" % urllib.parse.urlencode(queryParameters)
-        request = urllib.request.Request(url = url, headers = {"api_key" : self.apiKey})
+        url = tcia_utils.nbia.setApiUrl("getImage", self.apiKey) + "getImage?NewFileNames=Yes&%s" % urllib.parse.urlencode(queryParameters)
+        headers = {"api_key": self.apiKey}
+        if self.apiKey == "restricted": headers = headers | tcia_utils.nbia.api_call_headers
+        request = urllib.request.Request(url = url, headers = headers)
         return urllib.request.urlopen(request)
     
     def logOut(self):

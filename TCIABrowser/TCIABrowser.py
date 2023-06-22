@@ -906,6 +906,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           loadables = plugin.examine([fileList])
           self.clearStatus()
           volume = plugin.load(loadables[0])
+      self.browserWidget.close()
 
   def downloadSelectedSeries(self):
     while self.downloadQueue and not self.cancelDownload:
@@ -1253,6 +1254,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           table.setItem(n, 9, imageCount)
         if key == 'FileSize':
           fileSize = qt.QTableWidgetItem(str(round(series['FileSize']/1048576, 2)))
+          print(fileSize)
+          if fileSize == "0.0": fileSize = "< 0.01"
           self.fileSizes.append(fileSize)
           table.setItem(n, 10, fileSize)
         if key == 'LicenseURI':
