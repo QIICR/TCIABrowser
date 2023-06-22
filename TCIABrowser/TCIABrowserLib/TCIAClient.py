@@ -19,9 +19,9 @@ class TCIAClient:
         if self.apiKey == "nlst" or self.apiKey == "restricted":
                 tcia_utils.nbia.getToken(user, pw, self.apiKey)
                 try:
-                    if self.apiKey == "": tcia_utils.nbia.api_call_headers != None 
+                    if self.apiKey == "restricted": tcia_utils.nbia.api_call_headers != None 
                     else: tcia_utils.nbia.nlst_api_call_headers != None 
-                    self.exp_time = tcia_utils.nbia.token_exp_time if self.apiKey == "" else tcia_utils.nbia.nlst_token_exp_time
+                    self.exp_time = tcia_utils.nbia.token_exp_time if self.apiKey == "restricted" else tcia_utils.nbia.nlst_token_exp_time
                 except:
                     self.credentialError = "Please check your credential and try again.\nFor more information, check the Python console."
 
