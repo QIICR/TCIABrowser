@@ -488,7 +488,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
     self.seriesTableWidget.connect('itemSelectionChanged()', self.seriesSelected)
     self.loginButton.connect('clicked(bool)', self.AccountSelected)
-    self.logoutButton.connect('clicked(bool)', self.onLoginButton)
+    self.logoutButton.connect('clicked(bool)', self.onLogoutButton)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
@@ -516,7 +516,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         if (choice == qt.QMessageBox.Cancel):
             return None
         self.getCollectionValues()
-    elif self.passwordEdit.text.strip() == '':
+    elif self.usernameEdit.text.strip() == '' or self.passwordEdit.text.strip() == '':
         if self.usernameEdit.text.strip() != 'nbia_guest':
             qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
         else:
@@ -524,7 +524,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     else:
         self.getCollectionValues()
         
-  def onLoginButton(self):
+  def onLogoutButton(self):
     if self.loginButton.isVisible():
         if hasattr(self.TCIAClient, "exp_time"): 
             message = "You have logged in. Your token will expire at " + str(self.TCIAClient.exp_time)
@@ -635,8 +635,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       message = "getCollectionValues: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                   'TCIA Browser', message, qt.QMessageBox.Ok)
+    self.onLogoutButton()
     self.showBrowser()
-    self.onLoginButton()
 
   def onStudiesSelectAllButton(self):
     self.studiesTableWidget.selectAll()

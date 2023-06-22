@@ -13,8 +13,10 @@ import tcia_utils.nbia
 #
 class TCIAClient:
     def __init__(self, user = "nbia_guest", pw = "", nlst = False):
-        self.apiKey = "" if not nlst else "nlst"
-        if user != "nbia_guest" or self.apiKey == "nlst":
+        if nlst: self.apiKey = "nlst"
+        elif user == "nbia_guest": self.apiKey = ""
+        else: self.apiKey = "restricted"
+        if self.apiKey == "nlst" or self.apiKey == "restricted":
                 tcia_utils.nbia.getToken(user, pw, self.apiKey)
                 try:
                     if self.apiKey == "": tcia_utils.nbia.api_call_headers != None 
