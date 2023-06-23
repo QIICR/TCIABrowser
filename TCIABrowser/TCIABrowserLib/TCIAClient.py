@@ -39,9 +39,6 @@ class TCIAClient:
         return tcia_utils.nbia.getSeries(collection, patientId, studyInstanceUID, seriesInstanceUID, modality, 
                                          bodyPartExamined, manufacturer, manufacturerModel, api_url = self.apiKey)
 
-    def get_series_size(self, seriesInstanceUid):
-        return tcia_utils.nbia.getSeriesSize(seriesInstanceUid, api_url = self.apiKey)
-
     def get_image(self, seriesInstanceUid):
         queryParameters = {"SeriesInstanceUID": seriesInstanceUid}
         url = tcia_utils.nbia.setApiUrl("getImage", self.apiKey) + "getImage?NewFileNames=Yes&%s" % urllib.parse.urlencode(queryParameters)

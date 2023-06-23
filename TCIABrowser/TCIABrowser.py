@@ -885,7 +885,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           downloadFolderPath = os.path.join(self.storagePath, str(len(self.previouslyDownloadedSeries)),
                             selectedSeries) + os.sep
           self.makeDownloadProgressBar(selectedSeries, n)
-          self.downloadQueue[selectedSeries] = downloadFolderPath
+          self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[n].text()]
           self.seriesRowNumber[selectedSeries] = n
 
     self.seriesTableWidget.clearSelection()
@@ -911,7 +911,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def downloadSelectedSeries(self):
     while self.downloadQueue and not self.cancelDownload:
       self.cancelDownloadButton.enabled = True
-      selectedSeries, downloadFolderPath = self.downloadQueue.popitem()
+      selectedSeries, [downloadFolderPath, seriesSize] = self.downloadQueue.popitem()
+      seriesSize = 0 if seriesSize == "< 0.01" else float(seriesSize)
       if not os.path.exists(downloadFolderPath):
         logging.debug("Creating directory to keep the downloads: " + downloadFolderPath)
         os.makedirs(downloadFolderPath)
@@ -924,7 +925,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.extractedFilesDirectory = downloadFolderPath + 'images'
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       self.showStatus(self.progressMessage)
-      seriesSize = self.getSeriesSize(selectedSeries)
       logging.debug(self.progressMessage)
       try:
         response = self.TCIAClient.get_image(seriesInstanceUid=selectedSeries)
@@ -1085,18 +1085,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     logging.debug("Total %i DICOM items extracted from image archive." % totalItems)
     return totalItems
 
-  def getSeriesSize(self, seriesInstanceUID):
-    response = self.TCIAClient.get_series_size(seriesInstanceUID)
-    # responseString = response.read()[:]
-    # jsonResponse = json.loads(responseString)
-    jsonResponse = response
-    # TCIABrowser returns the total size of the series while we are
-    # recieving series in compressed zip format. The compression ration
-    # is an approximation.
-    compressionRatio = 1.5
-    size = float(jsonResponse[0]['TotalSizeInBytes']) / compressionRatio
-    return size
-
   def populateCollectionsTreeView(self, responseString):
     # collections = json.loads(responseString)
     collections = responseString
@@ -1253,9 +1241,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           self.imageCounts.append(imageCount)
           table.setItem(n, 9, imageCount)
         if key == 'FileSize':
-          fileSize = qt.QTableWidgetItem(str(round(series['FileSize']/1048576, 2)))
-          print(fileSize)
-          if fileSize == "0.0": fileSize = "< 0.01"
+          fileSizeConversion = "< 0.01" if str(round(series['FileSize']/1048576, 2)) == "0.0" else str(round(series['FileSize']/1048576, 2))
+          fileSize = qt.QTableWidgetItem(fileSizeConversion)
           self.fileSizes.append(fileSize)
           table.setItem(n, 10, fileSize)
         if key == 'LicenseURI':
