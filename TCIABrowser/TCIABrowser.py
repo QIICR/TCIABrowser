@@ -19,10 +19,7 @@ import os
 import sys
 import urllib
 from __main__ import vtk, qt, ctk, slicer
-
-# from TCIABrowserLib import APISettingsPopup, clinicalDataPopup, TCIAClient
 from TCIABrowserLib import clinicalDataPopup, TCIAClient
-
 from slicer.ScriptedLoadableModule import *
 #
 # TCIABrowser
@@ -81,13 +78,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     self.downloadProgressBarWidgets = []
 
-    # self.progress.setWindowTitle("TCIA Browser")
-    # setup API key
-    # self.slicerPassword = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
-    # self.slicerUsername = 'nbia_guest'
-    # self.slicerPassword = ''
-    # self.currentUsername = self.slicerUsername
-    # self.currentPassword = self.slicerPassword
     item = qt.QStandardItem()
 
     # Put the files downloaded from TCIA in the DICOM database folder by default.
@@ -127,10 +117,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.parent.show()
 
   def enter(self):
-    # if self.showBrowserButton != None and self.showBrowserButton.enabled:
-    #   self.showBrowser()
-    # if not self.initialConnection:
-    #   self.getCollectionValues()
     pass
 
   def setup(self):
@@ -282,6 +268,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
     self.patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     self.patientsTableWidgetHeader.setStretchLastSection(True)
+    self.patientsTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     # patientsTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     patientsVBoxLayout2.addWidget(self.patientsTableWidget)
     self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
@@ -321,7 +308,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     studiesVerticalheader.setDefaultSectionSize(20)
     self.studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
     self.studiesTableWidgetHeader.setStretchLastSection(True)
-
+    self.studiesTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     studiesSelectOptionsWidget = qt.QWidget()
     studiesSelectOptionsLayout = qt.QHBoxLayout(studiesSelectOptionsWidget)
     studiesSelectOptionsLayout.setMargin(0)
@@ -368,6 +355,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesTableWidget.setSelectionMode(3)
     self.seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
     self.seriesTableWidgetHeader.setStretchLastSection(True)
+    self.seriesTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     # seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
@@ -478,7 +466,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.storagePathButton.directory = self.storagePath
     settingsGridLayout.addWidget(storagePathLabel, 0, 0, 1, 1)
     settingsGridLayout.addWidget(self.storagePathButton, 0, 1, 1, 4)
-    # self.apiSettingsPopup = APISettingsPopup.APISettingsPopup()
     self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
 
     # connections
@@ -625,8 +612,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         return None
     try:
       response = self.TCIAClient.get_collection_values()
-      # responseString = response.read()[:]
-      # self.populateCollectionsTreeView(responseString)
       self.populateCollectionsTreeView(response)
       self.clearStatus()
     except Exception as error:
@@ -688,7 +673,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         outputFile.close()
         f = codecs.open(cacheFile, 'rb', encoding='utf8')
         responseString = json.loads(f.read()[:])
-        # responseString = f.read()[:]
         self.populatePatientsTableWidget(responseString)
         groupBoxTitle = 'Patients (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
         self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
@@ -736,9 +720,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       try:
         response = self.TCIAClient.get_patient_study(patientId=self.selectedPatient)
         responseString = json.dumps(response).encode("utf-8")
-        # responseString = response.read()[:]
         with open(cacheFile, 'wb') as outputFile:
-          # outputFile.write(responseString)
           outputFile.write(responseString)
           outputFile.close()
         f = codecs.open(cacheFile, 'rb', encoding='utf8')
@@ -912,7 +894,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     while self.downloadQueue and not self.cancelDownload:
       self.cancelDownloadButton.enabled = True
       selectedSeries, [downloadFolderPath, seriesSize] = self.downloadQueue.popitem()
-      seriesSize = 0 if seriesSize == "< 0.01" else float(seriesSize)
+      seriesSize = 0.01 if seriesSize == "< 0.01" else float(seriesSize)
       if not os.path.exists(downloadFolderPath):
         logging.debug("Creating directory to keep the downloads: " + downloadFolderPath)
         os.makedirs(downloadFolderPath)
@@ -1086,7 +1068,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     return totalItems
 
   def populateCollectionsTreeView(self, responseString):
-    # collections = json.loads(responseString)
     collections = responseString
     # populate collection selector
     n = 0
@@ -1106,7 +1087,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearPatientsTableWidget()
     table = self.patientsTableWidget
     patients = responseString
-    # patients = json.loads(responseString)
     table.setRowCount(len(patients))
     n = 0
     for patient in patients:
