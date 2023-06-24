@@ -28,6 +28,9 @@ class TCIAClient:
     def get_collection_values(self):
         return tcia_utils.nbia.getCollections(api_url = self.apiKey)
     
+    def get_collection_descriptions(self):
+        return tcia_utils.nbia.getCollectionDescriptions("nlst" if self.apiKey == "nlst" else "")
+    
     def get_patient(self, collection = None):
         return tcia_utils.nbia.getPatient(collection, api_url = self.apiKey)
 

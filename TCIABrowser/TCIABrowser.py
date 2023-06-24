@@ -248,7 +248,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" + ">"
     self.logoLabel = qt.QLabel(logoLabelText)
     collectionsFormLayout.addWidget(self.logoLabel)
-
+    
+    #
+    # Collection Description Widget
+    #
+    self.collectionDescriptions = []
+    self.collectionDescriptionCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.collectionDescriptionCollapsibleGroupBox.setTitle('Collection Description')
+    self.collectionDescription = qt.QTextBrowser()
+    collectionDescriptionBoxLayout = qt.QVBoxLayout(self.collectionDescriptionCollapsibleGroupBox)
+    collectionDescriptionBoxLayout.addWidget(self.collectionDescription)
+    browserWidgetLayout.addWidget(self.collectionDescriptionCollapsibleGroupBox)
+    
     #
     # Patient Table Widget
     #
@@ -612,6 +623,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         return None
     try:
       response = self.TCIAClient.get_collection_values()
+      self.collectionDescriptions = self.TCIAClient.get_collection_descriptions()
       self.populateCollectionsTreeView(response)
       self.clearStatus()
     except Exception as error:
@@ -649,6 +661,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.clinicalDataRetrieveAction.enabled = False
     else:
       self.clinicalDataRetrieveAction.enabled = True
+    
+    filteredDescriptions = list(filter(lambda record: record["collectionName"] == self.selectedCollection, self.collectionDescriptions))
+    if len(filteredDescriptions) != 0: self.collectionDescription.setHtml(filteredDescriptions[0]["description"])
 
     patientsList = None
     if os.path.isfile(cacheFile) and self.useCacheFlag:
