@@ -53,16 +53,29 @@ class TCIABrowser(ScriptedLoadableModule):
   def runTest(self):
     tester = TCIABrowserTest()
     tester.runTest()
+# 
+# browserWidget Initialization
+# Defines size and position
+# 
+class browserWindow(qt.QWidget):
+  def __init__(self):
+    super().__init__()
 
+  def closeEvent(self, event):
+    settings = qt.QSettings()
+    if settings.value("loginStatus"):
+        settings.setValue("browserWidgetGeometry", qt.QRect(self.pos, self.size))
+    event.accept() 
+    
 #
 # qTCIABrowserWidget
 #
-
-class TCIABrowserWidget(ScriptedLoadableModuleWidget):
+class TCIABrowserWidget(ScriptedLoadableModuleWidget): 
   def __init__(self, parent=None):
     self.loadToScene = False
     
-    self.browserWidget = qt.QWidget()
+    # self.browserWidget = qt.QWidget()
+    self.browserWidget = browserWindow()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
     self.initialConnection = False
@@ -78,6 +91,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     self.downloadProgressBarWidgets = []
     self.settings = qt.QSettings()
+    self.settings.setValue("loginStatus", False)
+    self.settings.setValue("browserWidgetGeometry", "")
     item = qt.QStandardItem()
 
     # Put the files downloaded from TCIA in the DICOM database folder by default.
@@ -503,14 +518,15 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesSelectAllButton.connect('clicked(bool)', self.onStudiesSelectAllButton)
     self.studiesSelectNoneButton.connect('clicked(bool)', self.onStudiesSelectNoneButton)
     self.storageResetButton.connect('clicked(bool)', self.onStorageResetButton)
-
+    
     # Add vertical spacer
     self.layout.addStretch(1)
-
+        
   def cleanup(self):
     pass
-
+  
   def AccountSelected(self):
+    # print(self.closeEvent())
     if self.nlstSwitch.isChecked() and (self.usernameEdit.text.strip() != 'nbia_guest' or self.passwordEdit.text.strip() != ''):
         choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', 
                                "NLST is selected but username is not \'nbia_guest\' or password is given, any changes in these fields will be nullified, proceed?", 
@@ -528,6 +544,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         
   def onLogoutButton(self):
     if self.loginButton.isVisible():
+        self.settings.setValue("loginStatus", True)
         if hasattr(self.TCIAClient, "exp_time"): 
             message = "You have logged in. Your token will expire at " + str(self.TCIAClient.exp_time)
         else: message = "You have logged in."
@@ -546,6 +563,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         if self.usernameEdit.text.strip() != "nbia_guest":
                 self.TCIAClient.logOut()
         del(self.TCIAClient)
+        self.settings.setValue("loginStatus", False)
         self.browserWidget.close()
         self.promptLabel.setText("To browse collections, please log in first")
         self.usernameEdit.setText("")
@@ -559,6 +577,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.logoutButton.hide()
         self.showBrowserButton.hide()
         self.showBrowserButton.enabled = False
+        self.settings.setValue("browserWidgetGeometry", "")
     
   def onShowBrowserButton(self):
     self.showBrowser()
@@ -593,10 +612,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def showBrowser(self):
     self.browserWidget.adjustSize()
     if not self.browserWidget.isVisible():
-      self.popupPositioned = False
+      self.popupPositioned = True
       self.browserWidget.show()
-      if self.popupGeometry.isValid():
-        self.browserWidget.setGeometry(self.popupGeometry)
+      if self.settings.value("browserWidgetGeometry") != "":
+          self.browserWidget.setGeometry(self.settings.value("browserWidgetGeometry"))
     self.browserWidget.raise_()
 
     if not self.popupPositioned:
