@@ -61,7 +61,7 @@ class TCIABrowser(ScriptedLoadableModule):
 class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def __init__(self, parent=None):
     self.loadToScene = False
-
+    
     self.browserWidget = qt.QWidget()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
@@ -77,17 +77,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.imagesToDownloadCount = 0
 
     self.downloadProgressBarWidgets = []
-
+    self.settings = qt.QSettings()
     item = qt.QStandardItem()
 
     # Put the files downloaded from TCIA in the DICOM database folder by default.
     # This makes downloaded files relocatable along with the DICOM database in
     # recent Slicer versions.
     databaseDirectory = slicer.dicomDatabase.databaseDirectory
-    self.storagePath = databaseDirectory + "/TCIALocal/"
+    self.storagePath = self.settings.value("customStoragePath")  if self.settings.contains("customStoragePath") else databaseDirectory + "/TCIALocal/"
     if not os.path.exists(self.storagePath):
       os.makedirs(self.storagePath)
-
+    if not self.settings.contains("defaultStoragePath"):
+      self.settings.setValue("defaultStoragePath", (databaseDirectory + "/TCIALocal/"))
     self.cachePath = self.storagePath + "/ServerResponseCache/"
     self.downloadedSeriesArchiveFile = self.storagePath + 'archive.p'
     if os.path.isfile(self.downloadedSeriesArchiveFile):
@@ -115,7 +116,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     if not parent:
       self.setup()
       self.parent.show()
-
+    
   def enter(self):
     pass
 
@@ -167,7 +168,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     browserLayout = qt.QGridLayout(browserCollapsibleButton)
 
     self.popupGeometry = qt.QRect()
-    settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
     if mainWindow:
       width = mainWindow.width * 0.75
@@ -201,11 +201,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     browserLayout.addWidget(self.promptLabel, 0, 0, 1, 0)
     browserLayout.addWidget(self.loginButton, 3, 1, 2, 1)
     browserLayout.addWidget(self.nlstSwitch, 3, 2, 1, 1)
-    
     self.logoutButton = qt.QPushButton("Log Out")
     self.logoutButton.toolTip = "Logging out of TCIA Browser."
     self.logoutButton.hide()
     browserLayout.addWidget(self.logoutButton, 1, 0, 2, 1)
+    
     #
     # Show Browser Button
     #
@@ -217,7 +217,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     # Browser Widget Layout within the collapsible button
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
-
     self.collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.collectionsCollapsibleGroupBox.setTitle('Collections')
     browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)
@@ -441,6 +440,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.statusLabel = qt.QLabel('')
     statusHBoxLayout.addWidget(self.statusLabel)
     statusHBoxLayout.addStretch(1)
+    
     #
     # clinical data context menu
     #
@@ -471,12 +471,15 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # storageWidget = qt.QWidget()
     # storageFormLayout = qt.QFormLayout(storageWidget)
     # settingsVBoxLayout.addWidget(storageWidget)
-
     storagePathLabel = qt.QLabel("Storage Folder: ")
     self.storagePathButton = ctk.ctkDirectoryButton()
     self.storagePathButton.directory = self.storagePath
+    self.storageResetButton = qt.QPushButton("Reset Path")
+    self.storageResetButton.toolTip = "Resetting the storage folder to default."
+    self.storageResetButton.enabled  = True if self.settings.contains("customStoragePath") else False
     settingsGridLayout.addWidget(storagePathLabel, 0, 0, 1, 1)
     settingsGridLayout.addWidget(self.storagePathButton, 0, 1, 1, 4)
+    settingsGridLayout.addWidget(self.storageResetButton, 1, 0, 1, 1)
     self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
 
     # connections
@@ -499,6 +502,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesSelectNoneButton.connect('clicked(bool)', self.onSeriesSelectNoneButton)
     self.studiesSelectAllButton.connect('clicked(bool)', self.onStudiesSelectAllButton)
     self.studiesSelectNoneButton.connect('clicked(bool)', self.onStudiesSelectNoneButton)
+    self.storageResetButton.connect('clicked(bool)', self.onStorageResetButton)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -538,6 +542,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.showBrowserButton.show()
         self.showBrowserButton.enabled = True
     else:
+        self.collectionDescriptions = []
         if self.usernameEdit.text.strip() != "nbia_guest":
                 self.TCIAClient.logOut()
         del(self.TCIAClient)
@@ -586,6 +591,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableSelectionChanged()
 
   def showBrowser(self):
+    self.browserWidget.adjustSize()
     if not self.browserWidget.isVisible():
       self.popupPositioned = False
       self.browserWidget.show()
@@ -612,7 +618,15 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
   def onStoragePathButton(self):
     self.storagePath = self.storagePathButton.directory
+    self.settings.setValue("customStoragePath", self.storagePath)
+    self.storageResetButton.enabled = True
 
+  def onStorageResetButton(self):
+    self.settings.remove("customStoragePath")
+    self.storageResetButton.enabled = False
+    self.storagePath = self.settings.value("defaultStoragePath")
+    self.storagePathButton.directory = self.storagePath
+    
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
