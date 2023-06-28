@@ -2,4 +2,4 @@
 *.swp
 *.py~
 *.DS_Store
-*-checkpoint.py
+*-checkpoint.*

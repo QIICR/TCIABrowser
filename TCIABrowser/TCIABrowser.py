@@ -13,21 +13,17 @@ import webbrowser
 import xml.etree.ElementTree as ET
 import zipfile
 from random import randint
-
+import DICOM
 import pydicom
 import os
 import sys
 import urllib
 from __main__ import vtk, qt, ctk, slicer
-
-from TCIABrowserLib import APISettingsPopup, clinicalDataPopup, TCIAClient
-
+from TCIABrowserLib import clinicalDataPopup, TCIAClient
 from slicer.ScriptedLoadableModule import *
-
 #
 # TCIABrowser
 #
-
 class TCIABrowser(ScriptedLoadableModule):
   def __init__(self, parent):
     parent.title = "TCIA Browser"
@@ -57,16 +53,29 @@ class TCIABrowser(ScriptedLoadableModule):
   def runTest(self):
     tester = TCIABrowserTest()
     tester.runTest()
+# 
+# browserWidget Initialization
+# Defines size and position
+# 
+class browserWindow(qt.QWidget):
+  def __init__(self):
+    super().__init__()
 
+  def closeEvent(self, event):
+    settings = qt.QSettings()
+    if settings.value("loginStatus"):
+        settings.setValue("browserWidgetGeometry", qt.QRect(self.pos, self.size))
+    event.accept() 
+    
 #
 # qTCIABrowserWidget
 #
-
-class TCIABrowserWidget(ScriptedLoadableModuleWidget):
+class TCIABrowserWidget(ScriptedLoadableModuleWidget): 
   def __init__(self, parent=None):
     self.loadToScene = False
-
-    self.browserWidget = qt.QWidget()
+    
+    # self.browserWidget = qt.QWidget()
+    self.browserWidget = browserWindow()
     self.browserWidget.setWindowTitle('TCIA Browser')
 
     self.initialConnection = False
@@ -81,24 +90,20 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.imagesToDownloadCount = 0
 
     self.downloadProgressBarWidgets = []
-
-    # self.progress.setWindowTitle("TCIA Browser")
-    # setup API key
-    # self.slicerPassword = 'f88ff53d-882b-4c0d-b60c-0fb560e82cf1'
-    self.slicerUsername = 'nbia_guest'
-    self.slicerPassword = ''
-    self.currentUsername = self.slicerUsername
-    self.currentPassword = self.slicerPassword
+    self.settings = qt.QSettings()
+    self.settings.setValue("loginStatus", False)
+    self.settings.setValue("browserWidgetGeometry", "")
     item = qt.QStandardItem()
 
     # Put the files downloaded from TCIA in the DICOM database folder by default.
     # This makes downloaded files relocatable along with the DICOM database in
     # recent Slicer versions.
     databaseDirectory = slicer.dicomDatabase.databaseDirectory
-    self.storagePath = databaseDirectory + "/TCIALocal/"
+    self.storagePath = self.settings.value("customStoragePath")  if self.settings.contains("customStoragePath") else databaseDirectory + "/TCIALocal/"
     if not os.path.exists(self.storagePath):
       os.makedirs(self.storagePath)
-
+    if not self.settings.contains("defaultStoragePath"):
+      self.settings.setValue("defaultStoragePath", (databaseDirectory + "/TCIALocal/"))
     self.cachePath = self.storagePath + "/ServerResponseCache/"
     self.downloadedSeriesArchiveFile = self.storagePath + 'archive.p'
     if os.path.isfile(self.downloadedSeriesArchiveFile):
@@ -126,12 +131,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     if not parent:
       self.setup()
       self.parent.show()
-
+    
   def enter(self):
-    if self.showBrowserButton != None and self.showBrowserButton.enabled:
-      self.showBrowser()
-    if not self.initialConnection:
-      self.getCollectionValues()
+    pass
 
   def setup(self):
     # Instantiate and connect widgets ...
@@ -154,12 +156,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
     reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
-    # (use this during development, but remove it when delivering
-    #  your module to users)
+    # (use this during development, but remove it when delivering your module to users)
     self.reloadButton = qt.QPushButton("Reload")
     self.reloadButton.toolTip = "Reload this module."
     self.reloadButton.name = "TCIABrowser Reload"
@@ -167,12 +168,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
-    # (use this during development, but remove it when delivering
-    #  your module to users)
-    self.reloadAndTestButton = qt.QPushButton("Reload and Test")
-    self.reloadAndTestButton.toolTip = "Reload this module and then run the self tests."
-    reloadFormLayout.addWidget(self.reloadAndTestButton)
-    self.reloadAndTestButton.connect('clicked()', self.onReloadAndTest)
+    # (use this during development, but remove it when delivering your module to users)
+    # self.reloadAndTestButton = qt.QPushButton("Reload and Test")
+    # self.reloadAndTestButton.toolTip = "Reload this module and then run the self tests."
+    # reloadFormLayout.addWidget(self.reloadAndTestButton)
+    # self.reloadAndTestButton.connect('clicked()', self.onReloadAndTest)
 
     #
     # Browser Area
@@ -180,10 +180,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     browserCollapsibleButton = ctk.ctkCollapsibleButton()
     browserCollapsibleButton.text = "TCIA Browser"
     self.layout.addWidget(browserCollapsibleButton)
-    browserLayout = qt.QVBoxLayout(browserCollapsibleButton)
+    browserLayout = qt.QGridLayout(browserCollapsibleButton)
 
     self.popupGeometry = qt.QRect()
-    settings = qt.QSettings()
     mainWindow = slicer.util.mainWindow()
     if mainWindow:
       width = mainWindow.width * 0.75
@@ -192,21 +191,50 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.popupGeometry.setHeight(height)
       self.popupPositioned = False
       self.browserWidget.setGeometry(self.popupGeometry)
-
+    
+    #
+    # Login Area
+    #
+    self.promptLabel = qt.QLabel("To browse collections, please log in first.")
+    self.usernameLabel = qt.QLabel("Username: ")
+    self.passwordLabel = qt.QLabel("Password: ")
+    self.usernameEdit = qt.QLineEdit("nbia_guest")
+    self.usernameEdit.setPlaceholderText("For public access, enter \"nbia_guest\".")
+    self.passwordEdit = qt.QLineEdit()
+    self.passwordEdit.setPlaceholderText("No password required for public access.")
+    self.passwordEdit.setEchoMode(qt.QLineEdit.Password)
+    self.loginButton = qt.QPushButton("Log In")
+    self.loginButton.toolTip = "Logging in to TCIA Server."
+    self.loginButton.enabled = True
+    self.nlstSwitch = qt.QCheckBox("NLST Database")
+    self.nlstSwitch.setCheckState(False)
+    self.nlstSwitch.setTristate(False)
+    browserLayout.addWidget(self.usernameLabel, 1, 1, 1, 1)
+    browserLayout.addWidget(self.usernameEdit, 1, 2, 1, 1)
+    browserLayout.addWidget(self.passwordLabel, 2, 1, 1, 1)
+    browserLayout.addWidget(self.passwordEdit, 2, 2, 1, 1)
+    browserLayout.addWidget(self.promptLabel, 0, 0, 1, 0)
+    browserLayout.addWidget(self.loginButton, 3, 1, 2, 1)
+    browserLayout.addWidget(self.nlstSwitch, 3, 2, 1, 1)
+    self.logoutButton = qt.QPushButton("Log Out")
+    self.logoutButton.toolTip = "Logging out of TCIA Browser."
+    self.logoutButton.hide()
+    browserLayout.addWidget(self.logoutButton, 1, 0, 2, 1)
+    
     #
     # Show Browser Button
     #
     self.showBrowserButton = qt.QPushButton("Show Browser")
     # self.showBrowserButton.toolTip = "."
     self.showBrowserButton.enabled = False
-    browserLayout.addWidget(self.showBrowserButton)
+    self.showBrowserButton.hide()
+    browserLayout.addWidget(self.showBrowserButton, 1, 2, 2, 1)
 
     # Browser Widget Layout within the collapsible button
     browserWidgetLayout = qt.QVBoxLayout(self.browserWidget)
-
     self.collectionsCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
     self.collectionsCollapsibleGroupBox.setTitle('Collections')
-    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)  #
+    browserWidgetLayout.addWidget(self.collectionsCollapsibleGroupBox)
     collectionsFormLayout = qt.QHBoxLayout(self.collectionsCollapsibleGroupBox)
 
     #
@@ -234,7 +262,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" + ">"
     self.logoLabel = qt.QLabel(logoLabelText)
     collectionsFormLayout.addWidget(self.logoLabel)
-
+    
+    #
+    # Collection Description Widget
+    #
+    self.collectionDescriptions = []
+    self.collectionDescriptionCollapsibleGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.collectionDescriptionCollapsibleGroupBox.setTitle('Collection Description')
+    self.collectionDescription = qt.QTextBrowser()
+    collectionDescriptionBoxLayout = qt.QVBoxLayout(self.collectionDescriptionCollapsibleGroupBox)
+    collectionDescriptionBoxLayout.addWidget(self.collectionDescription)
+    browserWidgetLayout.addWidget(self.collectionDescriptionCollapsibleGroupBox)
+    
     #
     # Patient Table Widget
     #
@@ -254,6 +293,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.patientsTableWidget.setHorizontalHeaderLabels(self.patientsTableHeaderLabels)
     self.patientsTableWidgetHeader = self.patientsTableWidget.horizontalHeader()
     self.patientsTableWidgetHeader.setStretchLastSection(True)
+    self.patientsTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     # patientsTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     patientsVBoxLayout2.addWidget(self.patientsTableWidget)
     self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
@@ -293,7 +333,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     studiesVerticalheader.setDefaultSectionSize(20)
     self.studiesTableWidgetHeader = self.studiesTableWidget.horizontalHeader()
     self.studiesTableWidgetHeader.setStretchLastSection(True)
-
+    self.studiesTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     studiesSelectOptionsWidget = qt.QWidget()
     studiesSelectOptionsLayout = qt.QHBoxLayout(studiesSelectOptionsWidget)
     studiesSelectOptionsLayout.setMargin(0)
@@ -340,6 +380,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesTableWidget.setSelectionMode(3)
     self.seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
     self.seriesTableWidgetHeader.setStretchLastSection(True)
+    self.seriesTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     # seriesTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     seriesVerticalheader = self.seriesTableWidget.verticalHeader()
     seriesVerticalheader.setDefaultSectionSize(20)
@@ -414,6 +455,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.statusLabel = qt.QLabel('')
     statusHBoxLayout.addWidget(self.statusLabel)
     statusHBoxLayout.addStretch(1)
+    
     #
     # clinical data context menu
     #
@@ -444,55 +486,25 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # storageWidget = qt.QWidget()
     # storageFormLayout = qt.QFormLayout(storageWidget)
     # settingsVBoxLayout.addWidget(storageWidget)
-
     storagePathLabel = qt.QLabel("Storage Folder: ")
     self.storagePathButton = ctk.ctkDirectoryButton()
     self.storagePathButton.directory = self.storagePath
+    self.storageResetButton = qt.QPushButton("Reset Path")
+    self.storageResetButton.toolTip = "Resetting the storage folder to default."
+    self.storageResetButton.enabled  = True if self.settings.contains("customStoragePath") else False
     settingsGridLayout.addWidget(storagePathLabel, 0, 0, 1, 1)
     settingsGridLayout.addWidget(self.storagePathButton, 0, 1, 1, 4)
-    self.apiSettingsPopup = APISettingsPopup.APISettingsPopup()
+    settingsGridLayout.addWidget(self.storageResetButton, 1, 0, 1, 1)
     self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
-
-    #
-    # Connection Area
-    #
-    # Add remove button
-    customAccountLabel = qt.QLabel("Custom API Account: ")
-
-    addRemoveAccountsButton = qt.QPushButton("+")
-    addRemoveAccountsButton.toolTip = "Add or Remove Accounts"
-    addRemoveAccountsButton.enabled = True
-    addRemoveAccountsButton.setMaximumWidth(20)
-
-    # API selection combo box
-    self.accountSelectionComboBox = qt.QComboBox()
-    self.accountSelectionComboBox.addItem('Slicer API')
-    settings = qt.QSettings()
-    settings.beginGroup("TCIABrowser/API-Keys")
-    self.apiUsernames = settings.childKeys()
-
-    for account in self.apiUsernames:
-      self.accountSelectionComboBox.addItem(account)
-    settings.endGroup()
-
-    self.connectButton = qt.QPushButton("Log In")
-    self.connectButton.toolTip = "Logging in to TCIA Server."
-    self.connectButton.enabled = True
-
-    settingsGridLayout.addWidget(customAccountLabel, 1, 0, 1, 1)
-    settingsGridLayout.addWidget(addRemoveAccountsButton, 1, 1, 1, 1)
-    settingsGridLayout.addWidget(self.accountSelectionComboBox, 1, 2, 1, 2)
-    settingsGridLayout.addWidget(self.connectButton, 1, 4, 2, 1)
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
-    addRemoveAccountsButton.connect('clicked(bool)', self.apiSettingsPopup.open)
-    self.accountSelectionComboBox.connect('currentIndexChanged(QString)', self.AccountSelected)
     self.collectionSelector.connect('currentIndexChanged(QString)', self.collectionSelected)
     self.patientsTableWidget.connect('itemSelectionChanged()', self.patientsTableSelectionChanged)
     self.studiesTableWidget.connect('itemSelectionChanged()', self.studiesTableSelectionChanged)
     self.seriesTableWidget.connect('itemSelectionChanged()', self.seriesSelected)
-    self.connectButton.connect('clicked(bool)', self.getCollectionValues)
+    self.loginButton.connect('clicked(bool)', self.AccountSelected)
+    self.logoutButton.connect('clicked(bool)', self.onLogoutButton)
     self.useCacheCeckBox.connect('stateChanged(int)', self.onUseCacheStateChanged)
     self.indexButton.connect('clicked(bool)', self.onIndexButton)
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
@@ -505,25 +517,68 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesSelectNoneButton.connect('clicked(bool)', self.onSeriesSelectNoneButton)
     self.studiesSelectAllButton.connect('clicked(bool)', self.onStudiesSelectAllButton)
     self.studiesSelectNoneButton.connect('clicked(bool)', self.onStudiesSelectNoneButton)
-
+    self.storageResetButton.connect('clicked(bool)', self.onStorageResetButton)
+    
     # Add vertical spacer
     self.layout.addStretch(1)
-
+        
   def cleanup(self):
     pass
-
+  
   def AccountSelected(self):
-    settings = qt.QSettings()
-    settings.beginGroup("TCIABrowser/API-Keys")
-    
-    # self.connectButton.enabled = True
-    if self.accountSelectionComboBox.currentText == 'Slicer API':
-      self.currentUsername = self.slicerUsername
-      self.currentPassword = self.slicerPassword
+    # print(self.closeEvent())
+    if self.nlstSwitch.isChecked() and (self.usernameEdit.text.strip() != 'nbia_guest' or self.passwordEdit.text.strip() != ''):
+        choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', 
+                               "NLST is selected but username is not \'nbia_guest\' or password is given, any changes in these fields will be nullified, proceed?", 
+                               qt.QMessageBox.Ok | qt.QMessageBox.Cancel)
+        if (choice == qt.QMessageBox.Cancel):
+            return None
+        self.getCollectionValues()
+    elif self.usernameEdit.text.strip() == '' or self.passwordEdit.text.strip() == '':
+        if self.usernameEdit.text.strip() != 'nbia_guest':
+            qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
+        else:
+            self.getCollectionValues()
     else:
-      self.currentUsername = self.slicerUsername
-      # self.currentUsername = settings.value(self.accountSelectionComboBox.currentText)
-      self.currentPassword = settings.value(self.accountSelectionComboBox.currentText)
+        self.getCollectionValues()
+        
+  def onLogoutButton(self):
+    if self.loginButton.isVisible():
+        self.settings.setValue("loginStatus", True)
+        if hasattr(self.TCIAClient, "exp_time"): 
+            message = "You have logged in. Your token will expire at " + str(self.TCIAClient.exp_time)
+        else: message = "You have logged in."
+        self.promptLabel.setText(message)
+        self.usernameLabel.hide()
+        self.usernameEdit.hide()
+        self.passwordLabel.hide()
+        self.passwordEdit.hide()
+        self.loginButton.hide()
+        self.nlstSwitch.hide()
+        self.logoutButton.show()
+        self.showBrowserButton.show()
+        self.showBrowserButton.enabled = True
+    else:
+        self.collectionDescriptions = []
+        if self.usernameEdit.text.strip() != "nbia_guest":
+                self.TCIAClient.logOut()
+        del(self.TCIAClient)
+        self.settings.setValue("loginStatus", False)
+        self.browserWidget.close()
+        self.promptLabel.setText("To browse collections, please log in first")
+        self.usernameEdit.setText("")
+        self.usernameLabel.show()
+        self.usernameEdit.show()
+        self.passwordEdit.setText("")
+        self.passwordLabel.show()
+        self.passwordEdit.show()
+        self.loginButton.show()
+        self.nlstSwitch.show()
+        self.logoutButton.hide()
+        self.showBrowserButton.hide()
+        self.showBrowserButton.enabled = False
+        self.settings.setValue("browserWidgetGeometry", "")
+    
   def onShowBrowserButton(self):
     self.showBrowser()
 
@@ -555,11 +610,12 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableSelectionChanged()
 
   def showBrowser(self):
+    self.browserWidget.adjustSize()
     if not self.browserWidget.isVisible():
-      self.popupPositioned = False
+      self.popupPositioned = True
       self.browserWidget.show()
-      if self.popupGeometry.isValid():
-        self.browserWidget.setGeometry(self.popupGeometry)
+      if self.settings.value("browserWidgetGeometry") != "":
+          self.browserWidget.setGeometry(self.settings.value("browserWidgetGeometry"))
     self.browserWidget.raise_()
 
     if not self.popupPositioned:
@@ -581,26 +637,35 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
   def onStoragePathButton(self):
     self.storagePath = self.storagePathButton.directory
+    self.settings.setValue("customStoragePath", self.storagePath)
+    self.storageResetButton.enabled = True
 
+  def onStorageResetButton(self):
+    self.settings.remove("customStoragePath")
+    self.storageResetButton.enabled = False
+    self.storagePath = self.settings.value("defaultStoragePath")
+    self.storagePathButton.directory = self.storagePath
+    
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
-    self.TCIAClient = TCIAClient.TCIAClient(self.currentUsername, self.currentPassword)
+    self.TCIAClient = TCIAClient.TCIAClient(self.usernameEdit.text.strip(), self.passwordEdit.text.strip(), self.nlstSwitch.isChecked())
     self.showStatus("Getting Available Collections")
+    if hasattr(self.TCIAClient, "credentialError"):
+        qt.QMessageBox.critical(slicer.util.mainWindow(),'TCIA Browser', self.TCIAClient.credentialError, qt.QMessageBox.Ok)
+        return None
     try:
       response = self.TCIAClient.get_collection_values()
-      # responseString = response.read()[:]
-      # self.populateCollectionsTreeView(responseString)
+      self.collectionDescriptions = self.TCIAClient.get_collection_descriptions()
       self.populateCollectionsTreeView(response)
       self.clearStatus()
-
     except Exception as error:
-      self.connectButton.enabled = True
+      self.loginButton.enabled = True
       self.clearStatus()
       message = "getCollectionValues: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                   'TCIA Browser', message, qt.QMessageBox.Ok)
-    self.showBrowserButton.enabled = True
+    self.onLogoutButton()
     self.showBrowser()
 
   def onStudiesSelectAllButton(self):
@@ -629,6 +694,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.clinicalDataRetrieveAction.enabled = False
     else:
       self.clinicalDataRetrieveAction.enabled = True
+    
+    filteredDescriptions = list(filter(lambda record: record["collectionName"] == self.selectedCollection, self.collectionDescriptions))
+    if len(filteredDescriptions) != 0: self.collectionDescription.setHtml(filteredDescriptions[0]["description"])
 
     patientsList = None
     if os.path.isfile(cacheFile) and self.useCacheFlag:
@@ -653,7 +721,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         outputFile.close()
         f = codecs.open(cacheFile, 'rb', encoding='utf8')
         responseString = json.loads(f.read()[:])
-        # responseString = f.read()[:]
         self.populatePatientsTableWidget(responseString)
         groupBoxTitle = 'Patients (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
         self.patientsCollapsibleGroupBox.setTitle(groupBoxTitle)
@@ -701,9 +768,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       try:
         response = self.TCIAClient.get_patient_study(patientId=self.selectedPatient)
         responseString = json.dumps(response).encode("utf-8")
-        # responseString = response.read()[:]
         with open(cacheFile, 'wb') as outputFile:
-          # outputFile.write(responseString)
           outputFile.write(responseString)
           outputFile.close()
         f = codecs.open(cacheFile, 'rb', encoding='utf8')
@@ -826,6 +891,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearStatus()
 
   def addSelectedToDownloadQueue(self):
+    DICOM.DICOMFileDialog.createDefaultDatabase()
     self.cancelDownload = False
     allSelectedSeriesUIDs = []
     downloadQueue = {}
@@ -849,7 +915,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           downloadFolderPath = os.path.join(self.storagePath, str(len(self.previouslyDownloadedSeries)),
                             selectedSeries) + os.sep
           self.makeDownloadProgressBar(selectedSeries, n)
-          self.downloadQueue[selectedSeries] = downloadFolderPath
+          self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[n].text()]
           self.seriesRowNumber[selectedSeries] = n
 
     self.seriesTableWidget.clearSelection()
@@ -870,11 +936,13 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           loadables = plugin.examine([fileList])
           self.clearStatus()
           volume = plugin.load(loadables[0])
+      self.browserWidget.close()
 
   def downloadSelectedSeries(self):
     while self.downloadQueue and not self.cancelDownload:
       self.cancelDownloadButton.enabled = True
-      selectedSeries, downloadFolderPath = self.downloadQueue.popitem()
+      selectedSeries, [downloadFolderPath, seriesSize] = self.downloadQueue.popitem()
+      seriesSize = 0.01 if seriesSize == "< 0.01" else float(seriesSize)
       if not os.path.exists(downloadFolderPath):
         logging.debug("Creating directory to keep the downloads: " + downloadFolderPath)
         os.makedirs(downloadFolderPath)
@@ -887,7 +955,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.extractedFilesDirectory = downloadFolderPath + 'images'
       self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
       self.showStatus(self.progressMessage)
-      seriesSize = self.getSeriesSize(selectedSeries)
       logging.debug(self.progressMessage)
       try:
         response = self.TCIAClient.get_image(seriesInstanceUid=selectedSeries)
@@ -1048,21 +1115,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     logging.debug("Total %i DICOM items extracted from image archive." % totalItems)
     return totalItems
 
-  def getSeriesSize(self, seriesInstanceUID):
-    response = self.TCIAClient.get_series_size(seriesInstanceUID)
-    # responseString = response.read()[:]
-    # jsonResponse = json.loads(responseString)
-    jsonResponse = response
-    # TCIABrowser returns the total size of the series while we are
-    # recieving series in compressed zip format. The compression ration
-    # is an approximation.
-    compressionRatio = 1.5
-    size = float(jsonResponse[0]['TotalSizeInBytes']) / compressionRatio
-    return size
-
   def populateCollectionsTreeView(self, responseString):
     collections = responseString
-    # collections = json.loads(responseString)
     # populate collection selector
     n = 0
     self.collectionSelector.disconnect('currentIndexChanged(QString)')
@@ -1081,7 +1135,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearPatientsTableWidget()
     table = self.patientsTableWidget
     patients = responseString
-    # patients = json.loads(responseString)
     table.setRowCount(len(patients))
     n = 0
     for patient in patients:
@@ -1216,7 +1269,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           self.imageCounts.append(imageCount)
           table.setItem(n, 9, imageCount)
         if key == 'FileSize':
-          fileSize = qt.QTableWidgetItem(str(round(series['FileSize']/1048576, 2)))
+          fileSizeConversion = "< 0.01" if str(round(series['FileSize']/1048576, 2)) == "0.0" else str(round(series['FileSize']/1048576, 2))
+          fileSize = qt.QTableWidgetItem(fileSizeConversion)
           self.fileSizes.append(fileSize)
           table.setItem(n, 10, fileSize)
         if key == 'LicenseURI':
