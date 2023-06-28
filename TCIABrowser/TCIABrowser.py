@@ -104,8 +104,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       os.makedirs(self.storagePath)
     if not self.settings.contains("defaultStoragePath"):
       self.settings.setValue("defaultStoragePath", (databaseDirectory + "/TCIALocal/"))
-    self.cachePath = self.storagePath + "/ServerResponseCache/"
-    self.downloadedSeriesArchiveFile = self.storagePath + 'archive.p'
+    self.cachePath = slicer.dicomDatabase.databaseDirectory  + "/TCIAServerResponseCache/"
+    self.downloadedSeriesArchiveFile = slicer.dicomDatabase.databaseDirectory + '/TCIAArchive.p'
     if os.path.isfile(self.downloadedSeriesArchiveFile):
       print("Reading "+self.downloadedSeriesArchiveFile)
       f = open(self.downloadedSeriesArchiveFile, 'rb')
@@ -596,6 +596,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     for uid in self.seriesInstanceUIDs:
       if uid.isSelected():
         removeList.append(uid.text())
+        slicer.dicomDatabase.removeSeries(uid.text(), True)
     with open(self.downloadedSeriesArchiveFile, 'rb') as f:
       self.previouslyDownloadedSeries = pickle.load(f)
     f.close()
@@ -912,8 +913,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
         # create download queue
         if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
-          downloadFolderPath = os.path.join(self.storagePath, str(len(self.previouslyDownloadedSeries)),
-                            selectedSeries) + os.sep
+          downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
           self.makeDownloadProgressBar(selectedSeries, n)
           self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[n].text()]
           self.seriesRowNumber[selectedSeries] = n
@@ -947,9 +947,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         logging.debug("Creating directory to keep the downloads: " + downloadFolderPath)
         os.makedirs(downloadFolderPath)
       # save series uid in a text file for further reference
-      with open(downloadFolderPath + 'seriesUID.txt', 'w') as f:
-        f.write(selectedSeries)
-        f.close()
+      # with open(downloadFolderPath + 'seriesUID.txt', 'w') as f:
+        # f.write(selectedSeries)
+        # f.close()
       fileName = downloadFolderPath + 'images.zip'
       logging.debug("Downloading images to " + fileName)
       self.extractedFilesDirectory = downloadFolderPath + 'images'
