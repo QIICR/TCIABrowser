@@ -161,11 +161,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    # self.reloadButton = qt.QPushButton("Reload")
-    # self.reloadButton.toolTip = "Reload this module."
-    # self.reloadButton.name = "TCIABrowser Reload"
-    # reloadFormLayout.addWidget(self.reloadButton)
-    # self.reloadButton.connect('clicked()', self.onReload)
+    self.reloadButton = qt.QPushButton("Reload")
+    self.reloadButton.toolTip = "Reload this module."
+    self.reloadButton.name = "TCIABrowser Reload"
+    reloadFormLayout.addWidget(self.reloadButton)
+    self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -957,7 +957,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     allSelectedSeriesUIDs = []
     downloadQueue = {}
     self.seriesRowNumber = {}
-
+    self.downloadQueue = {}
+    refSeriesList = []
     for n in range(len(self.seriesInstanceUIDs)):
       # print self.seriesInstanceUIDs[n]
       if self.seriesInstanceUIDs[n].isSelected():
@@ -973,11 +974,30 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
         # create download queue
         if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
+          # check if selected is an RTSTRUCT or SEG file
+          if self.modalities[n].text() in ["RTSTRUCT", "SEG"]:
+              refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
+              # check if the reference series is also selected or is already downloaded
+              if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
+                  message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded or added the reference series {refSeries} to download, do you wish to download it as well?"
+                  choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
+                  if (choice == qt.QMessageBox.Yes): 
+                      refSeriesList.append(refSeries)
+                      downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
+                      self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
+                      # check if the reference series is in the same table
+                      if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
+                          refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
+                          self.selectedSeriesNicknamesDic[refSeries] = str(selectedPatient) + '-' + str(self.selectedStudyRow + 1) + '-' + str(refRow + 1)
+                          self.makeDownloadProgressBar(refSeries, refRow)
+                          self.seriesRowNumber[refSeries] = refRow
+          
           downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
           self.makeDownloadProgressBar(selectedSeries, n)
           self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[n].text()]
           self.seriesRowNumber[selectedSeries] = n
-
+            
+    self.downloadQueue = dict(reversed(self.downloadQueue.items()))
     self.seriesTableWidget.clearSelection()
     self.patientsTableWidget.enabled = False
     self.studiesTableWidget.enabled = False
