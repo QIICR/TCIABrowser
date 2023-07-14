@@ -984,7 +984,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
                   if (choice == qt.QMessageBox.Yes): 
                       allSelectedSeriesUIDs.append(refSeries)
                       refSeriesList.append(refSeries)
-                      downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
+                      downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
                       self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
                       # check if the reference series is in the same table
                       if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
