@@ -1012,16 +1012,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           self.progressMessage = "Examine Files to Load"
           self.showStatus(self.progressMessage)
           if slicer.dicomDatabase.fieldForSeries("Modality", seriesUID) == ("RTSTRUCT"):
-              if not "DicomRtImportExportPlugin" in availablePlugins:
-                self.progressMessage = "It appears that SlicerRT extension is not installed or enabled, skipping series: " + seriesUID
-                self.showStatus(self.progressMessage)
-                continue
+              # if not "DicomRtImportExportPlugin" in availablePlugins:
+                # self.progressMessage = "It appears that SlicerRT extension is not installed or enabled, skipping series: " + seriesUID
+                # self.showStatus(self.progressMessage)
+                # continue
               plugin = slicer.modules.dicomPlugins["DicomRtImportExportPlugin"]()
           elif slicer.dicomDatabase.fieldForSeries("Modality", seriesUID) == ("SEG"):
-              if not "DICOMSegmentationPlugin" in availablePlugins:
-                self.progressMessage = "It appears that QuantitativeReporting extension is not installed or enabled, skipping series: " + seriesUID
-                self.showStatus(self.progressMessage)
-                continue
+              # if not "DICOMSegmentationPlugin" in availablePlugins:
+                # self.progressMessage = "It appears that QuantitativeReporting extension is not installed or enabled, skipping series: " + seriesUID
+                # self.showStatus(self.progressMessage)
+                # continue
               plugin = slicer.modules.dicomPlugins["DICOMSegmentationPlugin"]()
           else:
               plugin = slicer.modules.dicomPlugins["DICOMScalarVolumePlugin"]()
