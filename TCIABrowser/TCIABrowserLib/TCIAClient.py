@@ -49,6 +49,12 @@ class TCIAClient:
         if self.apiKey == "restricted": headers = headers | tcia_utils.nbia.api_call_headers
         request = urllib.request.Request(url = url, headers = headers)
         return urllib.request.urlopen(request)
+
+    def get_seg_ref_series(self, seriesInstanceUid):
+        refSeries = tcia_utils.nbia.getSegRefSeries(seriesInstanceUid)
+        metadata = tcia_utils.nbia.getSeriesMetadata(refSeries, api_url = self.apiKey)[0]
+        fileSize = round(int(metadata["File Size"])/1048576, 2)
+        return metadata["Series UID"], 0.01 if fileSize <= 0.01 else fileSize
     
     def logOut(self):
         tcia_utils.nbia.logoutToken(api_url = self.apiKey)

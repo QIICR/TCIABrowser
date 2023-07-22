@@ -9,6 +9,7 @@ set(EXTENSION_CONTRIBUTORS "Alireza Mehrtash(SPL and BWH), Andrey Fedorov (SPL a
 set(EXTENSION_DESCRIPTION "A Module to connect to TCIA archive, browse the collections, patients and studies and download DICOM files to 3D Slicer.")
 set(EXTENSION_ICONURL "http://wiki.slicer.org/slicerWiki/images/9/92/TCIABrowser_logo.png")
 set(EXTENSION_SCREENSHOTURLS "http://www.slicer.org/slicerWiki/images/b/bf/TCIABrowser-screenshot.png")
+set(EXTENSION_DEPENDS QuantitativeReporting SlicerRT)
 
 #-----------------------------------------------------------------------------
 find_package(Slicer REQUIRED)
