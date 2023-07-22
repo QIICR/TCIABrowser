@@ -52,7 +52,7 @@ class TCIAClient:
 
     def get_seg_ref_series(self, seriesInstanceUid):
         refSeries = tcia_utils.nbia.getSegRefSeries(seriesInstanceUid)
-        metadata = tcia_utils.nbia.getSeriesMetadata(refSeries)[0]
+        metadata = tcia_utils.nbia.getSeriesMetadata(refSeries, api_url = self.apiKey)[0]
         fileSize = round(int(metadata["File Size"])/1048576, 2)
         return metadata["Series UID"], 0.01 if fileSize <= 0.01 else fileSize
     
