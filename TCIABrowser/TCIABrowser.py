@@ -105,17 +105,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     if not self.settings.contains("defaultStoragePath"):
       self.settings.setValue("defaultStoragePath", (databaseDirectory + "/TCIALocal/"))
     self.cachePath = slicer.dicomDatabase.databaseDirectory  + "/TCIAServerResponseCache/"
-    self.downloadedSeriesArchiveFile = slicer.dicomDatabase.databaseDirectory + '/TCIAArchive.p'
-    if os.path.isfile(self.downloadedSeriesArchiveFile):
-      print("Reading "+self.downloadedSeriesArchiveFile)
-      f = open(self.downloadedSeriesArchiveFile, 'rb')
-      self.previouslyDownloadedSeries = pickle.load(f)
-      f.close()
-    else:
-      with open(self.downloadedSeriesArchiveFile, 'wb') as f:
-        self.previouslyDownloadedSeries = []
-        pickle.dump(self.previouslyDownloadedSeries, f)
-      f.close()
+    # Gets a list of series UIDs from the DICOM database
+    self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
 
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
@@ -657,17 +648,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.seriesTableWidget.item(row, 1).setIcon(self.downloadIcon)
         removeList.append(uid.text())
         slicer.dicomDatabase.removeSeries(uid.text(), True)
-    with open(self.downloadedSeriesArchiveFile, 'rb') as f:
-      self.previouslyDownloadedSeries = pickle.load(f)
-    f.close()
-    updatedDownloadSeries = []
-    for item in self.previouslyDownloadedSeries:
-      if item not in removeList:
-        updatedDownloadSeries.append(item)
-    with open(self.downloadedSeriesArchiveFile, 'wb') as f:
-      pickle.dump(updatedDownloadSeries,f)
-    f.close()
-    self.previouslyDownloadedSeries = updatedDownloadSeries
+    self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
     # self.studiesTableSelectionChanged()
 
   def showBrowser(self):
@@ -1079,10 +1060,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
             # Import the data into dicomAppWidget and open the dicom browser
             self.addFilesToDatabase(selectedSeries)
             #
-            self.previouslyDownloadedSeries.append(selectedSeries)
-            with open(self.downloadedSeriesArchiveFile, 'wb') as f:
-              pickle.dump(self.previouslyDownloadedSeries, f)
-            f.close()
+            self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
             n = self.seriesRowNumber[selectedSeries]
             table = self.seriesTableWidget
             item = table.item(n, 1)
