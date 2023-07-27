@@ -618,8 +618,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.showBrowserButton.enabled = True
     else:
         self.collectionDescriptions = []
-        if self.usernameEdit.text.strip() != "nbia_guest":
-                self.TCIAClient.logOut()
+        # if self.usernameEdit.text.strip() != "nbia_guest":
+        #         self.TCIAClient.logOut()
         del(self.TCIAClient)
         self.settings.setValue("loginStatus", False)
         self.browserWidget.close()
