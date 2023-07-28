@@ -19,7 +19,7 @@ The Cancer Imaging Archive (TCIA) hosts a large collection of Cancer medical ima
 
 
 ## Panels and their use
-* #### Settings
+1. #### Settings
 > By opening TCIABrowser module it will show the settings. There are two settings currently available: Account and Storage Folder.
 > By default, the username file is filled by "nbia_guest" with empty password field.
 > If you want to just browse and download public data, click "Login" and proceed.
@@ -28,34 +28,26 @@ The Cancer Imaging Archive (TCIA) hosts a large collection of Cancer medical ima
 > To change where images are downloaded to, simply click the folder box and change the path.
 > To reset the storage folder back to its original location, click "Reset Path".
 > When done using the browser, click "logout" to exit, or click "Show Browser" to check other available datasets.
-<div class="screenshots" style="border: 3px solid black;">
-    <img src="TCIABrowser/Resources/Screenshot/Settings.png")>
-    <ul>
-        <li>A: Login area</li>
-        <li>B: Storage location</li>
-    </ul>
-</div>
+> ![Settings Screenshot](TCIABrowser/Resources/Screenshot/Settings.png)
+> - A: Login area
+> - B: Storage location
 
-* #### Browsing Collections, Patients and Studies
+2. #### Browsing Collections, Patients and Studies
 > After loggin into an account it will connect to the the TCIA server and list all of the available collections.
 > First from the "Current Collection" combobox select a collection.
 > The browser will get the patient data from the TCIA server and will populate the patients table.
 > The use Cache checkbox will cache the query results on your hard drive which makes further recurring queries faster.
 > If direct query from TCIA server is desired the user can uncheck this box. In case of caching server responses the latest access time is provided for each table separately.
 > Further selecting a patient will populate the study table for the selected one and selecting a study will update the series table.
-<div class="screenshots" style="border: 3px solid black;">
-    <img src="TCIABrowser/Resources/Screenshot/Browsing.png")>
-    <ul>
-        <li>A: Collection selector combobox</li>
-        <li>B: Cache server response to the local storage</li>
-        <li>C: Tables are expandable</li>
-        <li>D: Status of the series (Available on local database / Available on TCIA server)</li>
-        <li>E: Download and Index to the Slicer DICOM database (local storage)</li>
-        <li>F: Download and load into the Slicer scene</li>
-    </ul>
-</div>
+> ![Downloading Data Screenshot](TCIABrowser/Resources/Screenshot/Downloading.png)
+> - A: Collection selector combobox
+> - B: Cache server response to the local storage
+> - C: Tables are expandable
+> - D: Status of the series (Available on local database / Available on TCIA server)
+> - E: Download and Index to the Slicer DICOM database (local storage)
+> - F: Download and load into the Slicer scene
 
-* #### Downloading Series
+3. #### Downloading Series
 > After selecting at least one series the download icons will become activated.
 > Pressing the "Download and Index" button will download the images from TCIA to your computer and index the DICOM files inside 3D Slicer DICOM database.
 > So you can review them, check the meta-data and load into the scene later with Slicer DICOM module.
@@ -67,18 +59,14 @@ The Cancer Imaging Archive (TCIA) hosts a large collection of Cancer medical ima
 > The total number of images for the selected series is indicated at the bottom right corner of series table.
 > After pressing the download button you can check the download status of each series at the 'Download Status' collapsible button at the module's widget.
 > While the download is in progress you can still browse and add other series to the download queue or view the downloaded images in the 3D Slicer Scene.
-<div class="screenshots" style="border: 3px solid black;">
-    <img src="TCIABrowser/Resources/Screenshot/Downloading.png")>
-    <ul>
-        <li>A: Progress bars showing download status of the selected series</li>
-        <li>B: Status bar showing the current process and the status of server responses</li>
-        <li>C: Cancel downloads button</li>
-    </ul>
-</div>
+> ![Downloading Data Screenshot](TCIABrowser/Resources/Screenshot/Downloading.png)
+> - A: Progress bars showing download status of the selected serie
+> - B: Status bar showing the current process and the status of server responses
+> - C: Cancel downloads button
+
 
 ## Similar Modules
 - [SNATSlicer](https://github.com/NrgXnat/XNATSlicer.git)
-<br>
 - [DICOM](https://slicer.readthedocs.io/en/latest/user_guide/modules/dicom.html)
 
 ## Reference
