@@ -105,17 +105,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     if not self.settings.contains("defaultStoragePath"):
       self.settings.setValue("defaultStoragePath", (databaseDirectory + "/TCIALocal/"))
     self.cachePath = slicer.dicomDatabase.databaseDirectory  + "/TCIAServerResponseCache/"
-    self.downloadedSeriesArchiveFile = slicer.dicomDatabase.databaseDirectory + '/TCIAArchive.p'
-    if os.path.isfile(self.downloadedSeriesArchiveFile):
-      print("Reading "+self.downloadedSeriesArchiveFile)
-      f = open(self.downloadedSeriesArchiveFile, 'rb')
-      self.previouslyDownloadedSeries = pickle.load(f)
-      f.close()
-    else:
-      with open(self.downloadedSeriesArchiveFile, 'wb') as f:
-        self.previouslyDownloadedSeries = []
-        pickle.dump(self.previouslyDownloadedSeries, f)
-      f.close()
+    # Gets a list of series UIDs from the DICOM database
+    self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
 
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
@@ -618,8 +609,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.showBrowserButton.enabled = True
     else:
         self.collectionDescriptions = []
-        if self.usernameEdit.text.strip() != "nbia_guest":
-                self.TCIAClient.logOut()
+        # if self.usernameEdit.text.strip() != "nbia_guest":
+        #         self.TCIAClient.logOut()
         del(self.TCIAClient)
         self.settings.setValue("loginStatus", False)
         self.browserWidget.close()
@@ -657,17 +648,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.seriesTableWidget.item(row, 1).setIcon(self.downloadIcon)
         removeList.append(uid.text())
         slicer.dicomDatabase.removeSeries(uid.text(), True)
-    with open(self.downloadedSeriesArchiveFile, 'rb') as f:
-      self.previouslyDownloadedSeries = pickle.load(f)
-    f.close()
-    updatedDownloadSeries = []
-    for item in self.previouslyDownloadedSeries:
-      if item not in removeList:
-        updatedDownloadSeries.append(item)
-    with open(self.downloadedSeriesArchiveFile, 'wb') as f:
-      pickle.dump(updatedDownloadSeries,f)
-    f.close()
-    self.previouslyDownloadedSeries = updatedDownloadSeries
+    self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
     # self.studiesTableSelectionChanged()
 
   def showBrowser(self):
@@ -975,24 +956,26 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         # create download queue
         if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
           # check if selected is an RTSTRUCT or SEG file
-          if self.modalities[n].text() in ["RTSTRUCT", "SEG"]:                          
-              refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
-              # check if the reference series is also selected or is already downloaded
-              if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
-                  message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded or added the reference series {refSeries} to download, do you wish to download it as well?"
-                  choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
-                  if (choice == qt.QMessageBox.Yes): 
-                      allSelectedSeriesUIDs.append(refSeries)
-                      refSeriesList.append(refSeries)
-                      downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
-                      self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
-                      # check if the reference series is in the same table
-                      if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
-                          refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
-                          self.selectedSeriesNicknamesDic[refSeries] = str(selectedPatient) + '-' + str(self.selectedStudyRow + 1) + '-' + str(refRow + 1)
-                          self.makeDownloadProgressBar(refSeries, refRow)
-                          self.seriesRowNumber[refSeries] = refRow
-          
+          if self.modalities[n].text() in ["RTSTRUCT", "SEG"]:
+              try:
+                  refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
+                  # check if the reference series is also selected or is already downloaded
+                  if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
+                      message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded or added the reference series {refSeries} to download, do you wish to download it as well?"
+                      choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
+                      if (choice == qt.QMessageBox.Yes): 
+                          allSelectedSeriesUIDs.append(refSeries)
+                          refSeriesList.append(refSeries)
+                          downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
+                          self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
+                          # check if the reference series is in the same table
+                          if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
+                              refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
+                              self.selectedSeriesNicknamesDic[refSeries] = str(selectedPatient) + '-' + str(self.selectedStudyRow + 1) + '-' + str(refRow + 1)
+                              self.makeDownloadProgressBar(refSeries, refRow)
+                              self.seriesRowNumber[refSeries] = refRow
+              except Exception:
+                  pass
           downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
           self.makeDownloadProgressBar(selectedSeries, n)
           self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[n].text()]
@@ -1077,10 +1060,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
             # Import the data into dicomAppWidget and open the dicom browser
             self.addFilesToDatabase(selectedSeries)
             #
-            self.previouslyDownloadedSeries.append(selectedSeries)
-            with open(self.downloadedSeriesArchiveFile, 'wb') as f:
-              pickle.dump(self.previouslyDownloadedSeries, f)
-            f.close()
+            self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
             n = self.seriesRowNumber[selectedSeries]
             table = self.seriesTableWidget
             item = table.item(n, 1)
