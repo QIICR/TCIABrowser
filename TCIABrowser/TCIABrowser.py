@@ -19,7 +19,7 @@ import os
 import sys
 import urllib
 from __main__ import vtk, qt, ctk, slicer
-from TCIABrowserLib import clinicalDataPopup, TCIAClient
+from TCIABrowserLib import TCIAClient
 from slicer.ScriptedLoadableModule import *
 #
 # TCIABrowser
@@ -34,8 +34,8 @@ class TCIABrowser(ScriptedLoadableModule):
     From collection selector choose a collection and the patients table will be populated. Click on a patient and
     the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series
     table and download the images from the server by pressing the "Download and Load" button.
-    See <a href=\"http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/TCIABrowser\">
-    the documentation</a> for more information."""
+    See the <a href=\"https://github.com/QIICR/TCIABrowser/Documentation.md">
+    documentation</a> for more information."""
     parent.acknowledgementText = """ <img src=':Logos/QIICR.png'><br><br>
     Supported by NIH U24 CA180918 (PIs Kikinis and Fedorov)
     """
@@ -446,14 +446,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.statusLabel = qt.QLabel('')
     statusHBoxLayout.addWidget(self.statusLabel)
     statusHBoxLayout.addStretch(1)
-    
-    #
-    # clinical data context menu
-    #
-    self.patientsTableWidget.setContextMenuPolicy(2)
-    self.clinicalDataRetrieveAction = qt.QAction("Get Clinical Data", self.patientsTableWidget)
-    self.patientsTableWidget.addAction(self.clinicalDataRetrieveAction)
-    self.clinicalDataRetrieveAction.enabled = False
 
     #
     # delete data context menu
@@ -486,7 +478,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     settingsGridLayout.addWidget(storagePathLabel, 0, 0, 1, 1)
     settingsGridLayout.addWidget(self.storagePathButton, 0, 1, 1, 4)
     settingsGridLayout.addWidget(self.storageResetButton, 1, 0, 1, 1)
-    self.clinicalPopup = clinicalDataPopup.clinicalDataPopup(self.cachePath, self.reportIcon)
 
     # connections
     self.showBrowserButton.connect('clicked(bool)', self.onShowBrowserButton)
@@ -501,9 +492,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.loadButton.connect('clicked(bool)', self.onLoadButton)
     self.cancelDownloadButton.connect('clicked(bool)', self.onCancelDownloadButton)
     self.storagePathButton.connect('directoryChanged(const QString &)', self.onStoragePathButton)
-    self.clinicalDataRetrieveAction.connect('triggered()', self.onContextMenuTriggered)
     self.removeSeriesAction.connect('triggered()', self.onRemoveSeriesContextMenuTriggered)
-    self.clinicalDataRetrieveAction.connect('triggered()', self.clinicalPopup.open)
     self.seriesSelectAllButton.connect('clicked(bool)', self.onSeriesSelectAllButton)
     self.seriesSelectNoneButton.connect('clicked(bool)', self.onSeriesSelectNoneButton)
     self.studiesSelectAllButton.connect('clicked(bool)', self.onStudiesSelectAllButton)
@@ -637,9 +626,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     elif state == 2:
       self.useCacheFlag = True
 
-  def onContextMenuTriggered(self):
-    self.clinicalPopup.getData(self.selectedCollection, self.selectedPatient)
-
   def onRemoveSeriesContextMenuTriggered(self):
     removeList = []
     for uid in self.seriesInstanceUIDs:
@@ -732,10 +718,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     cacheFile = self.cachePath + self.selectedCollection + '.json'
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showStatus(self.progressMessage)
-    if self.selectedCollection[0:4] != 'TCGA':
-      self.clinicalDataRetrieveAction.enabled = False
-    else:
-      self.clinicalDataRetrieveAction.enabled = True
     
     filteredDescriptions = list(filter(lambda record: record["collectionName"] == self.selectedCollection, self.collectionDescriptions))
     if len(filteredDescriptions) != 0: self.collectionDescription.setHtml(filteredDescriptions[0]["description"])
@@ -1220,8 +1202,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           patientID = qt.QTableWidgetItem(patientIDString)
           self.patientsIDs.append(patientID)
           table.setItem(n, 0, patientID)
-          if patientIDString[0:4] == 'TCGA':
-            patientID.setIcon(self.reportIcon)
         if key == 'PatientSex':
           patientSex = qt.QTableWidgetItem(str(patient['PatientSex']))
           self.patientSexes.append(patientSex)
