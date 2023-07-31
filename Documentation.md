@@ -15,7 +15,7 @@ License: [Slicer License](https://github.com/Slicer/Slicer/blob/main/License.txt
 <img src="TCIABrowser.png" width="150">
 
 The Cancer Imaging Archive (TCIA) hosts a large collection of Cancer medical imaging data which is available to the public through a programmatic interface (REST API). TCIA Browser is a Slicer module by which the user can connect to the TCIA archive, browse different collections, patient subjects, studies, and series, download the images, and visualize them in 3D Slicer.<br>
-[TCIA metrics dashboard](https://www.cancerimagingarchive.net/dashboard2/) provides extensive details on the types of imaging data by anatomy and other characteristics available within TCIA.
+[TCIA metrics dashboard](https://www.cancerimagingarchive.net/stats) provides extensive details on the types of imaging data by anatomy and other characteristics available within TCIA.
 
 
 ## Panels and their use
@@ -71,10 +71,8 @@ The Cancer Imaging Archive (TCIA) hosts a large collection of Cancer medical ima
 
 ## Reference
 - [Quantitative Image Informatics for Cancer Research (QIICR)](http://qiicr.org/)
-- [Quantitative Imaging Network (QIN)](http://imaging.cancer.gov/programsandresources/specializedinitiatives/qin)
-- [TCIA Home Page](http://cancerimagingarchive.net/)
-- [cBioPortal for Cancer Genomics Web Interface](https://docs.cbioportal.org/web-api-and-clients/)
-- [Description of TCIA Collections](https://wiki.cancerimagingarchive.net/display/Public/Collections)
+- [Quantitative Imaging Network (QIN)](https://imaging.cancer.gov/programs_resources/specialized_initiatives/qin/about/default.htm)
+- [TCIA Home Page](https://cancerimagingarchive.net/)
 - [TCIA Rest API Documentation](https://wiki.cancerimagingarchive.net/display/Public/TCIA+Programmatic+Interface+REST+API+Guides)
 - [Project page at NAMIC 2014 Project Week](http://www.na-mic.org/Wiki/index.php/2014_Project_Week:TCIA_Browser_Extension_in_Slicer)
 - [Rapid API page for testing TCIA API endpoint](https://rapidapi.com/tcia/api/the-cancer-imaging-archive/)

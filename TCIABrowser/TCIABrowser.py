@@ -1216,6 +1216,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           table.setItem(n, 3, speciesDescription)
       n += 1
     self.patientsTableWidget.resizeColumnsToContents()
+    self.patientsTableWidget.sortByColumn(0, qt.Qt.AscendingOrder)
     self.patientsTableWidgetHeader.setStretchLastSection(True)
 
   def populateStudiesTableWidget(self, responseString):
@@ -1260,6 +1261,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           table.setItem(n, 6, seriesCount)
       n += 1
     self.studiesTableWidget.resizeColumnsToContents()
+    self.studiesTableWidget.sortByColumn(1, qt.Qt.AscendingOrder)
     self.studiesTableWidgetHeader.setStretchLastSection(True)
     self.studiesTableRowCount = n
 
@@ -1334,6 +1336,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           table.setItem(n, 11, licenseURI)
       n += 1
     self.seriesTableWidget.resizeColumnsToContents()
+    self.seriesTableWidget.sortByColumn(2, qt.Qt.AscendingOrder)
     self.seriesTableRowCount = n
     self.seriesTableWidgetHeader.setStretchLastSection(True)
 
