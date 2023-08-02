@@ -30,15 +30,15 @@ class TCIABrowser(ScriptedLoadableModule):
     parent.title = "TCIA Browser"
     parent.categories = ["Informatics"]
     parent.dependencies = []
-    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH), Adam Li (GU)"]
-    parent.helpText = """ Connect to TCIA web archive and get a list of all available collections.
-    From collection selector choose a collection and the patients table will be populated. Click on a patient and
+    parent.contributors = ["Alireza Mehrtash (SPL, BWH), Andrey Fedorov (SPL, BWH), Adam Li (GU), Justin Kirby (FNLCR)"]
+    parent.helpText = """ Connect to <a href=\"https://cancerimagingarchive.net">The Cancer Imaging Archive</a> and get a list of all available collections. After choosing a collection, the patients table will be populated. Click on a patient and
     the studies for the patient will be presented. Do the same for studies. Finally choose a series from the series
     table and download the images from the server by pressing the "Download and Load" button.
-    See the <a href=\"https://github.com/QIICR/TCIABrowser/Documentation.md">
+    See the <a href=\"https://github.com/QIICR/TCIABrowser/blob/master/Documentation.md">
     documentation</a> for more information."""
     parent.acknowledgementText = """ <img src=':Logos/QIICR.png'><br><br>
-    Supported by NIH U24 CA180918 (PIs Kikinis and Fedorov)
+    Supported by NIH U24 CA180918 (PIs Kikinis and Fedorov).<br><br>
+    This project has been funded in whole or in part with Federal funds from the National Cancer Institute, National Institutes of Health, under Contract No. 75N91019D00024. The content of this publication does not necessarily reflect the views or policies of the Department of Health and Human Services, nor does mention of trade names, commercial products, or organizations imply endorsement by the U.S. Government.
     """
     self.parent = parent
 
@@ -924,7 +924,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
             refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
             # check if the reference series is also selected or is already downloaded
             if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
-              message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded or added the reference series {refSeries} to download, do you wish to download it as well?"
+              message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded the reference series {refSeries}. Do you wish to download it as well?"
               choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
               if (choice == qt.QMessageBox.Yes): 
                 allSelectedSeriesUIDs.append(refSeries)
