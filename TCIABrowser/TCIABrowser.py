@@ -684,6 +684,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         qt.QMessageBox.critical(slicer.util.mainWindow(),'TCIA Browser', self.TCIAClient.credentialError, qt.QMessageBox.Ok)
         return None
     try:
+      self.showBrowser()
       response = self.TCIAClient.get_collection_values()
       self.collectionDescriptions = self.TCIAClient.get_collection_descriptions()
       self.populateCollectionsTreeView(response)
@@ -695,7 +696,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       qt.QMessageBox.critical(slicer.util.mainWindow(),
                   'TCIA Browser', message, qt.QMessageBox.Ok)
     self.onLogoutButton()
-    self.showBrowser()
 
   def onStudiesSelectAllButton(self):
     self.studiesTableWidget.selectAll()
@@ -763,8 +763,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.studiesTableRowCount = 0
-    self.numberOfSelectedPatients = len(self.patientsTableWidget.selectionModel().selectedRows(0))
     rows = [i.row() for i in self.patientsTableWidget.selectionModel().selectedRows(0)]
+    self.numberOfSelectedPatients = len(rows)
     self.patientSelected(rows)
 
   def patientSelected(self, rows):
@@ -784,11 +784,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           f = codecs.open(cacheFile, 'rb', encoding='utf8')
           responseString.append(json.loads(f.read()))
           f.close()
-          if self.numberOfSelectedPatients == 1:
-            groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
-          else:
-            groupBoxTitle = 'Studies '
-            self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
         else:
           response = self.TCIAClient.get_patient_study(self.selectedCollection, self.selectedPatients[-1])
           responseString.append(response)
@@ -796,12 +791,12 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           with open(cacheFile, 'wb') as outputFile:
             outputFile.write(response)
             outputFile.close()
-          if self.numberOfSelectedPatients == 1:
-            groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
-          else:
-            groupBoxTitle = 'Studies '
       responseString = str(list(chain(*responseString))).replace("\'", "\"")
       self.populateStudiesTableWidget(responseString)
+      if self.numberOfSelectedPatients == 1:
+        groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+      else:
+        groupBoxTitle = 'Studies '
       self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
       self.clearStatus()
     except Exception as error:
@@ -813,8 +808,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def studiesTableSelectionChanged(self):
     self.clearSeriesTableWidget()
     self.seriesTableRowCount = 0
-    self.numberOfSelectedStudies = 0
     rows = [i.row() for i in self.studiesTableWidget.selectionModel().selectedRows(0)]
+    self.numberOfSelectedStudies = len(rows)
     self.studySelected(rows)
 
   def studySelected(self, rows):
@@ -832,11 +827,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           f = codecs.open(cacheFile, 'rb', encoding='utf8')
           responseString.append(json.loads(f.read()))
           f.close()
-          self.clearStatus()
-          if self.numberOfSelectedStudies == 1:
-            groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
-          else:
-            groupBoxTitle = 'Series '
         else:
           response = self.TCIAClient.get_series(self.selectedCollection, None, self.selectedStudies[-1])
           responseString.append(response)
@@ -844,12 +834,12 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           with open(cacheFile, 'wb') as outputFile:
             outputFile.write(response)
             outputFile.close()
-          if self.numberOfSelectedStudies == 1:
-            groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
-          else:
-            groupBoxTitle = 'Series '
       responseString = str(list(chain(*responseString))).replace("\'", "\"")
       self.populateSeriesTableWidget(responseString)
+      if self.numberOfSelectedStudies == 1:
+        groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+      else:
+        groupBoxTitle = 'Series '
       self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
       self.clearStatus()
     except Exception as error:
