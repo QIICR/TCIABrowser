@@ -18,6 +18,7 @@ import pydicom
 import os
 import sys
 import urllib
+from itertools import chain
 from __main__ import vtk, qt, ctk, slicer
 from TCIABrowserLib import TCIAClient
 from slicer.ScriptedLoadableModule import *
@@ -147,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
-    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
+    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    # self.reloadButton = qt.QPushButton("Reload")
-    # self.reloadButton.toolTip = "Reload this module."
-    # self.reloadButton.name = "TCIABrowser Reload"
-    # reloadFormLayout.addWidget(self.reloadButton)
-    # self.reloadButton.connect('clicked()', self.onReload)
+    self.reloadButton = qt.QPushButton("Reload")
+    self.reloadButton.toolTip = "Reload this module."
+    self.reloadButton.name = "TCIABrowser Reload"
+    reloadFormLayout.addWidget(self.reloadButton)
+    self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -287,7 +288,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.patientsTableWidgetHeader.setDefaultAlignment(qt.Qt.AlignLeft)
     # patientsTableWidgetHeader.setResizeMode(qt.QHeaderView.Stretch)
     patientsVBoxLayout2.addWidget(self.patientsTableWidget)
-    self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
+    # self.patientsTreeSelectionModel = self.patientsTableWidget.selectionModel()
     abstractItemView = qt.QAbstractItemView()
     self.patientsTableWidget.setSelectionBehavior(abstractItemView.SelectRows)
     verticalheader = self.patientsTableWidget.verticalHeader()
@@ -318,7 +319,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableWidget.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
     self.studiesTableWidget.resizeColumnsToContents()
     studiesVBoxLayout2.addWidget(self.studiesTableWidget)
-    self.studiesTreeSelectionModel = self.studiesTableWidget.selectionModel()
+    # self.studiesTreeSelectionModel = self.studiesTableWidget.selectionModel()
     self.studiesTableWidget.setSelectionBehavior(abstractItemView.SelectRows)
     studiesVerticalheader = self.studiesTableWidget.verticalHeader()
     studiesVerticalheader.setDefaultSectionSize(20)
@@ -366,7 +367,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
-    self.seriesTreeSelectionModel = self.studiesTableWidget.selectionModel()
+    # self.seriesTreeSelectionModel = self.studiesTableWidget.selectionModel()
     self.seriesTableWidget.setSelectionBehavior(abstractItemView.SelectRows)
     self.seriesTableWidget.setSelectionMode(3)
     self.seriesTableWidgetHeader = self.seriesTableWidget.horizontalHeader()
@@ -715,7 +716,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.selectedCollection = item
-    cacheFile = self.cachePath + self.selectedCollection + '.json'
+    if not os.path.exists(f"{self.cachePath}{self.selectedCollection}"):
+      os.mkdir(f"{self.cachePath}{self.selectedCollection}")
+    cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedCollection}.json"
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showStatus(self.progressMessage)
     
@@ -760,114 +763,100 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.studiesTableRowCount = 0
-    self.numberOfSelectedPatients = 0
-    for n in range(len(self.patientsIDs)):
-      if self.patientsIDs[n].isSelected():
-        self.numberOfSelectedPatients += 1
-        self.patientSelected(n)
+    self.numberOfSelectedPatients = len(self.patientsTableWidget.selectionModel().selectedRows(0))
+    rows = [i.row() for i in self.patientsTableWidget.selectionModel().selectedRows(0)]
+    self.patientSelected(rows)
 
-  def patientSelected(self, row):
+  def patientSelected(self, rows):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
     # self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
-    self.selectedPatient = self.patientsIDs[row].text()
-    cacheFile = self.cachePath + self.selectedPatient + '.json'
-    self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatient
-    self.showStatus(self.progressMessage)
-    if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = codecs.open(cacheFile, 'rb', encoding='utf8')
-      responseString = f.read()[:]
-      f.close()
-      self.populateStudiesTableWidget(responseString)
-      self.clearStatus()
-      if self.numberOfSelectedPatients == 1:
-        groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
-      else:
-        groupBoxTitle = 'Studies '
-
-      self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
-
-    else:
-      try:
-        response = self.TCIAClient.get_patient_study(patientId=self.selectedPatient)
-        responseString = json.dumps(response).encode("utf-8")
-        with open(cacheFile, 'wb') as outputFile:
-          outputFile.write(responseString)
-          outputFile.close()
-        f = codecs.open(cacheFile, 'rb', encoding='utf8')
-        responseString = f.read()[:]
-        self.populateStudiesTableWidget(responseString)
-        if self.numberOfSelectedPatients == 1:
-          groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+    self.selectedPatients = []
+    responseString = []
+    try:
+      for row in rows:
+        self.selectedPatients.append(self.patientsIDs[row].text())
+        cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedPatients[-1]}.json"
+        self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatients[-1]
+        self.showStatus(self.progressMessage)
+        if os.path.isfile(cacheFile) and self.useCacheFlag:
+          f = codecs.open(cacheFile, 'rb', encoding='utf8')
+          responseString.append(json.loads(f.read()))
+          f.close()
+          if self.numberOfSelectedPatients == 1:
+            groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+          else:
+            groupBoxTitle = 'Studies '
+            self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
         else:
-          groupBoxTitle = 'Studies '
-
-        self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
-        self.clearStatus()
-
-      except Exception as error:
-        self.clearStatus()
-        message = "patientSelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-        qt.QMessageBox.critical(slicer.util.mainWindow(),
-                    'TCIA Browser', message, qt.QMessageBox.Ok)
+          response = self.TCIAClient.get_patient_study(self.selectedCollection, self.selectedPatients[-1])
+          responseString.append(response)
+          response = json.dumps(response).encode("utf-8")
+          with open(cacheFile, 'wb') as outputFile:
+            outputFile.write(response)
+            outputFile.close()
+          if self.numberOfSelectedPatients == 1:
+            groupBoxTitle = 'Studies (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+          else:
+            groupBoxTitle = 'Studies '
+      responseString = str(list(chain(*responseString))).replace("\'", "\"")
+      self.populateStudiesTableWidget(responseString)
+      self.studiesCollapsibleGroupBox.setTitle(groupBoxTitle)
+      self.clearStatus()
+    except Exception as error:
+      self.clearStatus()
+      message = "patientSelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                              'TCIA Browser', message, qt.QMessageBox.Ok)
 
   def studiesTableSelectionChanged(self):
     self.clearSeriesTableWidget()
     self.seriesTableRowCount = 0
     self.numberOfSelectedStudies = 0
-    for n in range(len(self.studyInstanceUIDs)):
-      if self.studyInstanceUIDs[n].isSelected():
-        self.numberOfSelectedStudies += 1
-        self.studySelected(n)
+    rows = [i.row() for i in self.studiesTableWidget.selectionModel().selectedRows(0)]
+    self.studySelected(rows)
 
-  def studySelected(self, row):
+  def studySelected(self, rows):
     self.loadButton.enabled = False
     self.indexButton.enabled = False
-    self.selectedStudy = self.studyInstanceUIDs[row].text()
-    self.selectedStudyRow = row
-    self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
-    self.showStatus(self.progressMessage)
-    cacheFile = self.cachePath + self.selectedStudy + '.json'
-    if os.path.isfile(cacheFile) and self.useCacheFlag:
-      f = codecs.open(cacheFile, 'rb', encoding='utf8')
-      responseString = f.read()[:]
-      f.close()
-      self.populateSeriesTableWidget(responseString)
-      self.clearStatus()
-      if self.numberOfSelectedStudies == 1:
-        groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
-      else:
-        groupBoxTitle = 'Series '
-
-      self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
-
-    else:
-      self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudy
-      self.showStatus(self.progressMessage)
-      try:
-        response = self.TCIAClient.get_series(studyInstanceUID=self.selectedStudy)
-        responseString = json.dumps(response).encode("utf-8")
-        # responseString = response.read()[:]
-        with open(cacheFile, 'wb') as outputFile:
-          # outputFile.write(responseString)
-          outputFile.write(responseString)
-          outputFile.close()
-        self.populateSeriesTableWidget(responseString)
-
-        if self.numberOfSelectedStudies == 1:
-          groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+    self.selectedStudies = []
+    responseString = []
+    try:
+      for row in rows:
+        self.selectedStudies.append(self.studyInstanceUIDs[row].text())
+        cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedStudies[-1]}.json"
+        self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudies[-1]
+        self.showStatus(self.progressMessage)
+        if os.path.isfile(cacheFile) and self.useCacheFlag:
+          f = codecs.open(cacheFile, 'rb', encoding='utf8')
+          responseString.append(json.loads(f.read()))
+          f.close()
+          self.clearStatus()
+          if self.numberOfSelectedStudies == 1:
+            groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+          else:
+            groupBoxTitle = 'Series '
         else:
-          groupBoxTitle = 'Series '
-
-        self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
-        self.clearStatus()
-
-      except Exception as error:
-        self.clearStatus()
-        message = "studySelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-        qt.QMessageBox.critical(slicer.util.mainWindow(),
-                    'TCIA Browser', message, qt.QMessageBox.Ok)
+          response = self.TCIAClient.get_series(self.selectedCollection, None, self.selectedStudies[-1])
+          responseString.append(response)
+          response = json.dumps(response).encode("utf-8")
+          with open(cacheFile, 'wb') as outputFile:
+            outputFile.write(response)
+            outputFile.close()
+          if self.numberOfSelectedStudies == 1:
+            groupBoxTitle = 'Series (Accessed: ' + time.ctime(os.path.getmtime(cacheFile)) + ')'
+          else:
+            groupBoxTitle = 'Series '
+      responseString = str(list(chain(*responseString))).replace("\'", "\"")
+      self.populateSeriesTableWidget(responseString)
+      self.seriesCollapsibleGroupBox.setTitle(groupBoxTitle)
+      self.clearStatus()
+    except Exception as error:
+      self.clearStatus()
+      message = "studySelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+      qt.QMessageBox.critical(slicer.util.mainWindow(),
+                              'TCIA Browser', message, qt.QMessageBox.Ok)
 
     self.onSeriesSelectAllButton()
     # self.loadButton.enabled = True
@@ -922,47 +911,42 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesRowNumber = {}
     self.downloadQueue = {}
     refSeriesList = []
-    for n in range(len(self.seriesInstanceUIDs)):
-      # print self.seriesInstanceUIDs[n]
-      if self.seriesInstanceUIDs[n].isSelected():
-        selectedCollection = self.selectedCollection
-        selectedPatient = self.selectedPatient
-        selectedStudy = self.selectedStudy
-        selectedSeries = self.seriesInstanceUIDs[n].text()
-        allSelectedSeriesUIDs.append(selectedSeries)
-        # selectedSeries = self.selectedSeriesUIdForDownload
-        self.selectedSeriesNicknamesDic[selectedSeries] = str(selectedPatient
-                                    ) + '-' + str(
-          self.selectedStudyRow + 1) + '-' + str(n + 1)
+    rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows(0)]
 
-        # create download queue
-        if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
-          # check if selected is an RTSTRUCT or SEG file
-          if self.modalities[n].text() in ["RTSTRUCT", "SEG"]:
-              try:
-                  refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
-                  # check if the reference series is also selected or is already downloaded
-                  if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
-                      message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded or added the reference series {refSeries} to download, do you wish to download it as well?"
-                      choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
-                      if (choice == qt.QMessageBox.Yes): 
-                          allSelectedSeriesUIDs.append(refSeries)
-                          refSeriesList.append(refSeries)
-                          downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
-                          self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
-                          # check if the reference series is in the same table
-                          if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
-                              refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
-                              self.selectedSeriesNicknamesDic[refSeries] = str(selectedPatient) + '-' + str(self.selectedStudyRow + 1) + '-' + str(refRow + 1)
-                              self.makeDownloadProgressBar(refSeries, refRow)
-                              self.seriesRowNumber[refSeries] = refRow
-              except Exception:
-                  pass
-          downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
-          self.makeDownloadProgressBar(selectedSeries, n)
-          self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[n].text()]
-          self.seriesRowNumber[selectedSeries] = n
-            
+    for row in rows:
+      selectedSeries = self.seriesInstanceUIDs[row].text()
+      self.selectedSeriesNicknamesDic[selectedSeries] = str(row + 1)
+      allSelectedSeriesUIDs.append(selectedSeries)
+      if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
+      # check if selected is an RTSTRUCT or SEG file
+        if self.modalities[row].text() in ["RTSTRUCT", "SEG"]:
+          try:
+            refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
+            # check if the reference series is also selected or is already downloaded
+            if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
+              message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded or added the reference series {refSeries} to download, do you wish to download it as well?"
+              choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
+              if (choice == qt.QMessageBox.Yes): 
+                allSelectedSeriesUIDs.append(refSeries)
+                refSeriesList.append(refSeries)
+                downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
+                self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
+                # check if the reference series is in the same table
+                if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
+                  refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
+                  self.selectedSeriesNicknamesDic[refSeries] = str(refRow + 1)
+                  self.makeDownloadProgressBar(refSeries, refRow)
+                  self.seriesRowNumber[refSeries] = refRow
+          except Exception:
+            pass
+      downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
+      self.makeDownloadProgressBar(selectedSeries, row)
+      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[row].text()]
+      self.seriesRowNumber[selectedSeries] = row
+
+###
+
+###        
     self.downloadQueue = dict(reversed(self.downloadQueue.items()))
     self.seriesTableWidget.clearSelection()
     self.patientsTableWidget.enabled = False
