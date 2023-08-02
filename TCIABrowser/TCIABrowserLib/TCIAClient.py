@@ -17,13 +17,12 @@ class TCIAClient:
         elif user == "nbia_guest": self.apiKey = ""
         else: self.apiKey = "restricted"
         if self.apiKey == "nlst" or self.apiKey == "restricted":
-                tcia_utils.nbia.getToken(user, pw, self.apiKey)
-                try:
-                    if self.apiKey == "restricted": tcia_utils.nbia.api_call_headers != None 
-                    else: tcia_utils.nbia.nlst_api_call_headers != None 
-                    self.exp_time = tcia_utils.nbia.token_exp_time if self.apiKey == "restricted" else tcia_utils.nbia.nlst_token_exp_time
-                except:
-                    self.credentialError = "Please check your credential and try again.\nFor more information, check the Python console."
+            tcia_utils.nbia.getToken(user, pw)
+            try:
+                tcia_utils.nbia.api_call_headers != None
+                self.exp_time = tcia_utils.nbia.token_exp_time
+            except:
+                self.credentialError = "Please check your credential and try again.\nFor more information, check the Python console."
 
     def get_collection_values(self):
         return tcia_utils.nbia.getCollections(api_url = self.apiKey)

@@ -7,7 +7,6 @@ set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
   ${LIB_NAME}/__init__.py
   ${LIB_NAME}/TCIAClient.py
-  ${LIB_NAME}/clinicalDataPopup.py
   )
 
 set(MODULE_PYTHON_RESOURCES
