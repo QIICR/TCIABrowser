@@ -936,8 +936,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[row].text()]
       self.seriesRowNumber[selectedSeries] = row
 
+    if imageSizeToDownload < 1024:
+        downloadWarning = f"You have selected {len(self.downloadQueue)} series to download, the download size is {round(imageSizeToDownload, 2)} MB, do you wish to proceed?"
+    else:
+        downloadWarning = f"You have selected {len(self.downloadQueue)} series to download, the download size is {round(imageSizeToDownload/1024, 2)} GB, do you wish to proceed?"
     # Warn users of the download size and series
-    downloadWarning = f"You have selected {len(self.downloadQueue)} series to download, the download size is {round(imageSizeToDownload, 2)} MB, do youu wish to proceed?"
     downloadChoice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', downloadWarning, qt.QMessageBox.Yes | qt.QMessageBox.No)
     if (downloadChoice == qt.QMessageBox.No): 
         return None
