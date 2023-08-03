@@ -148,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
-    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
+    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    self.reloadButton = qt.QPushButton("Reload")
-    self.reloadButton.toolTip = "Reload this module."
-    self.reloadButton.name = "TCIABrowser Reload"
-    reloadFormLayout.addWidget(self.reloadButton)
-    self.reloadButton.connect('clicked()', self.onReload)
+    # self.reloadButton = qt.QPushButton("Reload")
+    # self.reloadButton.toolTip = "Reload this module."
+    # self.reloadButton.name = "TCIABrowser Reload"
+    # reloadFormLayout.addWidget(self.reloadButton)
+    # self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -902,6 +902,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.downloadQueue = {}
     refSeriesList = []
     rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows(0)]
+    # Limiting how many series or images that can be downloaded at once
+    if len(rows) > 20 or self.imagesToDownloadCount > 1000:
+        message = "You are trying to download more than 20 series or 1,000 combined images, please download them in seperate batches."
+        qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Ok)
+        return None
 
     for row in rows:
       selectedSeries = self.seriesInstanceUIDs[row].text()
@@ -933,10 +938,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.makeDownloadProgressBar(selectedSeries, row)
       self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[row].text()]
       self.seriesRowNumber[selectedSeries] = row
-
-###
-
-###        
+     
     self.downloadQueue = dict(reversed(self.downloadQueue.items()))
     self.seriesTableWidget.clearSelection()
     self.patientsTableWidget.enabled = False
