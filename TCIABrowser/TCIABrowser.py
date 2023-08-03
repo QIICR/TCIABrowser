@@ -148,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
-    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
+    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    self.reloadButton = qt.QPushButton("Reload")
-    self.reloadButton.toolTip = "Reload this module."
-    self.reloadButton.name = "TCIABrowser Reload"
-    reloadFormLayout.addWidget(self.reloadButton)
-    self.reloadButton.connect('clicked()', self.onReload)
+    # self.reloadButton = qt.QPushButton("Reload")
+    # self.reloadButton.toolTip = "Reload this module."
+    # self.reloadButton.name = "TCIABrowser Reload"
+    # reloadFormLayout.addWidget(self.reloadButton)
+    # self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -856,11 +856,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.imagesToDownloadCount = 0
     self.loadButton.enabled = False
     self.indexButton.enabled = False
-    for n in range(len(self.seriesInstanceUIDs)):
-      if self.seriesInstanceUIDs[n].isSelected():
-        self.imagesToDownloadCount += int(self.imageCounts[n].text())
-        self.loadButton.enabled = True
-        self.indexButton.enabled = True
+    rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows(0)]
+    for row in rows:
+      self.imagesToDownloadCount += int(self.imageCounts[row].text())
+      self.loadButton.enabled = True
+      self.indexButton.enabled = True
     self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">' + str(
       self.imagesToDownloadCount) + '</span>' + ' '
 
@@ -901,12 +901,13 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesRowNumber = {}
     self.downloadQueue = {}
     refSeriesList = []
+    imageSizeToDownload = 0 
     rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows(0)]
-
     for row in rows:
       selectedSeries = self.seriesInstanceUIDs[row].text()
       self.selectedSeriesNicknamesDic[selectedSeries] = str(row + 1)
       allSelectedSeriesUIDs.append(selectedSeries)
+      imageSizeToDownload += float(self.fileSizes[row].text()) if self.fileSizes[row].text() != "< 0.01" else 0.01
       if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
       # check if selected is an RTSTRUCT or SEG file
         if self.modalities[row].text() in ["RTSTRUCT", "SEG"]:
@@ -921,6 +922,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
                 refSeriesList.append(refSeries)
                 downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
                 self.downloadQueue[refSeries] = [downloadFolderPath, refSeriesSize]
+                imageSizeToDownload += refSeriesSize
                 # check if the reference series is in the same table
                 if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
                   refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
@@ -934,9 +936,14 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[row].text()]
       self.seriesRowNumber[selectedSeries] = row
 
-###
-
-###        
+    if imageSizeToDownload < 1024:
+        downloadWarning = f"You have selected {len(self.downloadQueue)} series to download, the download size is {round(imageSizeToDownload, 2)} MB, do you wish to proceed?"
+    else:
+        downloadWarning = f"You have selected {len(self.downloadQueue)} series to download, the download size is {round(imageSizeToDownload/1024, 2)} GB, do you wish to proceed?"
+    # Warn users of the download size and series
+    downloadChoice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', downloadWarning, qt.QMessageBox.Yes | qt.QMessageBox.No)
+    if (downloadChoice == qt.QMessageBox.No): 
+        return None
     self.downloadQueue = dict(reversed(self.downloadQueue.items()))
     self.seriesTableWidget.clearSelection()
     self.patientsTableWidget.enabled = False
