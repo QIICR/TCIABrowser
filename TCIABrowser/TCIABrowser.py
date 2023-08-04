@@ -148,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
-    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
+    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    self.reloadButton = qt.QPushButton("Reload")
-    self.reloadButton.toolTip = "Reload this module."
-    self.reloadButton.name = "TCIABrowser Reload"
-    reloadFormLayout.addWidget(self.reloadButton)
-    self.reloadButton.connect('clicked()', self.onReload)
+    # self.reloadButton = qt.QPushButton("Reload")
+    # self.reloadButton.toolTip = "Reload this module."
+    # self.reloadButton.name = "TCIABrowser Reload"
+    # reloadFormLayout.addWidget(self.reloadButton)
+    # self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -875,12 +875,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
                 if len(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)) != 0:
                   refRow = self.seriesTableWidget.row(self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0])
                   self.selectedSeriesNicknamesDic[refSeries] = str(refRow + 1)
-                  self.makeDownloadProgressBar(refSeries, refRow)
                   self.seriesRowNumber[refSeries] = refRow
           except Exception:
             pass
       downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
-      self.makeDownloadProgressBar(selectedSeries, row)
       self.downloadQueue[selectedSeries] = [downloadFolderPath, self.seriesTableWidget.item(row, 11).text()]
       self.seriesRowNumber[selectedSeries] = row
 
@@ -928,6 +926,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.browserWidget.close()
 
   def downloadSelectedSeries(self):
+    n = 0
     while self.downloadQueue and not self.cancelDownload:
       self.cancelDownloadButton.enabled = True
       selectedSeries, [downloadFolderPath, seriesSize] = self.downloadQueue.popitem()
@@ -950,6 +949,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
+          self.makeDownloadProgressBar(selectedSeries, n)
           destinationFile = open(fileName, "wb")
           status = self.__bufferReadWrite(destinationFile, response, selectedSeries, seriesSize)
 
@@ -992,29 +992,32 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         message = "downloadSelectedSeries: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                     'TCIA Browser', message, qt.QMessageBox.Ok)
+      n += 1
     self.cancelDownloadButton.enabled = False
     self.collectionSelector.enabled = True
     self.patientsTableWidget.enabled = True
     self.studiesTableWidget.enabled = True
 
   def makeDownloadProgressBar(self, selectedSeries, n):
-    downloadProgressBar = qt.QProgressBar()
-    self.downloadProgressBars[selectedSeries] = downloadProgressBar
-    titleLabel = qt.QLabel(selectedSeries)
-    progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries] + ' (0 KB)')
-    self.downloadProgressLabels[selectedSeries] = progressLabel
+    # downloadProgressBar = qt.QProgressBar()
+    # self.downloadProgressBars[selectedSeries] = downloadProgressBar
+    # titleLabel = qt.QLabel(selectedSeries)
+    # progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries] + ' (0 KB)')
+    # self.downloadProgressLabels[selectedSeries] = progressLabel
     table = self.seriesTableWidget
-    table.setCellWidget(n, 1, downloadProgressBar)
+    # table.setCellWidget(n, 1, downloadProgressBar)
+    table.setItem(n, 1, qt.QTableWidgetItem("Downloading"))
     # self.downloadFormLayout.addRow(progressLabel,downloadProgressBar)
 
   def removeDownloadProgressBar(self, selectedSeries):
     n = self.seriesRowNumber[selectedSeries]
     table = self.seriesTableWidget
-    table.setCellWidget(n, 1, None)
-    self.downloadProgressBars[selectedSeries].deleteLater()
-    del self.downloadProgressBars[selectedSeries]
-    self.downloadProgressLabels[selectedSeries].deleteLater()
-    del self.downloadProgressLabels[selectedSeries]
+    # table.setCellWidget(n, 1, None)
+    table.setItem(n, 1, qt.QTableWidgetItem(""))
+    # self.downloadProgressBars[selectedSeries].deleteLater()
+    # del self.downloadProgressBars[selectedSeries]
+    # self.downloadProgressLabels[selectedSeries].deleteLater()
+    # del self.downloadProgressLabels[selectedSeries]
 
   def stringBufferReadWrite(self, dstFile, response, bufferSize=819):
     response = json.dumps(response).encode("utf-8")
@@ -1042,8 +1045,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   # This part was adopted from XNATSlicer module
   def __bufferReadWrite(self, dstFile, response, selectedSeries, seriesSize, bufferSize=8192):
 
-    currentDownloadProgressBar = self.downloadProgressBars[selectedSeries]
-    currentProgressLabel = self.downloadProgressLabels[selectedSeries]
+    # currentDownloadProgressBar = self.downloadProgressBars[selectedSeries]
+    # currentProgressLabel = self.downloadProgressLabels[selectedSeries]
 
     # Define the buffer read loop
     self.downloadSize = 0
@@ -1053,8 +1056,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       slicer.app.processEvents()
       if not buffer:
         # Pop from the queue
-        currentDownloadProgressBar.setMaximum(100)
-        currentDownloadProgressBar.setValue(100)
+        # currentDownloadProgressBar.setMaximum(100)
+        # currentDownloadProgressBar.setValue(100)
         # currentDownloadProgressBar.setVisible(False)
         # currentProgressLabel.setVisible(False)
         self.removeDownloadProgressBar(selectedSeries)
@@ -1070,12 +1073,12 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       # And update progress indicators
       #
       self.downloadSize += len(buffer)
-      currentDownloadProgressBar.setValue(self.downloadSize / seriesSize * 100)
+      # currentDownloadProgressBar.setValue(self.downloadSize / seriesSize * 100)
       # currentDownloadProgressBar.setMaximum(0)
-      currentProgressLabel.text = self.selectedSeriesNicknamesDic[
-                      selectedSeries] + ' (' + str(int(self.downloadSize / 1024)
-                                     ) + ' of ' + str(
-        int(seriesSize / 1024)) + " KB)"
+      # currentProgressLabel.text = self.selectedSeriesNicknamesDic[
+      #                 selectedSeries] + ' (' + str(int(self.downloadSize / 1024)
+      #                                ) + ' of ' + str(
+      #   int(seriesSize / 1024)) + " KB)"
     # return self.downloadSize
     return True
 
