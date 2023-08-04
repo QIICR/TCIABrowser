@@ -358,11 +358,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     seriesVBoxLayout2 = qt.QVBoxLayout(seriesExpdableArea)
     self.seriesTableWidget = qt.QTableWidget()
     # self.seriesModel = qt.QStandardItemModel()
-    self.seriesTableWidget.setColumnCount(13)
+    self.seriesTableWidget.setColumnCount(14)
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
-    self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Patient ID', 'Series Description', 'Series Number', 
-                                    'Modality', 'Body Part Examined', 'Protocol Name', 'Manufacturer', 
+    self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Patient ID', 'Study Date', 'Series Description',  
+                                    'Series Number', 'Modality', 'Body Part Examined', 'Protocol Name', 'Manufacturer', 
                                     'Manufacturer Model Name', 'Image Count', 'File Size (MB)', 'License URI']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     self.seriesTableWidget.resizeColumnsToContents()
@@ -806,7 +806,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.indexButton.enabled = False
     rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows()]
     for row in rows:
-      self.imagesToDownloadCount += int(self.seriesTableWidget.item(row, 10).text())
+      self.imagesToDownloadCount += int(self.seriesTableWidget.item(row, 11).text())
       self.loadButton.enabled = True
       self.indexButton.enabled = True
     self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">' + str(
@@ -855,10 +855,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       selectedSeries = self.seriesTableWidget.item(row, 0).text()
       self.selectedSeriesNicknamesDic[selectedSeries] = str(row + 1)
       allSelectedSeriesUIDs.append(selectedSeries)
-      imageSizeToDownload += float(self.seriesTableWidget.item(row, 11).text()) if self.seriesTableWidget.item(row, 11).text() != "< 0.01" else 0.01
+      imageSizeToDownload += float(self.seriesTableWidget.item(row, 12).text()) if self.seriesTableWidget.item(row, 12).text() != "< 0.01" else 0.01
       if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
       # check if selected is an RTSTRUCT or SEG file
-        if self.seriesTableWidget.item(row, 5).text() in ["RTSTRUCT", "SEG"]:
+        if self.seriesTableWidget.item(row, 6).text() in ["RTSTRUCT", "SEG"]:
           try:
             refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
             # check if the reference series is also selected or is already downloaded
@@ -879,7 +879,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           except Exception:
             pass
       downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
-      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.seriesTableWidget.item(row, 11).text()]
+      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.seriesTableWidget.item(row, 12).text()]
       self.seriesRowNumber[selectedSeries] = row
 
     if imageSizeToDownload < 1024:
@@ -1218,37 +1218,47 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         if key == 'PatientID':
           patientID = qt.QTableWidgetItem(str(series['PatientID']))
           table.setItem(n, 2, patientID)
+        if key == 'TimeStamp':
+          rows = [i.row() for i in self.studiesTableWidget.selectionModel().selectedRows()]
+          studyIDs = [self.studiesTableWidget.item(row, 0).text() for row in rows]
+          try: 
+            studyIDIndex = studyIDs.index(str(series['StudyInstanceUID']))
+            studyDate = self.studiesTableWidget.item(studyIDIndex, 2).text()
+            seriesDate = qt.QTableWidgetItem(studyDate)
+            table.setItem(n, 3, seriesDate)
+          except:
+            pass
         if key == 'SeriesDescription':
           seriesDescription = qt.QTableWidgetItem(str(series['SeriesDescription']))
-          table.setItem(n, 3, seriesDescription)
+          table.setItem(n, 4, seriesDescription)
         if key == 'SeriesNumber':
           seriesNumber = qt.QTableWidgetItem(str(series['SeriesNumber']))
-          table.setItem(n, 4, seriesNumber)
+          table.setItem(n, 5, seriesNumber)
         if key == 'Modality':
           modality = qt.QTableWidgetItem(str(series['Modality']))
-          table.setItem(n, 5, modality)
+          table.setItem(n, 6, modality)
         if key == 'BodyPartExamined':
           bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
-          table.setItem(n, 6, bodyPartExamined)
+          table.setItem(n, 7, bodyPartExamined)
         if key == 'ProtocolName':
           protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
-          table.setItem(n, 7, protocolName)
+          table.setItem(n, 8, protocolName)
         if key == 'Manufacturer':
           manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
-          table.setItem(n, 8, manufacturer)
+          table.setItem(n, 9, manufacturer)
         if key == 'ManufacturerModelName':
           manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
-          table.setItem(n, 9, manufacturerModelName)
+          table.setItem(n, 10, manufacturerModelName)
         if key == 'ImageCount':
           imageCount = qt.QTableWidgetItem(str(series['ImageCount']))
-          table.setItem(n, 10, imageCount)
+          table.setItem(n, 11, imageCount)
         if key == 'FileSize':
           fileSizeConversion = "< 0.01" if str(round(series['FileSize']/1048576, 2)) == "0.0" else str(round(series['FileSize']/1048576, 2))
           fileSize = qt.QTableWidgetItem(fileSizeConversion)
-          table.setItem(n, 11, fileSize)
+          table.setItem(n, 12, fileSize)
         if key == 'LicenseURI':
           licenseURI = qt.QTableWidgetItem(str(series['LicenseURI']))
-          table.setItem(n, 12, licenseURI)
+          table.setItem(n, 13, licenseURI)
       n += 1
     self.seriesTableWidget.resizeColumnsToContents()
     self.seriesTableWidget.sortByColumn(2, qt.Qt.AscendingOrder)
