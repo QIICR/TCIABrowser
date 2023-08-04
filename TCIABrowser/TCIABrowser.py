@@ -148,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
-    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
+    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    # self.reloadButton = qt.QPushButton("Reload")
-    # self.reloadButton.toolTip = "Reload this module."
-    # self.reloadButton.name = "TCIABrowser Reload"
-    # reloadFormLayout.addWidget(self.reloadButton)
-    # self.reloadButton.connect('clicked()', self.onReload)
+    self.reloadButton = qt.QPushButton("Reload")
+    self.reloadButton.toolTip = "Reload this module."
+    self.reloadButton.name = "TCIABrowser Reload"
+    reloadFormLayout.addWidget(self.reloadButton)
+    self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -311,9 +311,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableWidget = qt.QTableWidget()
     self.studiesTableWidget.setCornerButtonEnabled(True)
     self.studiesModel = qt.QStandardItemModel()
-    self.studiesTableHeaderLabels = ['Study Instance UID', 'Study Date', 'Study Description','Patient Age', 
+    self.studiesTableHeaderLabels = ['Study Instance UID', 'Patient ID', 'Study Date', 'Study Description','Patient Age', 
                                      'Event Type', 'Days From Event', 'Series Count']
-    self.studiesTableWidget.setColumnCount(7)
+    self.studiesTableWidget.setColumnCount(8)
     self.studiesTableWidget.sortingEnabled = True
     self.studiesTableWidget.hideColumn(0)
     self.studiesTableWidget.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
@@ -358,10 +358,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     seriesVBoxLayout2 = qt.QVBoxLayout(seriesExpdableArea)
     self.seriesTableWidget = qt.QTableWidget()
     # self.seriesModel = qt.QStandardItemModel()
-    self.seriesTableWidget.setColumnCount(12)
+    self.seriesTableWidget.setColumnCount(13)
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
-    self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Series Description', 'Series Number', 
+    self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Patient ID', 'Series Description', 'Series Number', 
                                     'Modality', 'Body Part Examined', 'Protocol Name', 'Manufacturer', 
                                     'Manufacturer Model Name', 'Image Count', 'File Size (MB)', 'License URI']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
@@ -499,68 +499,17 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesSelectAllButton.connect('clicked(bool)', self.onStudiesSelectAllButton)
     self.studiesSelectNoneButton.connect('clicked(bool)', self.onStudiesSelectNoneButton)
     self.storageResetButton.connect('clicked(bool)', self.onStorageResetButton)
-    self.patientsTableWidget.horizontalHeader().sortIndicatorChanged.connect(lambda: self.tableWidgetReorder("patients"))
-    self.studiesTableWidget.horizontalHeader().sortIndicatorChanged.connect(lambda: self.tableWidgetReorder("studies"))
-    self.seriesTableWidget.horizontalHeader().sortIndicatorChanged.connect(lambda: self.tableWidgetReorder("series"))
+    # self.patientsTableWidget.horizontalHeader().sortIndicatorChanged.connect(lambda: self.tableWidgetReorder("patients"))
+    # self.studiesTableWidget.horizontalHeader().sortIndicatorChanged.connect(lambda: self.tableWidgetReorder("studies"))
+    # self.seriesTableWidget.horizontalHeader().sortIndicatorChanged.connect(lambda: self.tableWidgetReorder("series"))
     
     # Add vertical spacer
     self.layout.addStretch(1)
-  def tableWidgetReorder(self, tableType):
-    if tableType == "patients":
-        self.patientsIDs = []
-        self.phantoms = []
-        self.patientSexes = []
-        self.speciesDescriptions = []
-        for n in range(self.patientsTableWidget.rowCount): 
-            self.patientsIDs.append(self.patientsTableWidget.item(n, 0))
-            self.phantoms.append(self.patientsTableWidget.item(n, 1))
-            self.patientSexes.append(self.patientsTableWidget.item(n, 2))
-            self.speciesDescriptions.append(self.patientsTableWidget.item(n, 3))
-    elif tableType == "studies":
-        if self.studiesTableWidget.rowCount != 0:
-            self.studyInstanceUIDs = []
-            self.studyDates = []
-            self.studyDescriptions = []
-            self.patientAges = []
-            self.longitudinalTemporalEventTypes = []
-            self.longitudinalTemporalOffsetFromEvents = []
-            self.seriesCounts = []
-            for n in range(self.studiesTableWidget.rowCount): 
-                self.studyInstanceUIDs.append(self.studiesTableWidget.item(n, 0))
-                self.studyDates.append(self.studiesTableWidget.item(n, 1))
-                self.studyDescriptions.append(self.studiesTableWidget.item(n, 2))
-                self.patientAges.append(self.studiesTableWidget.item(n, 3))
-                self.longitudinalTemporalEventTypes.append(self.studiesTableWidget.item(n, 4))
-                self.longitudinalTemporalOffsetFromEvents.append(self.studiesTableWidget.item(n, 5))
-                self.seriesCounts.append(self.studiesTableWidget.item(n, 6))
-    else:
-        if self.seriesTableWidget.rowCount != 0:
-            self.seriesInstanceUIDs = []
-            self.downloadStatusCollection = []
-            self.seriesDescriptions = []
-            self.seriesNumbers = []
-            self.modalities = []
-            self.bodyPartsExamined = []
-            self.protocolNames = []
-            self.manufacturers = []
-            self.manufacturerModelNames = []
-            self.imageCounts = []
-            self.fileSizes = []
-            self.licenseURIs = []
-            for n in range(self.seriesTableWidget.rowCount): 
-                self.seriesInstanceUIDs.append(self.seriesTableWidget.item(n, 0))
-                self.downloadStatusCollection.append(self.seriesTableWidget.item(n, 1))
-                self.seriesDescriptions.append(self.seriesTableWidget.item(n, 2))
-                self.seriesNumbers.append(self.seriesTableWidget.item(n, 3))
-                self.modalities.append(self.seriesTableWidget.item(n, 4))
-                self.bodyPartsExamined.append(self.seriesTableWidget.item(n, 5))
-                self.protocolNames.append(self.seriesTableWidget.item(n, 6))
-                self.manufacturers.append(self.seriesTableWidget.item(n, 7))
-                self.manufacturerModelNames.append(self.seriesTableWidget.item(n, 8))
-                self.imageCounts.append(self.seriesTableWidget.item(n, 9))
-                self.fileSizes.append(self.seriesTableWidget.item(n, 10))
-                self.licenseURIs.append(self.seriesTableWidget.item(n, 11))
-  
+
+
+  # def tableWidgetReorder(self, tableType):
+    # pass
+
   def cleanup(self):
     pass
   
@@ -629,12 +578,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
   def onRemoveSeriesContextMenuTriggered(self):
     removeList = []
-    for uid in self.seriesInstanceUIDs:
-      if uid.isSelected():
-        row = self.seriesTableWidget.row(uid)
+    rows = rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows()]
+    for row in rows:
         self.seriesTableWidget.item(row, 1).setIcon(self.downloadIcon)
-        removeList.append(uid.text())
-        slicer.dicomDatabase.removeSeries(uid.text(), True)
+        removeList.append(self.seriesTableWidget.item(row, 0).text())
+        slicer.dicomDatabase.removeSeries(self.seriesTableWidget.item(row, 0).text(), True)
     self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
     # self.studiesTableSelectionChanged()
 
@@ -763,7 +711,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.clearStudiesTableWidget()
     self.clearSeriesTableWidget()
     self.studiesTableRowCount = 0
-    rows = [i.row() for i in self.patientsTableWidget.selectionModel().selectedRows(0)]
+    rows = [i.row() for i in self.patientsTableWidget.selectionModel().selectedRows()]
     self.numberOfSelectedPatients = len(rows)
     self.patientSelected(rows)
 
@@ -776,7 +724,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     responseString = []
     try:
       for row in rows:
-        self.selectedPatients.append(self.patientsIDs[row].text())
+        self.selectedPatients.append(self.patientsTableWidget.item(row, 0).text())
         cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedPatients[-1]}.json"
         self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatients[-1]
         self.showStatus(self.progressMessage)
@@ -808,7 +756,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def studiesTableSelectionChanged(self):
     self.clearSeriesTableWidget()
     self.seriesTableRowCount = 0
-    rows = [i.row() for i in self.studiesTableWidget.selectionModel().selectedRows(0)]
+    rows = [i.row() for i in self.studiesTableWidget.selectionModel().selectedRows()]
     self.numberOfSelectedStudies = len(rows)
     self.studySelected(rows)
 
@@ -819,7 +767,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     responseString = []
     try:
       for row in rows:
-        self.selectedStudies.append(self.studyInstanceUIDs[row].text())
+        self.selectedStudies.append(self.studiesTableWidget.item(row, 0).text())
         cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedStudies[-1]}.json"
         self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudies[-1]
         self.showStatus(self.progressMessage)
@@ -856,9 +804,9 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.imagesToDownloadCount = 0
     self.loadButton.enabled = False
     self.indexButton.enabled = False
-    rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows(0)]
+    rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows()]
     for row in rows:
-      self.imagesToDownloadCount += int(self.imageCounts[row].text())
+      self.imagesToDownloadCount += int(self.seriesTableWidget.item(row, 10).text())
       self.loadButton.enabled = True
       self.indexButton.enabled = True
     self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">' + str(
@@ -902,15 +850,15 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.downloadQueue = {}
     refSeriesList = []
     imageSizeToDownload = 0 
-    rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows(0)]
+    rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows()]
     for row in rows:
-      selectedSeries = self.seriesInstanceUIDs[row].text()
+      selectedSeries = self.seriesTableWidget.item(row, 0).text()
       self.selectedSeriesNicknamesDic[selectedSeries] = str(row + 1)
       allSelectedSeriesUIDs.append(selectedSeries)
-      imageSizeToDownload += float(self.fileSizes[row].text()) if self.fileSizes[row].text() != "< 0.01" else 0.01
+      imageSizeToDownload += float(self.seriesTableWidget.item(row, 11).text()) if self.seriesTableWidget.item(row, 11).text() != "< 0.01" else 0.01
       if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
       # check if selected is an RTSTRUCT or SEG file
-        if self.modalities[row].text() in ["RTSTRUCT", "SEG"]:
+        if self.seriesTableWidget.item(row, 5).text() in ["RTSTRUCT", "SEG"]:
           try:
             refSeries, refSeriesSize = self.TCIAClient.get_seg_ref_series(seriesInstanceUid = selectedSeries)
             # check if the reference series is also selected or is already downloaded
@@ -933,7 +881,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
             pass
       downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
       self.makeDownloadProgressBar(selectedSeries, row)
-      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.fileSizes[row].text()]
+      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.seriesTableWidget.item(row, 11).text()]
       self.seriesRowNumber[selectedSeries] = row
 
     if imageSizeToDownload < 1024:
@@ -1181,19 +1129,15 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         if key == 'PatientId':
           patientIDString = str(patient['PatientId'])
           patientID = qt.QTableWidgetItem(patientIDString)
-          self.patientsIDs.append(patientID)
           table.setItem(n, 0, patientID)
         if key == 'PatientSex':
           patientSex = qt.QTableWidgetItem(str(patient['PatientSex']))
-          self.patientSexes.append(patientSex)
           table.setItem(n, 1, patientSex)
         if key == 'Phantom':
           phantom = qt.QTableWidgetItem(str(patient['Phantom']))
-          self.phantoms.append(phantom)
           table.setItem(n, 2, phantom)
         if key == 'SpeciesDescription':
           speciesDescription = qt.QTableWidgetItem(str(patient['SpeciesDescription']))
-          self.speciesDescriptions.append(speciesDescription)
           table.setItem(n, 3, speciesDescription)
       n += 1
     self.patientsTableWidget.resizeColumnsToContents()
@@ -1214,32 +1158,28 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       for key in keys:
         if key == 'StudyInstanceUID':
           studyInstanceUID = qt.QTableWidgetItem(str(study['StudyInstanceUID']))
-          self.studyInstanceUIDs.append(studyInstanceUID)
           table.setItem(n, 0, studyInstanceUID)
+        if key == 'PatientID':
+          patientID = qt.QTableWidgetItem(str(study['PatientID']))
+          table.setItem(n, 1, patientID)
         if key == 'StudyDate':
           studyDate = qt.QTableWidgetItem(str(study['StudyDate']))
-          self.studyDates.append(studyDate)
-          table.setItem(n, 1, studyDate)
+          table.setItem(n, 2, studyDate)
         if key == 'StudyDescription':
           studyDescription = qt.QTableWidgetItem(str(study['StudyDescription']))
-          self.studyDescriptions.append(studyDescription)
-          table.setItem(n, 2, studyDescription)
+          table.setItem(n, 3, studyDescription)
         if key == 'PatientAge':
           patientAge = qt.QTableWidgetItem(str(study['PatientAge']))
-          self.patientAges.append(patientAge)
-          table.setItem(n, 3, patientAge)
+          table.setItem(n, 4, patientAge)
         if key == 'LongitudinalTemporalEventType':
           longitudinalTemporalEventType = qt.QTableWidgetItem(str(study['LongitudinalTemporalEventType']))
-          self.longitudinalTemporalEventTypes.append(longitudinalTemporalEventType)
-          table.setItem(n, 4, longitudinalTemporalEventType)
+          table.setItem(n, 5, longitudinalTemporalEventType)
         if key == 'LongitudinalTemporalOffsetFromEvent':
           longitudinalTemporalOffsetFromEvent = qt.QTableWidgetItem(str(study['LongitudinalTemporalOffsetFromEvent']))
-          self.longitudinalTemporalOffsetFromEvents.append(longitudinalTemporalOffsetFromEvent)
-          table.setItem(n, 5, longitudinalTemporalOffsetFromEvent)
+          table.setItem(n, 6, longitudinalTemporalOffsetFromEvent)
         if key == 'SeriesCount':
           seriesCount = qt.QTableWidgetItem(str(study['SeriesCount']))
-          self.seriesCounts.append(seriesCount)
-          table.setItem(n, 6, seriesCount)
+          table.setItem(n, 7, seriesCount)
       n += 1
     self.studiesTableWidget.resizeColumnsToContents()
     self.studiesTableWidget.sortByColumn(1, qt.Qt.AscendingOrder)
@@ -1262,7 +1202,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         if key == 'SeriesInstanceUID':
           seriesInstanceUID = str(series['SeriesInstanceUID'])
           seriesInstanceUIDItem = qt.QTableWidgetItem(seriesInstanceUID)
-          self.seriesInstanceUIDs.append(seriesInstanceUIDItem)
           table.setItem(n, 0, seriesInstanceUIDItem)
           if any(seriesInstanceUID == s for s in self.previouslyDownloadedSeries):
             self.removeSeriesAction.enabled = True
@@ -1272,49 +1211,41 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           downloadStatusItem = qt.QTableWidgetItem(str(''))
           downloadStatusItem.setTextAlignment(qt.Qt.AlignCenter)
           downloadStatusItem.setIcon(icon)
-          self.downloadStatusCollection.append(downloadStatusItem)
           table.setItem(n, 1, downloadStatusItem)
+        if key == 'PatientID':
+          patientID = qt.QTableWidgetItem(str(series['PatientID']))
+          table.setItem(n, 2, patientID)
         if key == 'SeriesDescription':
           seriesDescription = qt.QTableWidgetItem(str(series['SeriesDescription']))
-          self.seriesDescriptions.append(seriesDescription)
-          table.setItem(n, 2, seriesDescription)
+          table.setItem(n, 3, seriesDescription)
         if key == 'SeriesNumber':
           seriesNumber = qt.QTableWidgetItem(str(series['SeriesNumber']))
-          self.seriesNumbers.append(seriesNumber)
-          table.setItem(n, 3, seriesNumber)
+          table.setItem(n, 4, seriesNumber)
         if key == 'Modality':
           modality = qt.QTableWidgetItem(str(series['Modality']))
-          self.modalities.append(modality)
-          table.setItem(n, 4, modality)
+          table.setItem(n, 5, modality)
         if key == 'BodyPartExamined':
           bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
-          self.bodyPartsExamined.append(bodyPartExamined)
-          table.setItem(n, 5, bodyPartExamined)
+          table.setItem(n, 6, bodyPartExamined)
         if key == 'ProtocolName':
           protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
-          self.protocolNames.append(protocolName)
-          table.setItem(n, 6, protocolName)
+          table.setItem(n, 7, protocolName)
         if key == 'Manufacturer':
           manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
-          self.manufacturers.append(manufacturer)
-          table.setItem(n, 7, manufacturer)
+          table.setItem(n, 8, manufacturer)
         if key == 'ManufacturerModelName':
           manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
-          self.manufacturerModelNames.append(manufacturerModelName)
-          table.setItem(n, 8, manufacturerModelName)
+          table.setItem(n, 9, manufacturerModelName)
         if key == 'ImageCount':
           imageCount = qt.QTableWidgetItem(str(series['ImageCount']))
-          self.imageCounts.append(imageCount)
-          table.setItem(n, 9, imageCount)
+          table.setItem(n, 10, imageCount)
         if key == 'FileSize':
           fileSizeConversion = "< 0.01" if str(round(series['FileSize']/1048576, 2)) == "0.0" else str(round(series['FileSize']/1048576, 2))
           fileSize = qt.QTableWidgetItem(fileSizeConversion)
-          self.fileSizes.append(fileSize)
-          table.setItem(n, 10, fileSize)
+          table.setItem(n, 11, fileSize)
         if key == 'LicenseURI':
           licenseURI = qt.QTableWidgetItem(str(series['LicenseURI']))
-          self.licenseURIs.append(licenseURI)
-          table.setItem(n, 11, licenseURI)
+          table.setItem(n, 12, licenseURI)
       n += 1
     self.seriesTableWidget.resizeColumnsToContents()
     self.seriesTableWidget.sortByColumn(2, qt.Qt.AscendingOrder)
@@ -1325,10 +1256,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.patientsTableWidget.horizontalHeader().setSortIndicator(-1, qt.Qt.AscendingOrder)
     table = self.patientsTableWidget
     self.patientsCollapsibleGroupBox.setTitle('Patients')
-    self.patientsIDs = []
-    self.phantoms = []
-    self.patientSexes = []
-    self.speciesDescriptions = []
     # self.collections = []
     table.setRowCount(0)
     table.clearContents()
@@ -1339,13 +1266,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.studiesTableRowCount = 0
     table = self.studiesTableWidget
     self.studiesCollapsibleGroupBox.setTitle('Studies')
-    self.studyInstanceUIDs = []
-    self.studyDates = []
-    self.studyDescriptions = []
-    self.patientAges = []
-    self.longitudinalTemporalEventTypes = []
-    self.longitudinalTemporalOffsetFromEvents = []
-    self.seriesCounts = []
     table.setRowCount(0)
     table.clearContents()
     table.setHorizontalHeaderLabels(self.studiesTableHeaderLabels)
@@ -1355,18 +1275,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesTableRowCount = 0
     table = self.seriesTableWidget
     self.seriesCollapsibleGroupBox.setTitle('Series')
-    self.seriesInstanceUIDs = []
-    self.downloadStatusCollection = []
-    self.seriesDescriptions = []
-    self.seriesNumbers = []
-    self.modalities = []
-    self.bodyPartsExamined = []
-    self.protocolNames = []
-    self.manufacturers = []
-    self.manufacturerModelNames = []
-    self.imageCounts = []
-    self.fileSizes = []
-    self.licenseURIs = []
     table.setRowCount(0)
     table.clearContents()
     table.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
