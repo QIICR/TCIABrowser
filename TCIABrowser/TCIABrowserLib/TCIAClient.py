@@ -16,7 +16,7 @@ class TCIAClient:
         if nlst: self.apiUrl = "nlst"
         elif user == "nbia_guest": self.apiUrl = ""
         else: self.apiUrl = "restricted"
-        if self.apiUrl == "nlst" or self.apiUrl == "restricted":
+        if self.apiUrl == "restricted":
             tcia_utils.nbia.getToken(user, pw)
             try:
                 tcia_utils.nbia.api_call_headers != None

@@ -148,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
-    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    self.layout.addWidget(reloadCollapsibleButton)
+    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    # self.reloadButton = qt.QPushButton("Reload")
-    # self.reloadButton.toolTip = "Reload this module."
-    # self.reloadButton.name = "TCIABrowser Reload"
-    # reloadFormLayout.addWidget(self.reloadButton)
-    # self.reloadButton.connect('clicked()', self.onReload)
+    self.reloadButton = qt.QPushButton("Reload")
+    self.reloadButton.toolTip = "Reload this module."
+    self.reloadButton.name = "TCIABrowser Reload"
+    reloadFormLayout.addWidget(self.reloadButton)
+    self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -362,8 +362,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.seriesTableWidget.sortingEnabled = True
     self.seriesTableWidget.hideColumn(0)
     self.seriesTableHeaderLabels = ['Series Instance UID', 'Status', 'Patient ID', 'Study Date', 'Series Description',  
-                                    'Series Number', 'Modality', 'Body Part Examined', 'Protocol Name', 'Manufacturer', 
-                                    'Manufacturer Model Name', 'Image Count', 'File Size (MB)', 'License URI']
+                                    'Series Number', 'Modality', 'Body Part Examined', 'Image Count', 'File Size (MB)', 
+                                    'Protocol Name', 'Manufacturer', 'Manufacturer Model Name', 'License URI']
     self.seriesTableWidget.setHorizontalHeaderLabels(self.seriesTableHeaderLabels)
     self.seriesTableWidget.resizeColumnsToContents()
     seriesVBoxLayout2.addWidget(self.seriesTableWidget)
@@ -521,6 +521,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
                                qt.QMessageBox.Ok | qt.QMessageBox.Cancel)
         if (choice == qt.QMessageBox.Cancel):
             return None
+        self.usernameEdit.setText("nbia_guest")
+        self.passwordEdit.setText("")
         self.getCollectionValues()
     elif self.usernameEdit.text.strip() == '' or self.passwordEdit.text.strip() == '':
         if self.usernameEdit.text.strip() != 'nbia_guest':
@@ -666,7 +668,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.selectedCollection = item
     if not os.path.exists(f"{self.cachePath}{self.selectedCollection}"):
       os.mkdir(f"{self.cachePath}{self.selectedCollection}")
-    cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedCollection}.json"
+    cacheFile = f"{self.cachePath}{self.selectedCollection}/Collection - {self.selectedCollection}.json"
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showStatus(self.progressMessage)
     
@@ -725,7 +727,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     try:
       for row in rows:
         self.selectedPatients.append(self.patientsTableWidget.item(row, 0).text())
-        cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedPatients[-1]}.json"
+        cacheFile = f"{self.cachePath}{self.selectedCollection}/Patient - {self.selectedPatients[-1]}.json"
         self.progressMessage = "Getting available studies for patient ID: " + self.selectedPatients[-1]
         self.showStatus(self.progressMessage)
         if os.path.isfile(cacheFile) and self.useCacheFlag:
@@ -768,7 +770,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     try:
       for row in rows:
         self.selectedStudies.append(self.studiesTableWidget.item(row, 0).text())
-        cacheFile = f"{self.cachePath}{self.selectedCollection}/{self.selectedStudies[-1]}.json"
+        cacheFile = f"{self.cachePath}{self.selectedCollection}/Study - {self.selectedStudies[-1]}.json"
         self.progressMessage = "Getting available series for studyInstanceUID: " + self.selectedStudies[-1]
         self.showStatus(self.progressMessage)
         if os.path.isfile(cacheFile) and self.useCacheFlag:
@@ -806,7 +808,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.indexButton.enabled = False
     rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows()]
     for row in rows:
-      self.imagesToDownloadCount += int(self.seriesTableWidget.item(row, 11).text())
+      self.imagesToDownloadCount += int(self.seriesTableWidget.item(row, 8).text())
       self.loadButton.enabled = True
       self.indexButton.enabled = True
     self.imagesCountLabel.text = 'No. of images to download: ' + '<span style=" font-size:8pt; font-weight:600; color:#aa0000;">' + str(
@@ -852,10 +854,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     imageSizeToDownload = 0 
     rows = [i.row() for i in self.seriesTableWidget.selectionModel().selectedRows()]
     for row in rows:
+      print(row)
       selectedSeries = self.seriesTableWidget.item(row, 0).text()
       self.selectedSeriesNicknamesDic[selectedSeries] = str(row + 1)
       allSelectedSeriesUIDs.append(selectedSeries)
-      imageSizeToDownload += float(self.seriesTableWidget.item(row, 12).text()) if self.seriesTableWidget.item(row, 12).text() != "< 0.01" else 0.01
+      imageSizeToDownload += float(self.seriesTableWidget.item(row, 9).text()) if self.seriesTableWidget.item(row, 9).text() != "< 0.01" else 0.01
       if not any(selectedSeries == s for s in self.previouslyDownloadedSeries):
       # check if selected is an RTSTRUCT or SEG file
         if self.seriesTableWidget.item(row, 6).text() in ["RTSTRUCT", "SEG"]:
@@ -879,7 +882,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           except Exception:
             pass
       downloadFolderPath = os.path.join(self.storagePath, selectedSeries) + os.sep
-      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.seriesTableWidget.item(row, 12).text()]
+      self.downloadQueue[selectedSeries] = [downloadFolderPath, self.seriesTableWidget.item(row, 9).text()]
       self.seriesRowNumber[selectedSeries] = row
 
     if imageSizeToDownload < 1024:
@@ -926,7 +929,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.browserWidget.close()
 
   def downloadSelectedSeries(self):
-    n = 0
     while self.downloadQueue and not self.cancelDownload:
       self.cancelDownloadButton.enabled = True
       selectedSeries, [downloadFolderPath, seriesSize] = self.downloadQueue.popitem()
@@ -949,7 +951,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         slicer.app.processEvents()
         # Save server response as images.zip in current directory
         if response.getcode() == 200:
-          self.makeDownloadProgressBar(selectedSeries, n)
+          self.makeDownloadProgressBar(selectedSeries)
           destinationFile = open(fileName, "wb")
           status = self.__bufferReadWrite(destinationFile, response, selectedSeries, seriesSize)
 
@@ -992,18 +994,18 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         message = "downloadSelectedSeries: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
         qt.QMessageBox.critical(slicer.util.mainWindow(),
                     'TCIA Browser', message, qt.QMessageBox.Ok)
-      n += 1
     self.cancelDownloadButton.enabled = False
     self.collectionSelector.enabled = True
     self.patientsTableWidget.enabled = True
     self.studiesTableWidget.enabled = True
 
-  def makeDownloadProgressBar(self, selectedSeries, n):
+  def makeDownloadProgressBar(self, selectedSeries):
     # downloadProgressBar = qt.QProgressBar()
     # self.downloadProgressBars[selectedSeries] = downloadProgressBar
     # titleLabel = qt.QLabel(selectedSeries)
     # progressLabel = qt.QLabel(self.selectedSeriesNicknamesDic[selectedSeries] + ' (0 KB)')
     # self.downloadProgressLabels[selectedSeries] = progressLabel
+    n = self.seriesRowNumber[selectedSeries]
     table = self.seriesTableWidget
     # table.setCellWidget(n, 1, downloadProgressBar)
     table.setItem(n, 1, qt.QTableWidgetItem("Downloading"))
@@ -1240,22 +1242,22 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         if key == 'BodyPartExamined':
           bodyPartExamined = qt.QTableWidgetItem(str(series['BodyPartExamined']))
           table.setItem(n, 7, bodyPartExamined)
-        if key == 'ProtocolName':
-          protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
-          table.setItem(n, 8, protocolName)
-        if key == 'Manufacturer':
-          manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
-          table.setItem(n, 9, manufacturer)
-        if key == 'ManufacturerModelName':
-          manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
-          table.setItem(n, 10, manufacturerModelName)
         if key == 'ImageCount':
           imageCount = qt.QTableWidgetItem(str(series['ImageCount']))
-          table.setItem(n, 11, imageCount)
+          table.setItem(n, 8, imageCount)
         if key == 'FileSize':
           fileSizeConversion = "< 0.01" if str(round(series['FileSize']/1048576, 2)) == "0.0" else str(round(series['FileSize']/1048576, 2))
           fileSize = qt.QTableWidgetItem(fileSizeConversion)
-          table.setItem(n, 12, fileSize)
+          table.setItem(n, 9, fileSize)
+        if key == 'ProtocolName':
+          protocolName = qt.QTableWidgetItem(str(series['ProtocolName']))
+          table.setItem(n, 10, protocolName)
+        if key == 'Manufacturer':
+          manufacturer = qt.QTableWidgetItem(str(series['Manufacturer']))
+          table.setItem(n, 11, manufacturer)
+        if key == 'ManufacturerModelName':
+          manufacturerModelName = qt.QTableWidgetItem(str(series['ManufacturerModelName']))
+          table.setItem(n, 12, manufacturerModelName)
         if key == 'LicenseURI':
           licenseURI = qt.QTableWidgetItem(str(series['LicenseURI']))
           table.setItem(n, 13, licenseURI)
