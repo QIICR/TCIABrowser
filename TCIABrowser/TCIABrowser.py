@@ -767,6 +767,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.indexButton.enabled = False
     self.selectedStudies = []
     responseString = []
+    self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
     try:
       for row in rows:
         self.selectedStudies.append(self.studiesTableWidget.item(row, 0).text())
@@ -1197,7 +1198,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     seriesCollection = json.loads(responseString)
     self.seriesSelectAllButton.enabled = True
     self.seriesSelectNoneButton.enabled = True
-    
+    self.previouslyDownloadedSeries = set([slicer.dicomDatabase.seriesForFile(x) for x in slicer.dicomDatabase.allFiles()])
     n = self.seriesTableRowCount
     table.setRowCount(n + len(seriesCollection))
     
