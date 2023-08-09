@@ -148,16 +148,16 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     reloadCollapsibleButton = ctk.ctkCollapsibleButton()
     reloadCollapsibleButton.text = "Reload && Test"
     # uncomment the next line for developing and testing
-    self.layout.addWidget(reloadCollapsibleButton)
-    reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
+    # self.layout.addWidget(reloadCollapsibleButton)
+    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
 
     # reload button
     # (use this during development, but remove it when delivering your module to users)
-    self.reloadButton = qt.QPushButton("Reload")
-    self.reloadButton.toolTip = "Reload this module."
-    self.reloadButton.name = "TCIABrowser Reload"
-    reloadFormLayout.addWidget(self.reloadButton)
-    self.reloadButton.connect('clicked()', self.onReload)
+    # self.reloadButton = qt.QPushButton("Reload")
+    # self.reloadButton.toolTip = "Reload this module."
+    # self.reloadButton.name = "TCIABrowser Reload"
+    # reloadFormLayout.addWidget(self.reloadButton)
+    # self.reloadButton.connect('clicked()', self.onReload)
 
     # reload and test button
     # (use this during development, but remove it when delivering your module to users)
@@ -515,22 +515,13 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   
   def AccountSelected(self):
     # print(self.closeEvent())
-    if self.nlstSwitch.isChecked() and (self.usernameEdit.text.strip() != 'nbia_guest' or self.passwordEdit.text.strip() != ''):
-        choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', 
-                               "NLST is selected but username is not \'nbia_guest\' or password is given, any changes in these fields will be nullified, proceed?", 
-                               qt.QMessageBox.Ok | qt.QMessageBox.Cancel)
-        if (choice == qt.QMessageBox.Cancel):
-            return None
+    if self.nlstSwitch.isChecked():
         self.usernameEdit.setText("nbia_guest")
         self.passwordEdit.setText("")
-        self.getCollectionValues()
-    elif self.usernameEdit.text.strip() == '' or self.passwordEdit.text.strip() == '':
-        if self.usernameEdit.text.strip() != 'nbia_guest':
-            qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
-        else:
-            self.getCollectionValues()
-    else:
-        self.getCollectionValues()
+    elif self.usernameEdit.text.strip() != 'nbia_guest' and self.passwordEdit.text.strip() == '':
+        qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
+        return None
+    self.getCollectionValues()
         
   def onLogoutButton(self):
     if self.loginButton.isVisible():
@@ -562,6 +553,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.passwordEdit.setText("")
         self.passwordLabel.show()
         self.passwordEdit.show()
+        self.loginButton.enabled = True
+        self.loginButton.setText("Log In")
         self.loginButton.show()
         self.nlstSwitch.show()
         self.logoutButton.hide()
@@ -628,6 +621,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
   def getCollectionValues(self):
     self.initialConnection = True
     # Instantiate TCIAClient object
+    self.loginButton.enabled = False
+    self.loginButton.setText("Logging In")
     self.TCIAClient = TCIAClient.TCIAClient(self.usernameEdit.text.strip(), self.passwordEdit.text.strip(), self.nlstSwitch.isChecked())
     self.showStatus("Getting Available Collections")
     if hasattr(self.TCIAClient, "credentialError"):
@@ -636,10 +631,10 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     try:
       self.showBrowser()
       response = self.TCIAClient.get_collection_values()
-      self.collectionDescriptions = self.TCIAClient.get_collection_descriptions()
       self.populateCollectionsTreeView(response)
       self.clearStatus()
     except Exception as error:
+      self.loginButton.setText("Log In")
       self.loginButton.enabled = True
       self.clearStatus()
       message = "getCollectionValues: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
@@ -671,9 +666,30 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     cacheFile = f"{self.cachePath}{self.selectedCollection}/Collection - {self.selectedCollection}.json"
     self.progressMessage = "Getting available patients for collection: " + self.selectedCollection
     self.showStatus(self.progressMessage)
-    
+
+    # Check if there is a cache for collection descriptions
+    collectionCache = f"{self.cachePath}NLSTDescription.json" if self.nlstSwitch.isChecked() else f"{self.cachePath}CollectionDescriptions.json"
+    # If there is cache, use the cache
+    if os.path.isfile(collectionCache):
+      f = codecs.open(collectionCache, 'rb', encoding='utf8')
+      self.collectionDescriptions = json.loads(f.read()[:])
+      f.close()
+    # If there is no cache, fetch from the server and save a cache
+    else:
+      self.collectionDescriptions = self.TCIAClient.get_collection_descriptions()
+      with open(collectionCache, 'wb') as outputFile:
+        self.stringBufferReadWrite(outputFile, self.collectionDescriptions)
+      outputFile.close()
+    # Fetch a new list of collection descriptions from the server if the existing cache is outdated
     filteredDescriptions = list(filter(lambda record: record["collectionName"] == self.selectedCollection, self.collectionDescriptions))
     if len(filteredDescriptions) != 0: self.collectionDescription.setHtml(filteredDescriptions[0]["description"])
+    else:
+      self.collectionDescriptions = self.TCIAClient.get_collection_descriptions()
+      with open(collectionCache, 'wb') as outputFile:
+        self.stringBufferReadWrite(outputFile, self.collectionDescriptions)
+      outputFile.close()
+      filteredDescriptions = list(filter(lambda record: record["collectionName"] == self.selectedCollection, self.collectionDescriptions))
+      if len(filteredDescriptions) != 0: self.collectionDescription.setHtml(filteredDescriptions[0]["description"])
 
     patientsList = None
     if os.path.isfile(cacheFile) and self.useCacheFlag:
