@@ -297,6 +297,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     patientsVBoxLayout2.setSpacing(0)
     patientsVBoxLayout1.setMargin(0)
     patientsVBoxLayout2.setContentsMargins(7, 3, 7, 7)
+    self.patientsTableWidget.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
 
     #
     # Studies Table Widget
@@ -345,6 +346,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     studiesVBoxLayout2.setSpacing(0)
     studiesVBoxLayout1.setMargin(0)
     studiesVBoxLayout2.setContentsMargins(7, 3, 7, 7)
+    self.studiesTableWidget.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
 
     #
     # Series Table Widget
@@ -402,6 +404,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
                     'color:#aa0000;">' + str(self.imagesToDownloadCount) + '</span>' + ' '
     seriesSelectOptionsLayout.addWidget(self.imagesCountLabel)
     # seriesSelectOptionsLayout.setAlignment(qt.Qt.AlignTop)
+    self.seriesTableWidget.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
 
     # Index Button
     #
