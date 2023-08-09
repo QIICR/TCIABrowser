@@ -6,9 +6,9 @@ project(TCIABrowser)
 set(EXTENSION_HOMEPAGE "https://github.com/QIICR/TCIABrowser/blob/master/")
 set(EXTENSION_CATEGORY "Informatics")
 set(EXTENSION_CONTRIBUTORS "Alireza Mehrtash(SPL and BWH), Andrey Fedorov (SPL and BWH), Adam Li (GU), Justin Kirby (FNLCR)")
-set(EXTENSION_DESCRIPTION "A Module to connect to TCIA archive, browse the collections, patients and studies and download DICOM files to 3D Slicer.")
-set(EXTENSION_ICONURL "https://github.com/QIICR/TCIABrowser/blob/master/TCIABrowser/Resources/Logos/TCIABrowser.svg")
-set(EXTENSION_SCREENSHOTURLS "https://github.com/QIICR/TCIABrowser/blob/master/TCIABrowser/Resources/Screenshot/Screenshot_1.png")
+set(EXTENSION_DESCRIPTION "A Module to download DICOM data from The Cancer Imaging Archive.")
+set(EXTENSION_ICONURL "https://raw.githubusercontent.com/QIICR/TCIABrowser/master/TCIABrowser/Resources/Icons/TCIABrowser.png")
+set(EXTENSION_SCREENSHOTURLS "https://raw.githubusercontent.com/QIICR/TCIABrowser/master/TCIABrowser/Resources/Screenshot/Screenshot_2.png")
 set(EXTENSION_DEPENDS QuantitativeReporting SlicerRT)
 
 #-----------------------------------------------------------------------------
