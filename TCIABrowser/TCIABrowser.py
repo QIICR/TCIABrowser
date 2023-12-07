@@ -1486,7 +1486,10 @@ class TCIABrowserTest(ScriptedLoadableModuleTest):
   def testBrowserDownloadAndLoad(self):
     self.delayDisplay("Starting the test")
     widget = TCIABrowserWidget(None)
+
+    self.delayDisplay("Retrieving available collection")
     widget.getCollectionValues()
+
     browserWindow = widget.browserWidget
     collectionsCombobox = browserWindow.findChildren('QComboBox')[0]
     print('Number of collections: {}'.format(collectionsCombobox.count))
