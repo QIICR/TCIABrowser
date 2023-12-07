@@ -1467,27 +1467,10 @@ class TCIABrowserLogic(ScriptedLoadableModuleLogic):
     return True
 
 
-class TCIABrowserTest(unittest.TestCase):
+class TCIABrowserTest(ScriptedLoadableModuleTest):
   """
   This is the test case for your scripted module.
   """
-
-  def delayDisplay(self, message, msec=1000):
-    """This utility method displays a small dialog and waits.
-    This does two things: 1) it lets the event loop catch up
-    to the state of the test so that rendering and widget updates
-    have all taken place before the test continues and 2) it
-    shows the user/developer/tester the state of the test
-    so that we'll know when it breaks.
-    """
-    print(message)
-    self.info = qt.QDialog()
-    self.infoLayout = qt.QVBoxLayout()
-    self.info.setLayout(self.infoLayout)
-    self.label = qt.QLabel(message, self.info)
-    self.infoLayout.addWidget(self.label)
-    qt.QTimer.singleShot(msec, self.info.close)
-    self.info.exec_()
 
   def setUp(self):
     """ Do whatever is needed to reset the state - typically a scene clear will be enough.
@@ -1495,7 +1478,6 @@ class TCIABrowserTest(unittest.TestCase):
     slicer.mrmlScene.Clear(0)
 
   def runTest(self):
-    import traceback
     """Run as few or as many tests as needed here.
     """
     self.setUp()
