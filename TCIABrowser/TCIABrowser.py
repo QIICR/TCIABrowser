@@ -63,6 +63,9 @@ class browserWindow(qt.QWidget):
 #
 class TCIABrowserWidget(ScriptedLoadableModuleWidget): 
   def __init__(self, parent=None):
+    """Called when the user opens the module the first time and the widget is initialized."""
+    ScriptedLoadableModuleWidget.__init__(self, parent)
+
     self.loadToScene = False
     
     # self.browserWidget = qt.QWidget()
@@ -102,22 +105,15 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     if not os.path.exists(self.cachePath):
       os.makedirs(self.cachePath)
     self.useCacheFlag = False
-
-    if not parent:
-      self.parent = slicer.qMRMLWidget()
-      self.parent.setLayout(qt.QVBoxLayout())
-      self.parent.setMRMLScene(slicer.mrmlScene)
-    else:
-      self.parent = parent
-    self.layout = self.parent.layout()
-    if not parent:
-      self.setup()
-      self.parent.show()
     
   def enter(self):
+    """Called each time the user opens this module."""
     pass
 
   def setup(self):
+    """Called when the user opens the module the first time and the widget is initialized."""
+    ScriptedLoadableModuleWidget.setup(self)
+
     # Instantiate and connect widgets ...
     if 'TCIABrowser' in slicer.util.moduleNames():
       self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py", "")
@@ -131,30 +127,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.downloadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/download.png')
     self.storedlIcon = qt.QIcon(self.modulePath + '/Resources/Icons/stored.png')
     self.browserWidget.setWindowIcon(browserIcon)
-
-    #
-    # Reload and Test area
-    #
-    reloadCollapsibleButton = ctk.ctkCollapsibleButton()
-    reloadCollapsibleButton.text = "Reload && Test"
-    # uncomment the next line for developing and testing
-    # self.layout.addWidget(reloadCollapsibleButton)
-    # reloadFormLayout = qt.QFormLayout(reloadCollapsibleButton)
-
-    # reload button
-    # (use this during development, but remove it when delivering your module to users)
-    # self.reloadButton = qt.QPushButton("Reload")
-    # self.reloadButton.toolTip = "Reload this module."
-    # self.reloadButton.name = "TCIABrowser Reload"
-    # reloadFormLayout.addWidget(self.reloadButton)
-    # self.reloadButton.connect('clicked()', self.onReload)
-
-    # reload and test button
-    # (use this during development, but remove it when delivering your module to users)
-    # self.reloadAndTestButton = qt.QPushButton("Reload and Test")
-    # self.reloadAndTestButton.toolTip = "Reload this module and then run the self tests."
-    # reloadFormLayout.addWidget(self.reloadAndTestButton)
-    # self.reloadAndTestButton.connect('clicked()', self.onReloadAndTest)
 
     #
     # Browser Area
@@ -504,6 +476,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     # pass
 
   def cleanup(self):
+    """Called when the application closes and the module widget is destroyed."""
     pass
   
   def AccountSelected(self):
