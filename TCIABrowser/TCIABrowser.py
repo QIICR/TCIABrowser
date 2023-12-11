@@ -522,7 +522,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         self.usernameEdit.setText("nbia_guest")
         self.passwordEdit.setText("")
     elif self.usernameEdit.text.strip() != 'nbia_guest' and self.passwordEdit.text.strip() == '':
-        qt.QMessageBox.critical(slicer.util.mainWindow(), 'TCIA Browser', "Please enter username and password.", qt.QMessageBox.Ok)
+        message = "Please enter username and password."
+        slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
         return None
     self.getCollectionValues()
         
@@ -629,7 +630,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.TCIAClient = TCIAClient.TCIAClient(self.usernameEdit.text.strip(), self.passwordEdit.text.strip(), self.nlstSwitch.isChecked())
     self.showStatus("Getting Available Collections")
     if hasattr(self.TCIAClient, "credentialError"):
-        qt.QMessageBox.critical(slicer.util.mainWindow(),'TCIA Browser', self.TCIAClient.credentialError, qt.QMessageBox.Ok)
+        slicer.util.errorDisplay(self.TCIAClient.credentialError, windowTitle="TCIA Browser")
         return None
     try:
       self.showBrowser()
@@ -641,8 +642,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       self.loginButton.enabled = True
       self.clearStatus()
       message = "getCollectionValues: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-      qt.QMessageBox.critical(slicer.util.mainWindow(),
-                  'TCIA Browser', message, qt.QMessageBox.Ok)
+      slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
     self.onLogoutButton()
 
   def onStudiesSelectAllButton(self):
@@ -725,8 +725,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       except Exception as error:
         self.clearStatus()
         message = "collectionSelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-        qt.QMessageBox.critical(slicer.util.mainWindow(),
-                    'TCIA Browser', message, qt.QMessageBox.Ok)
+        slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
 
   def patientsTableSelectionChanged(self):
     self.clearStudiesTableWidget()
@@ -771,8 +770,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     except Exception as error:
       self.clearStatus()
       message = "patientSelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-      qt.QMessageBox.critical(slicer.util.mainWindow(),
-                              'TCIA Browser', message, qt.QMessageBox.Ok)
+      slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
 
   def studiesTableSelectionChanged(self):
     self.clearSeriesTableWidget()
@@ -815,8 +813,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     except Exception as error:
       self.clearStatus()
       message = "studySelected: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-      qt.QMessageBox.critical(slicer.util.mainWindow(),
-                              'TCIA Browser', message, qt.QMessageBox.Ok)
+      slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
 
     self.onSeriesSelectAllButton()
     # self.loadButton.enabled = True
@@ -985,10 +982,8 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
             self.showStatus(self.progressMessage)
             totalItems = self.unzip(fileName, self.extractedFilesDirectory)
             if totalItems == 0:
-              qt.QMessageBox.critical(slicer.util.mainWindow(),
-                          'TCIA Browser',
-                          "Failed to retrieve images for series %s. Please report this message to the developers!" % selectedSeries,
-                          qt.QMessageBox.Ok)
+              message = "Failed to retrieve images for series %s. Please report this message to the developers!" % selectedSeries
+              slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
             self.clearStatus()
             # Import the data into dicomAppWidget and open the dicom browser
             self.addFilesToDatabase(selectedSeries)
@@ -1012,8 +1007,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
       except Exception as error:
         self.clearStatus()
         message = "downloadSelectedSeries: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
-        qt.QMessageBox.critical(slicer.util.mainWindow(),
-                    'TCIA Browser', message, qt.QMessageBox.Ok)
+        slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
     self.cancelDownloadButton.enabled = False
     self.collectionSelector.enabled = True
     self.patientsTableWidget.enabled = True
