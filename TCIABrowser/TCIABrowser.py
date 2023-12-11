@@ -27,6 +27,7 @@ from slicer.ScriptedLoadableModule import *
 #
 class TCIABrowser(ScriptedLoadableModule):
   def __init__(self, parent):
+    ScriptedLoadableModule.__init__(self, parent)
     parent.title = "TCIA Browser"
     parent.categories = ["Informatics"]
     parent.dependencies = []
@@ -42,18 +43,7 @@ class TCIABrowser(ScriptedLoadableModule):
     """
     self.parent = parent
 
-    # Add this test to the SelfTest module's list for discovery when the module
-    # is created.  Since this module may be discovered before SelfTests itself,
-    # create the list if it doesn't already exist.
-    try:
-      slicer.selfTests
-    except AttributeError:
-      slicer.selfTests = {}
-    slicer.selfTests['TCIABrowser'] = self.runTest
 
-  def runTest(self):
-    tester = TCIABrowserTest()
-    tester.runTest()
 # 
 # browserWidget Initialization
 # Defines size and position
