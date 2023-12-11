@@ -115,17 +115,13 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     ScriptedLoadableModuleWidget.setup(self)
 
     # Instantiate and connect widgets ...
-    if 'TCIABrowser' in slicer.util.moduleNames():
-      self.modulePath = slicer.modules.tciabrowser.path.replace("TCIABrowser.py", "")
-    else:
-      self.modulePath = '.'
-    self.reportIcon = qt.QIcon(self.modulePath + '/Resources/Icons/report.png')
-    downloadAndIndexIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndIndex.png')
-    downloadAndLoadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/downloadAndLoad.png')
-    browserIcon = qt.QIcon(self.modulePath + '/Resources/Icons/TCIABrowser.png')
-    cancelIcon = qt.QIcon(self.modulePath + '/Resources/Icons/cancel.png')
-    self.downloadIcon = qt.QIcon(self.modulePath + '/Resources/Icons/download.png')
-    self.storedlIcon = qt.QIcon(self.modulePath + '/Resources/Icons/stored.png')
+    self.reportIcon = qt.QIcon(self.resourcePath("Icons/report.png"))
+    downloadAndIndexIcon = qt.QIcon(self.resourcePath("Icons/downloadAndIndex.png"))
+    downloadAndLoadIcon = qt.QIcon(self.resourcePath("Icons/downloadAndLoad.png"))
+    browserIcon = qt.QIcon(self.resourcePath("Icons/TCIABrowser.png"))
+    cancelIcon = qt.QIcon(self.resourcePath("Icons/cancel.png"))
+    self.downloadIcon = qt.QIcon(self.resourcePath("Icons/download.png"))
+    self.storedlIcon = qt.QIcon(self.resourcePath("Icons/stored.png"))
     self.browserWidget.setWindowIcon(browserIcon)
 
     #
@@ -213,7 +209,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     self.useCacheCeckBox.setCheckState(False)
     self.useCacheCeckBox.setTristate(False)
     collectionsFormLayout.addStretch(4)
-    logoLabelText = "<img src='" + self.modulePath + "/Resources/Logos/logo-vertical.png'" + ">"
+    logoLabelText = "<img src='%s'>" % self.resourcePath("Logos/logo-vertical.png")
     self.logoLabel = qt.QLabel(logoLabelText)
     collectionsFormLayout.addWidget(self.logoLabel)
     
