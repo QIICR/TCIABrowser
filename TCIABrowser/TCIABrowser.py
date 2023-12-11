@@ -884,8 +884,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
             # check if the reference series is also selected or is already downloaded
             if not self.seriesTableWidget.findItems(refSeries, qt.Qt.MatchExactly)[0].isSelected() and not any(refSeries == r for r in self.previouslyDownloadedSeries) and refSeries not in refSeriesList:
               message = f"Your selection {selectedSeries} is an RTSTRUCT or SEG file and it seems you have not either downloaded the reference series {refSeries}. Do you wish to download it as well?"
-              choice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', message, qt.QMessageBox.Yes | qt.QMessageBox.No)
-              if (choice == qt.QMessageBox.Yes): 
+              if slicer.util.confirmYesNoDisplay(message, windowTitle="TCIA Browser"):
                 allSelectedSeriesUIDs.append(refSeries)
                 refSeriesList.append(refSeries)
                 downloadFolderPath = os.path.join(self.storagePath, refSeries) + os.sep
@@ -907,8 +906,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
     else:
         downloadWarning = f"You have selected {len(self.downloadQueue)} series to download, the download size is {round(imageSizeToDownload/1024, 2)} GB, do you wish to proceed?"
     # Warn users of the download size and series
-    downloadChoice = qt.QMessageBox.warning(slicer.util.mainWindow(), 'TCIA Browser', downloadWarning, qt.QMessageBox.Yes | qt.QMessageBox.No)
-    if (downloadChoice == qt.QMessageBox.No): 
+    if not slicer.util.confirmYesNoDisplay(downloadWarning, windowTitle="TCIA Browser"):
         return None
     self.downloadQueue = dict(reversed(self.downloadQueue.items()))
     self.seriesTableWidget.clearSelection()
