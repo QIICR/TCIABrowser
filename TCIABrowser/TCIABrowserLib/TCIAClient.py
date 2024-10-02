@@ -1,9 +1,9 @@
 import slicer, json, string, urllib.request, urllib.parse, urllib.error
     
 try:
-    slicer.util.pip_install('tcia_utils<1.7.1 -U -q')
+    slicer.util.pip_install('tcia_utils -U -q')
 except:
-    slicer.util.pip_install('tcia_utils<1.7.1')
+    slicer.util.pip_install('tcia_utils')
 import tcia_utils.nbia
 
 #import TCIABrowserLib
