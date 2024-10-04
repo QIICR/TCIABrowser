@@ -10,11 +10,13 @@ class TCIAClient:
     def __init__(self, user = "nbia_guest", pw = "", nlst = False):
         if nlst: self.apiUrl = "nlst"
         else: self.apiUrl = "restricted"
-        #if self.apiUrl == "restricted":
+        # create a token
         try:
-            tcia_utils.nbia.getToken(user, pw)
-            tcia_utils.nbia.api_call_headers != None
-            self.exp_time = tcia_utils.nbia.token_exp_time
+            tcia_utils.nbia.getToken(user, pw, api_url = self.apiUrl)
+            if self.apiUrl == "nlst":
+                self.exp_time = tcia_utils.nbia.nlst_token_exp_time
+            else:
+                self.exp_time = tcia_utils.nbia.token_exp_time
         except:
             self.credentialError = "Please check your credential and try again.\nFor more information, check the Python console."
 
@@ -22,7 +24,7 @@ class TCIAClient:
         return tcia_utils.nbia.getCollections(api_url = self.apiUrl)
 
     def get_collection_descriptions(self):
-        return tcia_utils.nbia.getCollectionDescriptions("nlst" if self.apiUrl == "nlst" else "")
+        return tcia_utils.nbia.getCollectionDescriptions(api_url = self.apiUrl)
 
     def get_patient(self, collection = None):
         return tcia_utils.nbia.getPatient(collection, api_url = self.apiUrl)
