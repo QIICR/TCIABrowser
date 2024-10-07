@@ -9,7 +9,7 @@ import tcia_utils.nbia
 class TCIAClient:
     def __init__(self, user = "nbia_guest", pw = "", nlst = False):
         if nlst: self.apiUrl = "nlst"
-        else: self.apiUrl = "restricted"
+        else: self.apiUrl = ""
         # create a token
         try:
             tcia_utils.nbia.getToken(user, pw, api_url = self.apiUrl)
