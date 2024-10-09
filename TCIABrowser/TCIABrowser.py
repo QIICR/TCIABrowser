@@ -18,6 +18,7 @@ import pydicom
 import os
 import sys
 import urllib
+import traceback
 from itertools import chain
 from __main__ import vtk, qt, ctk, slicer
 from TCIABrowserLib import TCIAClient
@@ -919,7 +920,6 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
 
         # Define the file name where the zip file will be saved
         fileName = os.path.join(downloadFolderPath, 'images.zip')
-        logging.debug("Downloading images to " + fileName)
 
         self.extractedFilesDirectory = os.path.join(downloadFolderPath, 'images')
         self.progressMessage = "Downloading Images for series InstanceUID: " + selectedSeries
@@ -927,6 +927,7 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
         logging.debug(self.progressMessage)
 
         try:
+          logging.debug("Attempting to download " + selectedSeries + "to " + downloadFolderPath)
           self.TCIAClient.get_image(seriesInstanceUid=selectedSeries, path=downloadFolderPath)
           slicer.app.processEvents()
 
@@ -970,7 +971,11 @@ class TCIABrowserWidget(ScriptedLoadableModuleWidget):
           self.removeDownloadProgressBar(selectedSeries)
           self.downloadQueue.pop(selectedSeries, None)
           self.clearStatus()
-          message = "downloadSelectedSeries: Error in getting response from TCIA server.\nHTTP Error:\n" + str(error)
+          # Capture the traceback details
+          error_traceback = traceback.format_exc()
+
+          # Create the error message
+          message = f"downloadSelectedSeries Error:\n{error}\n\nTraceback:\n{error_traceback}"
           slicer.util.errorDisplay(message, windowTitle="TCIA Browser")
 
       # Re-enable buttons after the download is complete
